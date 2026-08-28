@@ -113,7 +113,10 @@ export async function askAssistant(
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const response = await client.beta.messages.create({
       model: MODEL,
-      max_tokens: 4096,
+      // Adaptive thinking is on by default on this model and its tokens count
+      // against max_tokens, so a tight cap truncates the answer rather than
+      // the reasoning. Answers here are short; the headroom is for thinking.
+      max_tokens: 16_000,
       system: SYSTEM_PROMPT,
       tools: anthropicToolDefinitions() as BetaTool[],
       messages,

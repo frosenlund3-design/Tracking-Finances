@@ -31,6 +31,13 @@ const WHAT_IT_DOES = [
   },
 ];
 
+/**
+ * Reads the session to decide where to send a signed-in visitor, so it can
+ * never be prerendered — and marking that explicitly keeps `next build` from
+ * needing a database at all.
+ */
+export const dynamic = 'force-dynamic';
+
 export default async function LandingPage() {
   const user = await getCurrentUser();
   if (user) redirect(user.onboardingCompletedAt ? '/dashboard' : '/onboarding');

@@ -171,6 +171,11 @@ makes zero-config local development possible without a second code path.
 Migrations in `database/migrations/` run automatically on first request, or
 explicitly with `npm run db:migrate`.
 
+The embedded database holds a lock on its data directory: PGlite is
+single-process, and a second process opening the same directory would
+otherwise abort with an unexplained WASM error much later. Starting a second
+instance now fails immediately, saying so and pointing at `DATABASE_URL`.
+
 ---
 
 ## Configuration
