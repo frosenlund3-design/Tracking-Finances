@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '@/store/useStore'
 import { Onboarding } from '@/components/Onboarding'
 import { Home } from '@/components/Home'
@@ -34,9 +34,49 @@ export default function App() {
   const overlay = useStore((s) => s.overlay)
   const closeOverlay = useStore((s) => s.closeOverlay)
 
+  /**
+   * Storage can be refused outright: private browsing, "bloker alle cookies",
+   * a locked-down managed device. Without this the app sat on a breathing
+   * circle forever, which is the worst possible first impression and gives her
+   * nothing to act on. So it says what happened and what to do about it.
+   */
+  const [storageError, setStorageError] = useState<string | null>(null)
+
   useEffect(() => {
-    void init()
+    void init().catch((e: unknown) => {
+      setStorageError(e instanceof Error ? e.message : String(e))
+    })
   }, [init])
+
+  if (storageError) {
+    return (
+      <div className="grid h-safe-screen place-items-center bg-canvas px-8">
+        <div className="max-w-[22rem] text-center">
+          <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.03em]">
+            Loops kan ikke gemme noget her
+          </h1>
+          <p className="mt-3 text-[15px] leading-relaxed text-muted">
+            Din browser har lukket for lagring. Alt i Loops ligger på telefonen, så uden den kan
+            appen ikke huske noget, og så vil jeg hellere sige det end lade som om.
+          </p>
+          <p className="mt-3 text-[14px] leading-relaxed text-faint">
+            Det sker næsten altid i privat browsing. Prøv at åbne linket i et almindeligt vindue i
+            Safari eller Chrome.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="focus-ring mt-6 min-h-[52px] w-full rounded-3xl bg-ink px-6 text-[16px] font-medium text-canvas active:scale-[0.98]"
+          >
+            Prøv igen
+          </button>
+          {/* Kept for whoever helps her, stripped of links she cannot use. */}
+          <p className="mt-4 break-words text-[11.5px] text-faint/70">
+            {storageError.replace(/https?:\/\/\S+/g, '').replace(/\s*Please visit\s*\.?/i, '').trim()}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   if (!ready) {
     return (

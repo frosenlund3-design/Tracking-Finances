@@ -521,6 +521,28 @@ over, åbn e-Boks."* Sætningen står på forsiden i stedet for pointteksten, fo
 den er hele planen. Skriver hun et klokkeslæt, siger appen fra: et klokkeslæt er
 én beslutning mere, hun selv skal huske at møde. En kedel sætter sig selv over.
 
+### Den kan skaffe det, man mangler
+
+*"Jeg har ikke deres nummer."* Det er dér, en opgave i virkeligheden stopper,
+og den stopper i tavshed: man tænker ikke på det som at være blokeret, man
+tænker på sig selv som en, der ikke får det gjort.
+
+Appen har ingen forbindelse til noget udenfor og kan ikke slå det op. Så den
+gør to ærlige ting i stedet. Ved den, hvor den slags plejer at ligge, siger den
+det. Og under alle omstændigheder gør den *at finde det* til opgaven, for "find
+deres nummer" kan blive færdig, og "ring til dem" kan ikke, så længe nummeret
+mangler.
+
+"Jeg mangler tid" og "jeg har ikke overskud" er noget andet og bliver ikke
+behandlet som en mangel, der kan hentes frem.
+
+### Når browseren siger nej
+
+Lagring kan blive nægtet: privat browsing, "bloker alle cookies", en låst
+arbejdstelefon. Før sad appen på en pulserende cirkel for evigt, hvilket er det
+værst tænkelige førstehåndsindtryk og ikke giver hende noget at handle på. Nu
+siger den hvad der skete, og hvad man gør ved det.
+
 ### Kalenderen
 
 Det eneste i appen, der kan nå hende, når Loops er lukket. En web-app kan ikke

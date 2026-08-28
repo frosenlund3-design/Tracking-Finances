@@ -453,6 +453,52 @@ export function handleAgentRequest({ text, task, circles = [], now = new Date() 
     }
   }
 
+  /* --- something she is missing -------------------------------------- */
+  //
+  // "Jeg har ikke deres nummer", "jeg mangler policenummeret". This is where a
+  // task actually stops, and it stops silently: she does not think of it as
+  // being blocked, she thinks of herself as not doing it.
+  //
+  // The app has no network and cannot look anything up, so it does two honest
+  // things instead. If it knows where that kind of thing lives, it says so. And
+  // either way it offers to make finding it the task, because "find deres
+  // nummer" is a task that can be finished and "ring til dem" is not, while the
+  // number is missing.
+  const missing = t.match(
+    /\b(?:jeg mangler|jeg har ikke|jeg kan ikke finde|hvor finder jeg|jeg ved ikke hvor)\s+(?:(?:mit|min|deres|hans|hendes|et|en|de)\b\s+)?(.{2,50}?)[.!?]*$/i,
+  )
+  // "Jeg mangler tid" and "jeg har ikke overskud" are not missing objects. They
+  // are the thing the rest of the app is for, and answering them with "så lad
+  // os finde tid frem" would be absurd.
+  const NOT_A_THING = /^(tid|overskud|energi|motivation|lyst|kr[æa]fter|ro|s[øo]vn|hj[æa]lp|penge)\b/i
+  if (missing && !NOT_A_THING.test(missing[1].trim())) {
+    const thing = missing[1].trim()
+    if (task) {
+      const know = knowHowFor(task.title)
+      const step = capitalise(`Find ${thing} frem`)
+      return {
+        lines: [
+          `Så er det ikke "${task.title}", der er opgaven lige nu. Det er at finde ${thing}.`,
+          // Context about the task, labelled as such. It is not a claim about
+          // where the missing thing is, and pretending otherwise would send her
+          // looking in the wrong place.
+          know?.need ? `Til den her opgave skal du i det hele taget bruge: ${know.need}` : '',
+          know?.where ?? '',
+          'Jeg kan ikke slå det op for dig, jeg har ingen forbindelse til noget udenfor. Men jeg kan gøre det til det eneste, du skal.',
+        ].filter(Boolean) as string[],
+        effect: { kind: 'add-step', nodeId: task.id, title: step },
+        options: ['Godt', 'Parkér hele opgaven til jeg har det'],
+      }
+    }
+    return {
+      lines: [
+        `At mangle ${thing} er ikke det samme som ikke at være kommet i gang. Det er en anden opgave, og den kan faktisk laves.`,
+        `Skal jeg lægge "find ${thing}" ind som sin egen ting?`,
+      ],
+      options: ['Ja', 'Nej tak'],
+    }
+  }
+
   /* --- questions --------------------------------------------------- */
   const q = detectQuestion(t)
   if (q && task) return answerQuestion(q, task, now)

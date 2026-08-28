@@ -56,6 +56,8 @@ export function Home() {
   const goal = prefs.rewardGoal
 
   const action = firstActionFor(next?.node ?? null)
+  /** Nothing at all yet: a brand new install, before the first brain dump. */
+  const empty = load.openLoops === 0 && closedToday === 0 && appointments.length === 0
   const attention = useMemo(() => scanAttention(map)[0] ?? null, [map])
 
   const tone = useMemo(() => {
@@ -268,7 +270,7 @@ export function Home() {
         )}
 
         {/* ── Permission to stop ──────────────────────────────────────── */}
-        {!enough.done && (
+        {!enough.done && !empty && (
           <button
             onClick={() => {
               if (enough.necessary.length > 0) setConfirmDone(true)
@@ -327,7 +329,14 @@ export function Home() {
           </button>
         )}
 
-        {/* ── Mental load, demoted to a line ──────────────────────────── */}
+        {/*
+          ── Mental load, demoted to a line ────────────────────────────
+          Hidden entirely on an empty first run. "0 ting din hjerne ikke behøver
+          huske, 0%" with an empty bar and four grey dots reads as a demand on a
+          list that does not exist yet, and it is the second thing a new user
+          sees.
+        */}
+        {!empty && (
         <button
           onClick={() => openOverlay({ kind: 'energy' })}
           className="focus-ring mt-3 w-full rounded-3xl border border-line bg-surface px-5 py-4 text-left active:scale-[0.99]"
@@ -363,6 +372,7 @@ export function Home() {
             </span>
           </span>
         </button>
+        )}
 
         {/* ── Tools, one quiet row ────────────────────────────────────── */}
         <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
