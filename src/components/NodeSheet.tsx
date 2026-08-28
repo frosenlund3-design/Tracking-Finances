@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  AlarmClock, ArrowDownToLine, Banknote, CalendarClock, Check, ChevronRight, CircleDashed, Clock,
+  AlarmClock, ArrowDownToLine, Banknote, CalendarClock, CalendarPlus, Check, ChevronRight, CircleDashed, Clock, Link2,
   Play, Plus, Split, Trash2, UserPlus, X,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -11,6 +11,8 @@ import { calibratedMinutes } from '@/lib/calibration'
 import { useCalibration } from '@/store/useStore'
 import { canFocus, visibleChildren } from '@/lib/nodes'
 import { haptic } from '@/lib/haptics'
+import { addToCalendar } from '@/lib/calendar'
+import { CUE_SUGGESTIONS, cueSentence, looksLikeATime } from '@/lib/cues'
 import { DEFAULT_GRANULARITY, GRANULARITIES, GRANULARITY_LABELS, type Granularity } from '@/lib/decompose'
 
 /**
@@ -29,6 +31,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
   const park = useStore((s) => s.parkNode)
   const unpark = useStore((s) => s.unparkNode)
   const breakDown = useStore((s) => s.breakDown)
+  const updateNode = useStore((s) => s.updateNode)
   const toggleStep = useStore((s) => s.toggleStep)
   const rename = useStore((s) => s.renameNode)
   const remove = useStore((s) => s.deleteNode)
@@ -43,6 +46,8 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
 
   const [showPark, setShowPark] = useState(false)
   const [showSplit, setShowSplit] = useState(false)
+  const [showCue, setShowCue] = useState(false)
+  const [cueDraft, setCueDraft] = useState('')
   const [granularity, setGranularity] = useState<Granularity>(DEFAULT_GRANULARITY)
   const [splitFailed, setSplitFailed] = useState(false)
   const [showTime, setShowTime] = useState(false)
@@ -120,13 +125,37 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
       </div>
 
       {node.dueAt && (
-        <p
-          className={`mt-2.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium ${
-            node.dueKind === 'appointment' ? 'bg-warm/15 text-warm' : 'bg-accent-soft text-ink/75'
-          }`}
-        >
-          {node.dueKind === 'appointment' ? <CalendarClock size={13} /> : <AlarmClock size={13} />}
-          {whenLabel(node)}
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <p
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium ${
+              node.dueKind === 'appointment' ? 'bg-warm/15 text-warm' : 'bg-accent-soft text-ink/75'
+            }`}
+          >
+            {node.dueKind === 'appointment' ? <CalendarClock size={13} /> : <AlarmClock size={13} />}
+            {whenLabel(node)}
+          </p>
+          {/*
+            The only thing in the app that can reach her when Loops is closed.
+            A web app cannot wake a phone, but her own calendar can, so this
+            hands the event over to it rather than pretending to remind her.
+          */}
+          <button
+            onClick={() => {
+              haptic('tap')
+              addToCalendar(node)
+            }}
+            className="focus-ring inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[13px] text-muted active:scale-95"
+          >
+            <CalendarPlus size={13} />
+            Læg i min kalender
+          </button>
+        </div>
+      )}
+
+      {node.cue && (
+        <p className="mt-2.5 rounded-xl2 border border-line bg-canvas px-4 py-3 text-[14px] leading-relaxed">
+          <span className="text-faint">Din plan: </span>
+          {cueSentence(node.cue, node.title)}
         </p>
       )}
 
@@ -263,6 +292,16 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
             onClick={() => (parked ? void unpark(node.id) : setShowPark((v) => !v))}
           />
         )}
+        {!isRoot && !node.isArea && (
+          <SmallAction
+            icon={<Link2 size={16} />}
+            label={node.cue ? 'Ret hvad den hænger på' : 'Hæng den på en vane'}
+            onClick={() => {
+              setCueDraft(node.cue ?? '')
+              setShowCue((v) => !v)
+            }}
+          />
+        )}
         {!isRoot && (
           <SmallAction
             icon={<Clock size={16} />}
@@ -310,6 +349,79 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
       </div>
 
       <AnimatePresence>
+        {showCue && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 rounded-xl2 border border-line bg-surface p-4">
+              <p className="text-[14px] leading-relaxed text-muted">
+                Hæng den på noget, du alligevel gør. Ikke et klokkeslæt: et klokkeslæt er én
+                beslutning mere, du skal huske at tage. En kedel sætter sig selv over.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {CUE_SUGGESTIONS.slice(0, 6).map((c) => (
+                  <button
+                    key={c}
+                    onClick={async () => {
+                      haptic('tap')
+                      setCueDraft(c)
+                      await updateNode(node.id, { cue: c })
+                    }}
+                    className={`focus-ring min-h-[44px] rounded-full border px-3.5 text-[13.5px] active:scale-95 ${
+                      node.cue === c ? 'border-ink/25 bg-accent-soft font-medium' : 'border-line bg-raised text-muted'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  const v = cueDraft.trim()
+                  if (!v) return
+                  await updateNode(node.id, { cue: v })
+                  haptic('tap')
+                }}
+                className="mt-3 flex gap-2"
+              >
+                <input
+                  value={cueDraft}
+                  onChange={(e) => setCueDraft(e.target.value)}
+                  placeholder="Når jeg…"
+                  className="focus-ring min-h-[46px] flex-1 rounded-xl2 border border-line bg-raised px-4 text-[15px] placeholder:text-faint"
+                />
+                <button
+                  type="submit"
+                  className="focus-ring min-h-[46px] rounded-xl2 border border-line bg-raised px-4 text-[14px] text-muted active:scale-95"
+                >
+                  Gem
+                </button>
+              </form>
+              {looksLikeATime(cueDraft) && (
+                <p className="mt-2 text-[12.5px] leading-relaxed text-warm">
+                  Det ligner et klokkeslæt. Det virker sjældent, fordi du selv skal huske at møde
+                  det. Prøv noget, der sker af sig selv i stedet.
+                </p>
+              )}
+              {node.cue && (
+                <>
+                  <p className="mt-3 text-[13.5px] leading-relaxed">{cueSentence(node.cue, node.title)}</p>
+                  <button
+                    onClick={() => void updateNode(node.id, { cue: undefined })}
+                    className="focus-ring mt-1 flex min-h-[44px] items-center text-[13px] text-faint"
+                  >
+                    Fjern den igen
+                  </button>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {showSplit && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}

@@ -131,6 +131,7 @@ export function CircleView({
 
     <motion.button
       layoutId={node ? `circle-${node.id}` : 'circle-overflow'}
+      data-node-id={node?.id}
       layout
       initial={{ opacity: 0, scale: 0.72 }}
       animate={{ opacity: 1, scale: pressed ? 0.94 : 1 }}

@@ -149,6 +149,7 @@ export async function sealNode(node: LoopNode): Promise<LoopNode> {
     title: await sealText(node.title),
     description: node.description ? await sealText(node.description) : node.description,
     goodEnoughNote: node.goodEnoughNote ? await sealText(node.goodEnoughNote) : node.goodEnoughNote,
+    cue: node.cue ? await sealText(node.cue) : node.cue,
     steps: await Promise.all(
       node.steps.map(async (s) => ({
         ...s,
@@ -165,6 +166,7 @@ export async function openNode(node: LoopNode, key?: CryptoKey | null): Promise<
     title: await openText(node.title, key),
     description: node.description ? await openText(node.description, key) : node.description,
     goodEnoughNote: node.goodEnoughNote ? await openText(node.goodEnoughNote, key) : node.goodEnoughNote,
+    cue: node.cue ? await openText(node.cue, key) : node.cue,
     steps: await Promise.all(
       node.steps.map(async (s) => ({
         ...s,

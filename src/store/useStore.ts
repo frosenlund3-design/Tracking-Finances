@@ -103,6 +103,7 @@ interface State {
 
   addNode: (input: { title: string; parentId: string; minutes?: number; autoBreak?: boolean }) => Promise<LoopNode>
   updateNode: (id: string, patch: Partial<LoopNode>) => Promise<void>
+  moveNode: (id: string, newParentId: string) => Promise<boolean>
   renameNode: (id: string, title: string) => Promise<void>
   deleteNode: (id: string) => Promise<void>
   completeNode: (id: string, via: Completion['via']) => Promise<void>
@@ -339,6 +340,40 @@ export const useStore = create<State>((set, get) => ({
     await putNode(next)
     const nodes = get().nodes.map((n) => (n.id === id ? next : n))
     set({ nodes, map: toMap(nodes) })
+  },
+
+  /**
+   * Move a loop into a different circle.
+   *
+   * Refuses to move something into itself or into one of its own children,
+   * which would cut that whole branch loose from the tree and make it
+   * unreachable from anywhere. A silent no is better than a lost branch.
+   */
+  async moveNode(id, newParentId) {
+    const { map } = get()
+    const node = map[id]
+    const target = map[newParentId]
+    if (!node || !target || id === newParentId || node.parentId === newParentId) return false
+
+    let cursor: string | null | undefined = newParentId
+    while (cursor) {
+      if (cursor === id) return false
+      cursor = map[cursor]?.parentId
+    }
+
+    const oldParent = node.parentId ? map[node.parentId] : undefined
+    const now = Date.now()
+    const next: LoopNode[] = [
+      { ...node, parentId: newParentId, area: target.area, updatedAt: now },
+      { ...target, childIds: [...target.childIds.filter((c) => c !== id), id], updatedAt: now },
+    ]
+    if (oldParent && oldParent.id !== newParentId) {
+      next.push({ ...oldParent, childIds: oldParent.childIds.filter((c) => c !== id), updatedAt: now })
+    }
+    await putNodes(next)
+    const nodes = get().nodes.map((n) => next.find((x) => x.id === n.id) ?? n)
+    set({ nodes, map: toMap(nodes) })
+    return true
   },
 
   async renameNode(id, title) {

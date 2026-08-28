@@ -22,6 +22,7 @@ import { GRANULARITIES, decompose, type Granularity } from '@/lib/decompose'
 import { analyse, toImperativeSentence } from '@/lib/language'
 import { cleanFragment } from '@/lib/brainDump'
 import { knowHowFor } from '@/lib/knowhow'
+import { CUE_SUGGESTIONS, cueSentence, looksLikeATime } from '@/lib/cues'
 import { addDays, humanMinutes, isoDate, PART_LABELS } from '@/lib/time'
 import { whenLabel } from '@/lib/deadlines'
 
@@ -36,6 +37,8 @@ export type AgentEffect =
   | { kind: 'good-enough'; nodeId: string; note: string }
   | { kind: 'delete'; nodeId: string }
   | { kind: 'complete'; nodeId: string }
+  | { kind: 'move'; nodeId: string; parentId: string }
+  | { kind: 'cue'; nodeId: string; cue: string }
 
 export interface AgentResult {
   lines: string[]
@@ -49,6 +52,8 @@ export interface AgentResult {
 export interface AgentInput {
   text: string
   task: LoopNode | null
+  /** The circles she could move something into, so the coach can name them. */
+  circles?: Array<{ id: string; title: string }>
   now?: Date
 }
 
@@ -213,7 +218,7 @@ function capitalise(s: string): string {
 
 const NEEDS_TASK = 'Sig hvilken opgave, så gør jeg det. Skriv bare et par ord fra titlen.'
 
-export function handleAgentRequest({ text, task, now = new Date() }: AgentInput): AgentResult | null {
+export function handleAgentRequest({ text, task, circles = [], now = new Date() }: AgentInput): AgentResult | null {
   const t = text.trim()
   if (!t) return null
   const lower = t.toLowerCase()
@@ -230,7 +235,12 @@ export function handleAgentRequest({ text, task, now = new Date() }: AgentInput)
     }
   }
 
-  if (/\b(f[æa]rre trin|for mange trin|for mange steps|for detaljeret|simplere|kortere liste|for meget)\b/i.test(lower) && task?.steps.length) {
+  //
+  // Every pattern in here has to be about the task, not about her life. "Der
+  // er alt for meget" used to match this one and quietly trimmed the step list
+  // on whatever happened to be open, which is both wrong and slightly insane
+  // as a response to somebody saying they are overwhelmed.
+  if (/\b(f[æa]rre trin|for mange trin|for mange steps|for detaljeret|kortere liste|simplere liste)\b/i.test(lower) && task?.steps.length) {
     const current = task.steps.length
     const target = [...GRANULARITIES].reverse().find((g) => g < current) ?? 1
     return {
@@ -281,7 +291,7 @@ export function handleAgentRequest({ text, task, now = new Date() }: AgentInput)
   }
 
   /* --- move it ----------------------------------------------------- */
-  if (/\b(flyt den|kan jeg tage den|tag den|udskyd|senere|ikke i dag|l[æa]g den (?:til|p[åa]))\b/i.test(lower)) {
+  if (/\b(flyt den|udskyd den|kan jeg tage den|tag den (?:i morgen|p[åa]|n[æa]ste)|ikke i dag|l[æa]g den (?:til|p[åa]|over p[åa]))\b/i.test(lower)) {
     if (!task) return { lines: [NEEDS_TASK] }
     const date = readDate(lower, now)
     const part = readPart(lower)
@@ -302,7 +312,7 @@ export function handleAgentRequest({ text, task, now = new Date() }: AgentInput)
   }
 
   /* --- park -------------------------------------------------------- */
-  if (/\b(park[eé]r|l[æa]g den v[æa]k|gem den|den kan vente|ikke lige nu|ud af hovedet med den)\b/i.test(lower)) {
+  if (/\b(park[eé]r|l[æa]g den v[æa]k|gem den til senere|den kan vente|ud af hovedet med den)\b/i.test(lower)) {
     if (!task) return { lines: [NEEDS_TASK] }
     const until = addDays(now, 7).getTime()
     return {
@@ -320,6 +330,65 @@ export function handleAgentRequest({ text, task, now = new Date() }: AgentInput)
       effect: { kind: 'delete', nodeId: task.id },
       confirm: 'Ja, slet den',
       options: ['Nej, parkér den i stedet'],
+    }
+  }
+
+  /* --- hang it on something she already does ------------------------- */
+  const hang = t.match(/\b(?:h[æa]ng den p[åa]|kobl den (?:til|p[åa])|min plan er|n[åa]r jeg har|n[åa]r jeg)\s+(.{3,60})$/i)
+  if (hang && task && /\b(h[æa]ng|kobl|plan|n[åa]r jeg)\b/i.test(lower)) {
+    const raw = hang[0].toLowerCase().startsWith('når jeg') ? hang[0] : hang[1]
+    const cue = capitalise(raw.replace(/[.!?]+$/, '').trim())
+    if (looksLikeATime(cue)) {
+      return {
+        lines: [
+          'Det ligner et klokkeslæt, og et klokkeslæt er én beslutning mere, du skal huske at tage.',
+          'Hæng den på noget, der sker af sig selv i stedet. Kaffen, tandbørsten, døren når du kommer hjem.',
+        ],
+        options: CUE_SUGGESTIONS.slice(0, 3).map((c) => `Hæng den på ${c.toLowerCase()}`),
+      }
+    }
+    return {
+      lines: [cueSentence(cue, task.title), 'Nu skal du ikke huske den. Du skal bare møde kaffen.'],
+      effect: { kind: 'cue', nodeId: task.id, cue },
+      options: ['Start den nu', 'Vælg noget andet'],
+    }
+  }
+
+  if (/\b(jeg glemmer den|glemmer hele tiden|husker den aldrig|falder ud af hovedet|hj[æa]lp mig med at huske)\b/i.test(lower) && task) {
+    return {
+      lines: [
+        'Så skal den ikke huskes. Den skal hænges på noget, du alligevel gør.',
+        'En påmindelse skal du selv møde. En vane møder dig.',
+        'Hvad af det her rammer du hver dag?',
+      ],
+      options: CUE_SUGGESTIONS.slice(0, 3).map((c) => `Hæng den på ${c.toLowerCase()}`),
+    }
+  }
+
+  /* --- move it to another circle ------------------------------------ */
+  const moveTo = t.match(
+    /\b(?:flyt den (?:(?:ind )?(?:til|under|over i|i))|l[æa]g den (?:under|i|ind i)|den h[øo]rer (?:til|hjemme) (?:under|i)|s[æa]t den (?:under|i))\s+(.{2,40})$/i,
+  )
+  if (moveTo) {
+    if (!task) return { lines: [NEEDS_TASK] }
+    const wanted = moveTo[1].replace(/[.!?"“”]+$/, '').trim().toLowerCase()
+    const hit =
+      circles.find((c) => c.title.toLowerCase() === wanted) ??
+      circles.find((c) => c.title.toLowerCase().startsWith(wanted.slice(0, 5))) ??
+      circles.find((c) => wanted.includes(c.title.toLowerCase()))
+    if (!hit) {
+      return {
+        lines: [
+          `Jeg kan ikke finde en cirkel, der hedder "${moveTo[1].trim()}".`,
+          circles.length ? `Dem du har: ${circles.slice(0, 8).map((c) => c.title).join(', ')}.` : '',
+        ].filter(Boolean),
+        options: circles.slice(0, 3).map((c) => `Flyt den til ${c.title}`),
+      }
+    }
+    return {
+      lines: [`Flyttet ind under ${hit.title}.`],
+      effect: { kind: 'move', nodeId: task.id, parentId: hit.id },
+      options: ['Start den nu', 'Flyt en mere'],
     }
   }
 
@@ -387,6 +456,45 @@ export function handleAgentRequest({ text, task, now = new Date() }: AgentInput)
   /* --- questions --------------------------------------------------- */
   const q = detectQuestion(t)
   if (q && task) return answerQuestion(q, task, now)
+
+  //
+  // A question it does not recognise, about a task it does know something
+  // about. Rather than falling through to generic encouragement, it lays out
+  // everything it actually has and says plainly what it does not. Being told
+  // "det ved jeg ikke, men her er hvad jeg ved" is a real answer. Being handed
+  // a motivational line instead of an answer is how an assistant stops being
+  // asked anything.
+  if (/\?\s*$/.test(t) && task) {
+    const know = knowHowFor(task.title)
+    const next = task.steps.find((s) => !s.done)
+    const facts = [
+      know?.where ? `Hvor: ${know.where}` : null,
+      know?.need ? `Du skal bruge: ${know.need}` : null,
+      know?.timing ? `Tid: ${know.timing}` : null,
+      know?.snag ? `Pas på: ${know.snag}` : null,
+      next ? `Næste trin: ${next.title}` : null,
+      task.dueAt ? `Frist: ${whenLabel(task, now.getTime())}` : null,
+    ].filter(Boolean) as string[]
+
+    if (facts.length) {
+      return {
+        lines: [
+          'Det præcise spørgsmål er jeg ikke sikker på, at jeg forstår. Her er alt, jeg ved om den:',
+          ...facts,
+          'Spørg igen med andre ord, hvis det ikke var det.',
+        ],
+        options: ['Hvad skal jeg bruge?', 'Hvad hvis det går galt?', 'Start den nu'],
+      }
+    }
+    return {
+      lines: [
+        'Det ved jeg ikke, og jeg gætter ikke.',
+        `Det eneste jeg har på "${task.title}" er, hvad du selv har skrevet.`,
+        'Men jeg kan dele den op, gøre den mindre, flytte den eller finde det første skridt. Sig til.',
+      ],
+      options: ['Del den op', 'Hvad er første skridt?', 'Flyt den'],
+    }
+  }
   if (q && !task) {
     return {
       lines: ['Hvilken opgave spørger du om?', 'Skriv et par ord fra den, så finder jeg den.'],

@@ -12,6 +12,10 @@
 import { cleanFragment, parseBrainDump, CERTAIN } from '../src/lib/brainDump'
 import { decompose } from '../src/lib/decompose'
 import { analyse, toImperativeSentence } from '../src/lib/language'
+import { handleAgentRequest } from '../src/lib/coach/agent'
+import { detectCaptures } from '../src/lib/coach/capture'
+import { matchTriggers } from '../src/lib/coach/triggers'
+import type { LoopNode } from '../src/db/types'
 
 const NOW = new Date('2026-08-28T10:00:00')
 let failures = 0
@@ -134,6 +138,60 @@ console.log('\ntvivl er synlig')
 check('a clear task is not flagged', (one('Ring til tandlægen')?.confidence ?? 0) >= CERTAIN)
 check('an unknown category does not fake doubt about kind',
   (one('Print billetterne ud')?.confidence ?? 0) >= CERTAIN && one('Print billetterne ud')?.placed === false)
+
+/* ------------------------------------------------------------------ *
+ * The coach must not act on things she did not ask it to act on.
+ * ------------------------------------------------------------------ */
+
+const TASK = {
+  id: 'n1',
+  title: 'Ordn skat',
+  steps: [{ id: 's1', title: 'Find MitID frem', done: false }],
+  estimatedMinutes: 45,
+  status: 'open',
+} as unknown as LoopNode
+
+console.log('\ncoachen holder fingrene fra almindelig snak')
+for (const text of [
+  'Jeg er så træt',
+  'Der er alt for meget',
+  'Det hele er for meget lige nu',
+  'Ikke lige nu',
+  'Jeg kan ikke overskue det',
+  'Jeg hader det her',
+  'Jeg føler mig dum',
+  'Hej',
+]) {
+  const r = handleAgentRequest({ text, task: TASK })
+  check(`"${text}" er ikke en kommando`, r === null || !r.effect, r?.lines[0])
+  check(`"${text}" bliver ikke til en opgave`, !detectCaptures(text, {})?.items.length)
+}
+
+console.log('\ncoachen gør det den bliver bedt om')
+for (const [text, kind] of [
+  ['Flyt den til på fredag', 'schedule'],
+  ['Parkér den', 'park'],
+  ['Tilføj at jeg skal finde lønsedlerne', 'add-step'],
+  ['Giv mig flere trin', 'resplit'],
+  ['Kald den Skat 2026', 'rename'],
+  ['Hæng den på når jeg har sat kaffe over', 'cue'],
+  ['Slet den', 'delete'],
+] as Array<[string, string]>) {
+  const r = handleAgentRequest({ text, task: TASK })
+  check(`"${text}" -> ${kind}`, r?.effect?.kind === kind, r?.effect?.kind ?? 'ingenting')
+}
+check('kun sletning spørger først', handleAgentRequest({ text: 'Slet den', task: TASK })?.confirm !== undefined)
+
+console.log('\ntriggers')
+const triggers = ['Hvis nogen virker sure på mig', 'Regninger og økonomi']
+check('en trigger i hendes egne ord fanges',
+  matchTriggers('Jeg tror min chef er sur på mig', triggers).length === 1)
+check('og en anden, uafhængig trigger gør også',
+  matchTriggers('Jeg tør ikke kigge på regningerne', triggers).length === 1)
+check('almindelig tekst udløser ingenting',
+  matchTriggers('Jeg skal vaske tøj i morgen', triggers).length === 0)
+check('en fritekst-trigger matcher på hendes egne ord',
+  matchTriggers('Jeg skal til tandlæge på torsdag', ['Tandlægen']).length === 1)
 
 console.log(failures ? `\n${failures} FAILED\n` : '\nalt passerer\n')
 process.exit(failures ? 1 : 0)

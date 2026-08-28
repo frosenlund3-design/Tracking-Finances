@@ -11,6 +11,7 @@ import { scanAttention } from '@/lib/attention'
 import { toneFor } from '@/lib/colors'
 import { blockedHeadline, enoughBody, enoughHeadline, enoughState } from '@/lib/enough'
 import { appointmentsToday, shortWhen, whenLabel } from '@/lib/deadlines'
+import { cueSentence } from '@/lib/cues'
 import { humanMinutes } from '@/lib/time'
 import { calibratedMinutes } from '@/lib/calibration'
 import { useCalibration } from '@/store/useStore'
@@ -220,9 +221,21 @@ export function Home() {
               )}
             </button>
 
-            <p className="mt-3 text-center text-[12.5px] opacity-60">
-              Point for at starte, ikke kun for at blive færdig.
-            </p>
+            {next.node.cue ? (
+              /*
+                When she has hung this loop on something she already does, that
+                sentence is the most useful thing on the card. It is the whole
+                plan, and it is the reason the start is supposed to happen
+                without her having to decide anything.
+              */
+              <p className="mt-3 text-center text-[12.5px] opacity-70">
+                {cueSentence(next.node.cue, action.text)}
+              </p>
+            ) : (
+              <p className="mt-3 text-center text-[12.5px] opacity-60">
+                Point for at starte, ikke kun for at blive færdig.
+              </p>
+            )}
 
             <div className="mt-4 flex items-center justify-between border-t pt-3 text-[12.5px]" style={{ borderColor: `${tone.text}22` }}>
               <span className="min-w-0 flex-1 truncate opacity-60">

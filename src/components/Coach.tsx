@@ -11,6 +11,7 @@ import { parkPresets } from '@/lib/time'
 import { MicButton } from './ui/MicButton'
 import { actionableLeaves } from '@/lib/nodes'
 import { BLOCK_ANSWERS, BLOCK_NAMED, scanAttention } from '@/lib/attention'
+import { ROOT_ID } from '@/db/db'
 import { observe } from '@/lib/coach/memory'
 import { handleAgentRequest, type AgentEffect } from '@/lib/coach/agent'
 import { matchTriggers } from '@/lib/coach/triggers'
@@ -29,6 +30,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const map = useStore((s) => s.map)
   const profile = useStore((s) => s.profile)
   const prefs = useStore((s) => s.prefs)
+  const savePrefs = useStore((s) => s.savePrefs)
   const allMessages = useStore((s) => s.coachMessages)
   const sessions = useStore((s) => s.coachSessions)
   const activeSessionId = useStore((s) => s.activeSessionId)
@@ -51,6 +53,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const scheduleNode = useStore((s) => s.schedule)
   const renameNode = useStore((s) => s.renameNode)
   const deleteNode = useStore((s) => s.deleteNode)
+  const moveNode = useStore((s) => s.moveNode)
   const completeNode = useStore((s) => s.completeNode)
   const unparkNode = useStore((s) => s.unparkNode)
   const addNote = useStore((s) => s.addNote)
@@ -70,6 +73,8 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const [pending, setPending] = useState<AgentEffect | null>(null)
   /** Things she said in chat that are not in the tree yet, waiting on her. */
   const [queue, setQueue] = useState<ParsedLoop[]>([])
+  /** Whether the batch being worked through was a single thing. */
+  const handledOne = useRef(false)
   const used = useRef<Strategy[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -84,6 +89,15 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const task = (namedTaskId ? map[namedTaskId] : null) ?? (nodeId ? map[nodeId] : null) ?? next?.node ?? null
   const sessionId = activeSessionId ?? ''
   const messages = allMessages.filter((m) => m.sessionId === sessionId)
+
+  // The circles she could move something into, named the way she named them.
+  const circles = useMemo(
+    () =>
+      nodes
+        .filter((n) => n.isArea && n.id !== ROOT_ID && n.status !== 'done')
+        .map((n) => ({ id: n.id, title: n.title })),
+    [nodes],
+  )
 
   // Patterns from her own data, recomputed as the data changes.
   const observations = useMemo(
@@ -132,6 +146,24 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
         const line = GREETINGS[profile.tone][Math.floor(Math.random() * GREETINGS[profile.tone].length)]
         void addMessage({ sessionId: id, role: 'coach', text: line })
         setOptions(['Jeg kan ikke komme i gang', 'Der er for meget', 'Hvad skal jeg lave?'])
+
+        // Asked once, when she has used the coach enough to know whether she
+        // wants it to know her. Not during onboarding, where it would be one
+        // more form standing between her and the app, and never again after.
+        const spoken = useStore.getState().coachMessages.filter((m) => m.role === 'user').length
+        if (!profile.self && !prefs.selfInvited && spoken >= 4) {
+          void savePrefs({ selfInvited: true })
+          void addMessage({
+            sessionId: id,
+            role: 'coach',
+            text: [
+              'Må jeg spørge om noget, før vi fortsætter?',
+              'Jeg bliver markant bedre, hvis jeg ved lidt om dig: diagnoser, hvad du døjer med, og hvad der rammer dig hårdt. Så holder jeg op med at sige ting, du har hørt hundrede gange.',
+              'Du bestemmer selv hvor lidt du skriver, og du kan slette det igen.',
+            ].join('\n'),
+          })
+          setOptions(['Fortæl mig hvor', 'Ikke nu'])
+        }
       }
     }
 
@@ -195,6 +227,12 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
       case 'complete':
         await completeNode(e.nodeId, 'coach')
         break
+      case 'move':
+        await moveNode(e.nodeId, e.parentId)
+        break
+      case 'cue':
+        await updateNode(e.nodeId, { cue: e.cue })
+        break
       case 'delete':
         await deleteNode(e.nodeId)
         break
@@ -214,7 +252,12 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const advanceQueue = async (rest: ParsedLoop[]) => {
     setQueue(rest)
     if (!rest.length) {
-      await say(['Så er de ude af hovedet.', 'Du skal ikke huske på nogen af dem nu.'], ['Hvad skal jeg starte med?', 'Jeg stopper her'])
+      await say(
+        handledOne.current
+          ? ['Så er den ude af hovedet.', 'Du skal ikke huske på den nu.']
+          : ['Så er de ude af hovedet.', 'Du skal ikke huske på nogen af dem nu.'],
+        ['Hvad skal jeg starte med?', 'Jeg stopper her'],
+      )
       return
     }
     await say([`Næste: “${rest[0].title}”. Er den din?`], ['Ja', 'Nej, den skal ikke ind', 'Det er bare en note'])
@@ -234,11 +277,28 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     if (named) setNamedTaskId(named.id)
     const focus = named ?? task
 
+    if (/^fort[æa]l mig hvor$/i.test(trimmed)) {
+      await say(['Indstillinger, øverst under "Din profil". Jeg åbner den.'])
+      openOverlay({ kind: 'self' })
+      return
+    }
+
     const yes = /^\s*(ja|jep|jeps|yes|okay|ok|gerne|k[øo]r|please|g[øo]r det)\b/i.test(trimmed)
     const no = /^\s*(nej|n[åa]h|nope|ellers tak|ikke|drop det)\b/i.test(trimmed)
 
+    // 0. She is answering the coach's own question about what blocks a task.
+    //
+    // This has to come first. "Jeg ved ikke hvor jeg skal starte" is one of
+    // the offered answers and is also shaped exactly like a question about the
+    // task, so anything downstream would happily answer it instead of hearing
+    // it. Being asked something and then having the answer treated as a new
+    // question is the single most demoralising thing an assistant can do.
+    const blockAnswer = diagnosing
+      ? BLOCK_ANSWERS.find((a) => a.label.toLowerCase() === trimmed.toLowerCase())
+      : undefined
+
     // 1. Something destructive is waiting on her word.
-    if (pending) {
+    if (pending && !blockAnswer) {
       const effect = pending
       setPending(null)
       if (yes) {
@@ -251,7 +311,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     }
 
     // 2. Working through a head she emptied a moment ago.
-    if (queue.length) {
+    if (queue.length && !blockAnswer) {
       const [head, ...rest] = queue
       if (yes) {
         await commitBrainDump(head.raw, [head])
@@ -284,7 +344,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     const liveTrigger = matchTriggers(trimmed, profile.self?.triggers).some(
       (h) => !usedTriggers.current.includes(h.trigger),
     )
-    const agent = handleAgentRequest({ text: trimmed, task: focus })
+    const agent = blockAnswer ? null : handleAgentRequest({ text: trimmed, task: focus, circles })
     if (agent && !(liveTrigger && !agent.effect)) {
       if (agent.effect && agent.confirm) setPending(agent.effect)
       else if (agent.effect) await applyEffect(agent.effect)
@@ -294,7 +354,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     }
 
     // 4. Something she has to do, said out loud in passing.
-    const captured = detectCaptures(trimmed, map)
+    const captured = blockAnswer ? null : detectCaptures(trimmed, map)
     if (captured) {
       await new Promise((r) => setTimeout(r, prefs.reducedStimulation ? 100 : 320))
       const known = alreadyLine(captured.already)
@@ -303,6 +363,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
         return
       }
       setQueue(captured.items)
+      handledOne.current = captured.items.length === 1
       if (captured.many) {
         await say([known, ...manyOffer(captured.items)].filter(Boolean) as string[], [
           'Ja',
@@ -319,8 +380,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     // on the task so the app stops asking and starts adapting.
     let naming: string | null = null
     if (diagnosing) {
-      const answer = BLOCK_ANSWERS.find((a) => a.label.toLowerCase() === trimmed.toLowerCase())
-      const reason: ProcrastinationReason | null = answer?.reason ?? null
+      const reason: ProcrastinationReason | null = blockAnswer?.reason ?? null
       if (reason) {
         await updateNode(diagnosing, { blockReason: reason })
         naming = BLOCK_NAMED[reason]

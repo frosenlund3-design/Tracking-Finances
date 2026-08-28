@@ -39,6 +39,17 @@ export interface LoopNode {
   startedAt?: number
   parkedUntil?: number
   /**
+   * Something she already does, that this loop hangs on.
+   *
+   * "Når jeg har sat kaffe over." Not a time: a moment she will meet anyway.
+   * This is the one technique in the whole ADHD literature with a clean
+   * mechanism behind it. A plan of the form "if situation X arises, I will do
+   * Y" moves the start out of the system that has to decide things and into
+   * the one that just reacts, which is exactly the system that still works.
+   * A time of day is a decision you have to remember to make. A kettle is not.
+   */
+  cue?: string
+  /**
    * A real time, when one genuinely exists. Loops never demands one, most
    * loops have no deadline, and inventing deadlines is how a calm system turns
    * into the stressful calendar she already refuses to use.
@@ -301,6 +312,14 @@ export interface UserPreferences {
   /** Dictation is opt-out; it is the one feature that leaves the phone. */
   voiceEnabled?: boolean
   voiceNoticeSeen?: boolean
+  /**
+   * Whether the coach has asked once whether it may know a bit about her.
+   *
+   * Once, and never again. The whole point of the profile is that it is hers
+   * to fill in or not, and an app that keeps asking for personal information
+   * is an app that is pressuring her for it.
+   */
+  selfInvited?: boolean
   /**
    * The day she has declared finished, either by reaching a small daily
    * goal, or by simply saying so. Stored as 'YYYY-MM-DD'.
