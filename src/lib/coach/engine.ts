@@ -12,7 +12,9 @@
  * never tells the user to pull themselves together.
  */
 
-import type { LoopNode } from '@/db/types'
+import type { LoopNode, SelfDescription } from '@/db/types'
+import { conceptsFor, PROBES } from './knowledge'
+import type { Observation } from './memory'
 import { CLOSERS, GREETINGS, RESPONSES, STEP_ACKS } from './responses'
 import type { CoachAction, CoachReply, CoachState, Intent, Strategy, Tone } from './types'
 
@@ -247,9 +249,47 @@ export interface RespondInput {
   /** Injected for deterministic tests. */
   seed?: number
   closedToday?: number
+  /** What she has told the app about herself. */
+  self?: SelfDescription
+  /** Patterns found in her own data, strongest first. */
+  observations?: Observation[]
+  /** So the same insight is not offered twice in one conversation. */
+  usedConcepts?: string[]
 }
 
-export function respond({ text, state, seed = Math.floor(Math.random() * 1000), closedToday = 0 }: RespondInput): CoachReply {
+/**
+ * The reply, assembled.
+ *
+ * Order matters and is deliberate: reflect what she said, name the mechanism,
+ * then — and only then — say what to do. Advice offered before the thing is
+ * named reads as a brush-off, and to someone who already knows the material it
+ * reads as being talked down to.
+ *
+ * Nothing here contradicts her. If she says something is hard, it is hard; the
+ * coach's job is to find out what kind of hard it is.
+ */
+function reflect(text: string, tone: Tone): string {
+  const t = text.trim().toLowerCase()
+  if (/\b(kan ikke|orker ikke)\b/.test(t)) {
+    return tone === 'blunt' ? 'Fair nok.' : 'Okay. Så lader vi være med at presse på den.'
+  }
+  if (/\b(tr[æa]t|udmattet|flad|dr[æa]net)\b/.test(t)) {
+    return tone === 'blunt' ? 'Noteret.' : 'Så er det den, vi tager udgangspunkt i.'
+  }
+  if (/\b(dum|doven|h[åa]bl[øo]s|elendig)\b/.test(t)) return 'Det der er ikke det, der foregår.'
+  if (/\b(for meget|overv[æa]ldet|kaos)\b/.test(t)) return 'Ja. Der er for meget på én gang.'
+  return ''
+}
+
+export function respond({
+  text,
+  state,
+  seed = Math.floor(Math.random() * 1000),
+  closedToday = 0,
+  self,
+  observations = [],
+  usedConcepts = [],
+}: RespondInput): CoachReply {
   const intent = detectIntent(text)
   const tone = state.personalityProfile.tone
 
@@ -309,11 +349,61 @@ export function respond({ text, state, seed = Math.floor(Math.random() * 1000), 
     }
   }
 
+  // If something she said maps onto a mechanism worth naming, lead with that.
+  // This is what separates a reply she has read a hundred times from one that
+  // tells her something about her own situation.
+  //
+  // How much she already knows changes what counts as help. To someone who has
+  // read everything, a strategy tip is noise she has heard a hundred times —
+  // and being told the obvious is the fastest way to lose her. So: the more she
+  // knows, the lower the bar for leading with a mechanism instead of advice.
+  const expert = self?.familiarity === 'expert'
+  const concept = conceptsFor(text, self).find((c) => !usedConcepts.includes(c.id))
+  if (concept && text.trim().split(/\s+/).length >= (expert ? 2 : 3)) {
+    const strategy = pickStrategy(state, intent)
+    const opening = reflect(text, tone)
+    return {
+      lines: [opening, concept.insight, concept.move].filter(Boolean),
+      strategy,
+      conceptId: concept.id,
+      options: [
+        'Ja, det er præcis det',
+        'Ikke helt',
+        state.currentTask ? 'Hjælp mig i gang' : 'Hvad skal jeg lave?',
+      ],
+      action: actionFor(strategy, state),
+    }
+  }
+
+  // Nothing to explain: offer something she cannot see about her own data.
+  const observation = observations[0]
+  if (observation && (intent === 'unknown' || intent === 'greeting') && seed % 3 === 0) {
+    return {
+      lines: [observation.text, observation.evidence, observation.move].filter(Boolean) as string[],
+      strategy: 'visual-progress',
+      options: ['Det vidste jeg ikke', 'Det passer ikke', 'Hvad skal jeg lave nu?'],
+    }
+  }
+
   const strategy = pickStrategy(state, intent)
+  const opening = reflect(text, tone)
+
+  // Nothing matched, and she already knows every tip we have. Then the honest
+  // move is to ask rather than to dispense — a question she has not asked
+  // herself does more than advice she could have written.
+  if (expert && intent === 'unknown' && text.trim().split(/\s+/).length >= 3) {
+    return {
+      lines: [opening, PROBES[seed % PROBES.length]].filter(Boolean),
+      strategy,
+      options: ['Det er igangsætningen', 'Det er uklart hvad jeg skal', 'Jeg ved det ikke'],
+      action: actionFor(strategy, state),
+    }
+  }
+
   const lines = pickVariation(strategy, tone, seed).map((l) => fill(l, state, { closed: closedToday }))
 
   return {
-    lines,
+    lines: [opening, ...lines].filter(Boolean),
     strategy,
     options: optionsFor(strategy, state),
     action: actionFor(strategy, state),

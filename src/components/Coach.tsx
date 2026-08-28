@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Send } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { History, Plus, Send, Sparkles, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore, useClosedToday, useMentalLoad, useNextTask } from '@/store/useStore'
 import { askCoach } from '@/lib/coach/adapter'
 import { complexityOf, findTaskByText } from '@/lib/coach/engine'
@@ -11,6 +11,7 @@ import { parkPresets } from '@/lib/time'
 import { MicButton } from './ui/MicButton'
 import { actionableLeaves } from '@/lib/nodes'
 import { BLOCK_ANSWERS, BLOCK_NAMED, scanAttention } from '@/lib/attention'
+import { observe } from '@/lib/coach/memory'
 import type { ProcrastinationReason } from '@/db/types'
 
 /**
@@ -24,7 +25,17 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const map = useStore((s) => s.map)
   const profile = useStore((s) => s.profile)
   const prefs = useStore((s) => s.prefs)
-  const messages = useStore((s) => s.coachMessages)
+  const allMessages = useStore((s) => s.coachMessages)
+  const sessions = useStore((s) => s.coachSessions)
+  const activeSessionId = useStore((s) => s.activeSessionId)
+  const startSession = useStore((s) => s.startCoachSession)
+  const openSession = useStore((s) => s.openCoachSession)
+  const deleteSession = useStore((s) => s.deleteCoachSession)
+  const remember = useStore((s) => s.rememberObservations)
+  const memories = useStore((s) => s.memories)
+  const dismissMemory = useStore((s) => s.dismissMemory)
+  const nodes = useStore((s) => s.nodes)
+  const completions = useStore((s) => s.completions)
   const addMessage = useStore((s) => s.addCoachMessage)
   const openOverlay = useStore((s) => s.openOverlay)
   const parkNode = useStore((s) => s.parkNode)
@@ -39,6 +50,8 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const [thinking, setThinking] = useState(false)
   const [options, setOptions] = useState<string[]>([])
   const [action, setAction] = useState<CoachAction | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+  const usedConcepts = useRef<string[]>([])
   const used = useRef<Strategy[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -51,37 +64,65 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const [diagnosing, setDiagnosing] = useState<string | null>(null)
   // A task she names beats the one we happened to open with.
   const task = (namedTaskId ? map[namedTaskId] : null) ?? (nodeId ? map[nodeId] : null) ?? next?.node ?? null
-  const sessionId = 'default'
+  const sessionId = activeSessionId ?? ''
+  const messages = allMessages.filter((m) => m.sessionId === sessionId)
+
+  // Patterns from her own data, recomputed as the data changes.
+  const observations = useMemo(
+    () => observe(nodes, map, completions).filter((o) => !o.id.startsWith('__')),
+    [nodes, map, completions],
+  )
 
   useEffect(() => {
-    const attention = ask ? scanAttention(map).find((a) => !nodeId || a.node.id === nodeId) : null
+    let cancelled = false
 
-    if (attention) {
-      // Observation, then one open question. No advice yet — advice before the
-      // reason is known is just guessing out loud.
-      setNamedTaskId(attention.node.id)
-      setDiagnosing(attention.node.id)
-      void addMessage({
-        sessionId,
-        role: 'coach',
-        text: [
-          attention.headline,
-          'Jeg gætter ikke på hvorfor.',
-          'Hvad sker der, når du kommer til den?',
-        ].join('\n'),
-      })
-      setOptions(BLOCK_ANSWERS.map((a) => a.label))
-      void updateNode(attention.node.id, { lastAskedAt: Date.now() })
-      return
+    const boot = async () => {
+      // Always land in a real conversation, so nothing is ever written into a
+      // session she cannot find again.
+      let id = activeSessionId
+      if (!id) id = await startSession()
+      if (cancelled) return
+
+      // What the app has worked out about her, kept so it survives the chat.
+      if (observations.length) void remember(observations.slice(0, 4))
+
+      const existing = useStore.getState().coachMessages.filter((m) => m.sessionId === id)
+      if (existing.length > 0 && !ask) return
+
+      const attention = ask ? scanAttention(map).find((a) => !nodeId || a.node.id === nodeId) : null
+
+      if (attention) {
+        // Observation, then one open question. No advice yet — advice before
+        // the reason is known is just guessing out loud.
+        setNamedTaskId(attention.node.id)
+        setDiagnosing(attention.node.id)
+        void addMessage({
+          sessionId: id,
+          role: 'coach',
+          text: [
+            attention.headline,
+            'Jeg gætter ikke på hvorfor.',
+            'Hvad sker der, når du kommer til den?',
+          ].join('\n'),
+        })
+        setOptions(BLOCK_ANSWERS.map((a) => a.label))
+        void updateNode(attention.node.id, { lastAskedAt: Date.now() })
+        return
+      }
+
+      if (existing.length === 0) {
+        const line = GREETINGS[profile.tone][Math.floor(Math.random() * GREETINGS[profile.tone].length)]
+        void addMessage({ sessionId: id, role: 'coach', text: line })
+        setOptions(['Jeg kan ikke komme i gang', 'Der er for meget', 'Hvad skal jeg lave?'])
+      }
     }
 
-    if (messages.length === 0) {
-      const line = GREETINGS[profile.tone][Math.floor(Math.random() * GREETINGS[profile.tone].length)]
-      void addMessage({ sessionId, role: 'coach', text: line })
-      setOptions(['Jeg kan ikke komme i gang', 'Der er for meget', 'Hvad skal jeg lave?'])
+    void boot()
+    return () => {
+      cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [activeSessionId])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -128,7 +169,16 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
       setDiagnosing(null)
     }
 
-    const reply = await askCoach({ text: trimmed, state: buildState(focus), closedToday })
+    const reply = await askCoach({
+      text: trimmed,
+      state: buildState(focus),
+      closedToday,
+      self: profile.self,
+      observations,
+      usedConcepts: usedConcepts.current,
+      history: messages.slice(-10).map((m) => ({ role: m.role, text: m.text })),
+    })
+    if (reply.conceptId) usedConcepts.current = [...usedConcepts.current, reply.conceptId]
     // A short beat so it does not feel like a lookup table firing back.
     await new Promise((r) => setTimeout(r, prefs.reducedStimulation ? 120 : 420))
 
@@ -207,6 +257,97 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
 
   return (
     <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between gap-2 pb-1">
+        <button
+          onClick={() => setShowHistory((v) => !v)}
+          className="focus-ring -ml-1 flex min-h-[44px] items-center gap-1.5 rounded-full px-2 text-[13px] text-muted"
+        >
+          <History size={14} />
+          {showHistory ? 'Tilbage til samtalen' : `Tidligere samtaler (${sessions.length})`}
+        </button>
+        <button
+          onClick={async () => {
+            await startSession()
+            usedConcepts.current = []
+            setShowHistory(false)
+            setOptions([])
+          }}
+          className="focus-ring -mr-1 flex min-h-[44px] items-center gap-1.5 rounded-full px-2 text-[13px] text-muted"
+        >
+          <Plus size={14} />
+          Ny
+        </button>
+      </div>
+
+      {showHistory ? (
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto no-scrollbar py-2">
+          {sessions.length === 0 && (
+            <p className="py-8 text-center text-[14.5px] text-faint">Ingen tidligere samtaler.</p>
+          )}
+          {sessions.map((session) => (
+            <div
+              key={session.id}
+              className={`flex items-start gap-3 rounded-xl2 border p-4 ${
+                session.id === activeSessionId ? 'border-ink/25 bg-accent-soft/40' : 'border-line bg-surface'
+              }`}
+            >
+              <button
+                onClick={() => {
+                  openSession(session.id)
+                  usedConcepts.current = []
+                  setShowHistory(false)
+                  setOptions([])
+                }}
+                className="focus-ring min-w-0 flex-1 text-left"
+              >
+                <span className="block truncate text-[15px] font-medium">{session.title}</span>
+                <span className="mt-0.5 block text-[12.5px] text-faint">
+                  {new Date(session.updatedAt).toLocaleDateString('da-DK', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}{' '}
+                  · {session.messageCount} beskeder
+                </span>
+              </button>
+              <button
+                onClick={() => void deleteSession(session.id)}
+                aria-label="Slet samtale"
+                className="focus-ring -mr-1 -mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-full text-faint"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ))}
+
+          {memories.filter((m) => !m.dismissed).length > 0 && (
+            <div className="mt-6">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-faint">Hvad jeg har lagt mærke til</p>
+              <div className="mt-2.5 space-y-2">
+                {memories
+                  .filter((m) => !m.dismissed)
+                  .slice(0, 6)
+                  .map((m) => (
+                    <div key={m.id} className="rounded-xl2 border border-line bg-surface p-4">
+                      <p className="flex items-start gap-2 text-[14.5px] leading-snug">
+                        <Sparkles size={14} className="mt-0.5 shrink-0 text-warm" />
+                        {m.text}
+                      </p>
+                      {m.evidence && <p className="mt-1.5 pl-6 text-[12.5px] text-faint">{m.evidence}</p>}
+                      <button
+                        onClick={() => void dismissMemory(m.id)}
+                        className="focus-ring mt-1.5 flex min-h-[36px] items-center pl-6 text-[12.5px] text-faint"
+                      >
+                        Det passer ikke på mig
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto no-scrollbar py-2">
         {task && (
           <p className="pb-1 text-center text-[12px] text-faint">
@@ -248,8 +389,9 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
           )}
         </AnimatePresence>
       </div>
+      )}
 
-      {action && (
+      {!showHistory && action && (
         <button
           onClick={() => void runAction(action)}
           className="focus-ring mb-2 min-h-[48px] w-full rounded-xl2 bg-accent-soft text-[15px] font-medium active:scale-[0.99]"
@@ -258,7 +400,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
         </button>
       )}
 
-      {options.length > 0 && (
+      {!showHistory && options.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {options.map((o) => (
             <button
@@ -272,6 +414,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
         </div>
       )}
 
+      {!showHistory && (
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -294,6 +437,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
           <Send size={18} />
         </button>
       </form>
+      )}
 
       <p className="pb-2 text-center text-[11.5px] leading-relaxed text-faint/80">
         Coachen er en hjælper — ikke psykolog, læge eller behandler. Alt bliver på din telefon.

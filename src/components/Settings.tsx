@@ -1,4 +1,4 @@
-import { BarChart3, ChevronLeft, Download, Info, Lock, LockOpen, Share, Trash2, Upload } from 'lucide-react'
+import { BarChart3, ChevronLeft, Download, Heart, Info, Lock, LockOpen, Share, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useStore } from '@/store/useStore'
 import { downloadBackup, importBackup, BackupError, wipeEverything } from '@/lib/backup'
@@ -37,6 +37,7 @@ export function Settings() {
   const authState = useStore((s) => s.authState)
   const authName = useStore((s) => s.authName)
   const lockNow = useStore((s) => s.lockNow)
+  const openOverlay = useStore((s) => s.openOverlay)
   const removeLock = useStore((s) => s.removeLock)
 
   const fileRef = useRef<HTMLInputElement>(null)
@@ -46,6 +47,14 @@ export function Settings() {
   const [removePw, setRemovePw] = useState('')
   const [removing, setRemoving] = useState(false)
   const [lockError, setLockError] = useState<string | null>(null)
+
+  const self = profile.self
+  const selfCount = (self?.diagnoses.length ?? 0) + (self?.challenges.length ?? 0)
+  const selfSummary = selfCount
+    ? `Om dig — ${[...(self?.diagnoses ?? []), ...(self?.challenges ?? [])].slice(0, 3).join(', ')}${
+        selfCount > 3 ? ` +${selfCount - 3}` : ''
+      }`
+    : 'Fortæl coachen hvad du døjer med'
 
   const hasDemo = nodes.some((n) => n.demo)
   const brain = BRAIN_PROFILES[profile.brainProfileId] ?? BRAIN_PROFILES['quiet-brain']
@@ -88,6 +97,11 @@ export function Settings() {
             <p className="text-[17px] font-semibold tracking-[-0.02em]">{brain.title}</p>
             <p className="mt-1.5 text-[14px] leading-relaxed text-muted">{brain.body[0]}</p>
           </div>
+          <Row
+            icon={<Heart size={17} />}
+            label={selfSummary}
+            onClick={() => openOverlay({ kind: 'self' })}
+          />
         </Section>
 
         <Section title="Profil og kode">

@@ -31,7 +31,13 @@ export function Celebration() {
           exit={{ opacity: 0, y: 10 }}
           transition={{ type: 'spring', stiffness: 300, damping: 28 }}
         >
-          <div className="pointer-events-auto flex items-center gap-3.5 rounded-xl3 border border-line bg-raised px-5 py-4 shadow-lift">
+          {/*
+            No pointer-events. The toast sits over whatever she is doing next,
+            and for two seconds after closing a loop it was swallowing taps on
+            the buttons underneath — precisely the moment momentum matters most.
+            It has nothing to tap, so it should never take a tap.
+          */}
+          <div className="flex items-center gap-3.5 rounded-xl3 border border-line bg-raised px-5 py-4 shadow-lift">
             <div className="relative grid h-11 w-11 shrink-0 place-items-center">
               <svg width={44} height={44} className="absolute -rotate-90">
                 <motion.circle

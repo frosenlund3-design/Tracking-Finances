@@ -20,6 +20,7 @@ import { QuickAdd } from '@/components/QuickAdd'
 import { EnergySheet } from '@/components/EnergySheet'
 import { Notes } from '@/components/Notes'
 import { PlanSheet } from '@/components/PlanSheet'
+import { SelfProfile } from '@/components/SelfProfile'
 import { Celebration } from '@/components/Celebration'
 import { LockScreen } from '@/components/Lock'
 import { InstallHint } from '@/components/InstallHint'
@@ -106,6 +107,10 @@ export default function App() {
 
       <Sheet open={overlay.kind === 'plan'} onClose={closeOverlay} title="Fordel dem for mig" full>
         <PlanSheet />
+      </Sheet>
+
+      <Sheet open={overlay.kind === 'self'} onClose={closeOverlay} title="Om dig" full>
+        <SelfProfile />
       </Sheet>
     </div>
   )

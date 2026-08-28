@@ -95,8 +95,15 @@ export const GIFT_CARD_STORES: GiftCardStore[] = [
   },
 ]
 
-/** Points per krone. Tuned so 50 kr is roughly 20 closed loops — reachable in a good week, not a grind. */
-export const XP_PER_KRONE = 8
+/**
+ * Points per krone.
+ *
+ * A closed loop pays roughly 12–25 point (see scoring.xpFor), so 25 point pr.
+ * krone means 50 kr ≈ 70 lukkede loops, 100 kr ≈ 140, 200 kr ≈ 280. Det er
+ * bevidst en rigtig opsparing over uger — ikke noget man snubler over på to
+ * dage. En belønning, der kommer for let, holder op med at være en belønning.
+ */
+export const XP_PER_KRONE = 25
 
 export function xpTargetFor(amountDKK: number): number {
   return amountDKK * XP_PER_KRONE

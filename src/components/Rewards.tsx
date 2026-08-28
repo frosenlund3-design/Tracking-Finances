@@ -37,6 +37,14 @@ export function Rewards() {
 
   const achievements = buildAchievements(completions.length, prefs.streak, rewards.length, claimed.length)
 
+  // What a closed loop has actually paid her, so the target can be stated in
+  // loops rather than in an abstract number. Falls back to a middling loop
+  // until she has closed enough for her own average to mean anything.
+  const perLoop = completions.length >= 5
+    ? Math.max(4, Math.round(completions.reduce((sum, c) => sum + c.xp, 0) / completions.length))
+    : 15
+  const loopsFor = (amountDKK: number) => Math.round((amountDKK * XP_PER_KRONE) / perLoop / 5) * 5
+
   return (
     <div className="h-full overflow-y-auto no-scrollbar pb-28">
       <div className="px-6 pt-safe">
@@ -100,8 +108,18 @@ export function Rewards() {
                   </button>
                 ))}
               </div>
-              <p className="mt-2.5 text-[12.5px] text-faint">
-                {amount} kr. = {amount * XP_PER_KRONE} point. Du har {available}.
+              {/*
+                A bare "5000 point" is just a wall. What she needs to know is
+                whether it is reachable, so say it in loops — measured from her
+                own closed ones where there are any, not from an invented
+                average.
+              */}
+              <p className="mt-2.5 text-[12.5px] leading-relaxed text-faint">
+                {amount} kr. = {(amount * XP_PER_KRONE).toLocaleString('da-DK')} point. Du har{' '}
+                {available.toLocaleString('da-DK')}.
+                <span className="mt-0.5 block">
+                  Det er cirka {loopsFor(amount)} lukkede loops. Der er ingen tidsfrist.
+                </span>
               </p>
 
               <p className="mt-5 text-[13px] font-medium text-muted">Hvor?</p>

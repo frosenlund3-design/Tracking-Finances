@@ -153,6 +153,30 @@ export interface CoachSession {
   endedAt?: number
   taskId?: string
   outcome?: 'started' | 'completed' | 'parked' | 'abandoned' | 'open'
+  /** A short human title so she can find the conversation again. */
+  title: string
+  updatedAt: number
+  messageCount: number
+}
+
+/**
+ * Something the coach worked out and should not forget.
+ *
+ * Kept separate from the conversation so it survives long after the messages
+ * scroll away, and so it can be shown to her — a pattern she cannot see
+ * herself is only useful if she is told about it.
+ */
+export interface CoachMemory {
+  id: string
+  kind: 'pattern' | 'preference' | 'fact' | 'win'
+  text: string
+  /** What the observation is based on, so it is never a bare assertion. */
+  evidence?: string
+  createdAt: number
+  /** How many times the app has seen this hold. */
+  strength: number
+  /** She can tell the coach it is wrong. */
+  dismissed?: boolean
 }
 
 export interface Completion {
@@ -211,11 +235,28 @@ export type Motivator = 'progress' | 'rewards' | 'cheering' | 'self-competition'
 export type ToneChoice = 'calm' | 'warm' | 'blunt' | 'humor' | 'peptalk'
 export type InfoDensity = 'minimal' | 'balanced' | 'detailed'
 
+/**
+ * What she has told the app about herself. Never inferred, never guessed —
+ * the coach speaks from this, so a wrong entry here would make it speak
+ * confidently about the wrong person.
+ */
+export interface SelfDescription {
+  /** Diagnoses she has chosen to write down, in her own words. */
+  diagnoses: string[]
+  /** Other things she struggles with, in her own words. */
+  challenges: string[]
+  /** Anything else she wants the coach to know. */
+  freeText?: string
+  /** How much she already knows — changes how basic the coach is allowed to be. */
+  familiarity: 'new' | 'some' | 'expert'
+}
+
 export interface UserProfile {
   id: 'me'
   createdAt: number
   onboarded: boolean
   name?: string
+  self?: SelfDescription
   procrastinationReasons: ProcrastinationReason[]
   listReaction: ListReaction
   energyPeak: EnergyPeak

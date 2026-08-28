@@ -12,7 +12,8 @@
  */
 
 import type { EnergyLevel, LifeArea, MentalWeight, TimePart, Urgency } from '@/db/types'
-import { decompose } from './decompose'
+import { decompose, DEFAULT_GRANULARITY, type Granularity } from './decompose'
+import { analyse, BROKEN, hasAction, toImperativeSentence } from './language'
 
 export interface ParsedTime {
   at: number
@@ -56,8 +57,10 @@ export interface ParsedLoop {
   goodEnough?: string
   /** A remark that came in brackets after the action; kept as the description. */
   aside?: string
-  /** 0–1, how sure we are about the placement. Low confidence lands in Løst og fast. */
+  /** 0–1, how sure we are that this is a task rather than a note. */
   confidence: number
+  /** Whether a category rule actually recognised it, or it fell to Løst og fast. */
+  placed: boolean
 }
 
 interface Rule {
@@ -89,18 +92,24 @@ const RULES: Rule[] = [
   { match: /\bskat\b|selvangivel|[åa]rsopg[øo]rel|forskudsopg[øo]rel/i, path: ['Økonomi', 'Skat'], area: 'money', minutes: 45, energy: 100 },
   { match: /\bregning\w*|\bbetal\w*|\brykker\w*|\bnetbank\w*|\bgiro\b/i, path: ['Økonomi', 'Regninger'], area: 'money', minutes: 10, energy: 60 },
   { match: /\bbudget\w*|\bopsparing\w*|\bl[åa]n\b|\bbank\w*|\bpension\w*|\bforsikring\w*|\babonnement\w*|\bops[iy]g\w*/i, path: ['Økonomi'], area: 'money', minutes: 25, energy: 60 },
+  // Public benefits: officialdom, forms and a portal — reliably heavy, and
+  // reliably about money, whatever the form is called.
+  { match: /\bboligst[øo]tte\w*|\bkontanthj[æa]lp\w*|\bSU\b|\bsygedagpeng\w*|\bbarselsdagpeng\w*|\bb[øo]rnepeng\w*|\bb[øo]rne(?:check|tilskud)\w*|udbetaling danmark|\bfriplads\w*|\btilskud\b/i, path: ['Økonomi', 'Det offentlige'], area: 'admin', minutes: 35, energy: 100 },
 
   { match: /\btandl[æa]ge\w*/i, path: ['Mig', 'Tandlæge'], area: 'health', minutes: 8, energy: 60 },
-  { match: /\bl[æa]ge\w*|\bpsykolog\w*|\bfysioterap\w*|\bspeciall[æa]ge\w*|sundhed\.dk|\brecept\w*|\bmedicin\w*/i, path: ['Mig', 'Sundhed'], area: 'health', minutes: 10, energy: 60 },
+  { match: /\bl[æa]ge\w*|\bpsykolog\w*|\bfysioterap\w*|\bspeciall[æa]ge\w*|sundhed\.dk|\brecept\w*|\bmedicin\w*|\bblodpr[øo]ve\w*|\bpr[øo]vesvar\w*|\bhenvisning\w*|\bscanning\w*|\bvaccin\w*/i, path: ['Mig', 'Sundhed'], area: 'health', minutes: 10, energy: 60 },
   { match: /\btr[æa]n\w*|\bl[øo]betur\w*|\byoga\b|\bmotion\b|\bg[åa]tur\b|\bfitness\b|\bsv[øo]mme\w*/i, path: ['Mig', 'Krop'], area: 'health', minutes: 40, energy: 60 },
   { match: /\bfris[øo]r\w*|\bnegle\w*|\bmassage\b|\bwellness\b|\bmig selv\b|\bpause\b|\bhvile\b/i, path: ['Mig', 'Aftaler'], area: 'personal', minutes: 15, energy: 30 },
   { match: /\bferie\w*|\brejse\w*|\bfly\b|\bhotel\b|\bsommerhus\w*/i, path: ['Mig', 'Ferie'], area: 'personal', minutes: 45, energy: 60 },
 
+  { match: /\bposthus\w*|\bpakkeshop\w*|\bpakke[nr]?\b|\bafhentningssted\w*|\bgenbrugsplads\w*|\bbibliotek\w*|\bapotek\w*|\brenseri\w*|\bskomager\w*|\bflaskeautomat\w*|\bafleveres?\s+p[åa]\b/i, path: ['Hjem', 'Ærinder'], area: 'home', minutes: 20, energy: 30 },
   { match: /\bindk[øo]b\w*|\bk[øo]b\w*\s+ind\b|\bhandle\s+ind\b|\bnetto\b|\bf[øo]tex\b|\bbilka\b|\brema\b|\blidl\b|\bsuper\w*|vaskemid\w*|\bshampoo\b|\btandpasta\b|\bm[æa]lk\b|\bbr[øo]d\b|\btoiletpapir\b/i, path: ['Hjem', 'Indkøb'], area: 'home', minutes: 25, energy: 30 },
-  { match: /\bopvask\w*|\bk[øo]kken\w*|\btallerken\w*|\bmadpakke\w*|\bmadplan\w*|\baftensmad\b/i, path: ['Hjem', 'Køkken'], area: 'home', minutes: 15, energy: 30 },
-  { match: /\bvasket[øo]j\b|\bvask\w*|\bt[øo]rretumbler\b|\bstrygning\b|\bt[øo]j\b/i, path: ['Hjem', 'Vasketøj'], area: 'home', minutes: 10, energy: 30 },
+  { match: /\bopvask\w*|\bk[øo]kken\w*|\btallerken\w*|\bmadpakke\w*|\bmadplan\w*|\baftensmad\b|\bservice\b/i, path: ['Hjem', 'Køkken'], area: 'home', minutes: 15, energy: 30 },
+  // Anchored deliberately: bare "vask" also lives inside "vaskemiddel" and
+  // "opvask", and matching those put shopping and dishes into the laundry.
+  { match: /\bvasket[øo]j\b|\bvaskemaskin\w*|\bvaske?\s+t[øo]j\b|\bt[øo]rretumbler\b|\bstrygning\b|\bt[øo]rre\s+t[øo]j\b/i, path: ['Hjem', 'Vasketøj'], area: 'home', minutes: 10, energy: 30 },
   { match: /\breng[øo]r\w*|\bst[øo]vsug\w*|\bg[øo]re rent\b|\bryd op\b|\boprydning\b|\bgulv\w*|\bbadev[æa]rels\w*|\bst[øo]v\b|\bskrald\b|\baffald\b/i, path: ['Hjem', 'Rengøring'], area: 'home', minutes: 20, energy: 30 },
-  { match: /\bbil\b|\bv[æa]rksted\w*|\bd[æa]k\b|\bsyn\b|\bbenzin\b|\bcykel\w*/i, path: ['Hjem', 'Praktisk'], area: 'home', minutes: 20, energy: 60 },
+  { match: /\bbil(?:en|er|erne)?\b|\bv[æa]rksted\w*|\bd[æa]k(?:ket|kene)?\b|\bsyn(?:et)?\b|\bbenzin\b|\bcykel\w*|\bnummerplade\w*|\bbilsyn\w*/i, path: ['Hjem', 'Praktisk'], area: 'home', minutes: 20, energy: 60 },
   { match: /\bhaven\b|\bhavearbejde\b|\bplante\w*|\bmale\b|\bmaling\b|\breparer\w*|\bh[åa]ndv[æa]rker\w*|\bskur\b|\bloftet\b|\bk[æa]lderen\b/i, path: ['Hjem', 'Praktisk'], area: 'home', minutes: 45, energy: 60 },
   { match: /\bhjem\w*|\bboligen\b|\blejlighed\w*|\bhus(?:et)?\b/i, path: ['Hjem'], area: 'home', minutes: 25, energy: 30 },
 
@@ -108,9 +117,37 @@ const RULES: Rule[] = [
   { match: /\bb[øo]rn\w*|\bskole\w*|\bb[øo]rnehave\w*|\bvuggestue\w*|\blektier\b|\bforældrem[øo]de\b|\bdatter\w*|\bs[øo]n(?:nen)?\b/i, path: ['Familie', 'Børn'], area: 'family', minutes: 20, energy: 60 },
   { match: /\bgave\w*|\bf[øo]dselsdag\w*|\bjul\b|\bbryllup\w*|\bkonfirmation\w*|\bfest\b/i, path: ['Familie', 'Mærkedage'], area: 'family', minutes: 25, energy: 60 },
 
-  { match: /\bmail\w*|\be-?mail\w*|\bindbakke\w*|\bsvar p[åa]\b/i, path: ['Løst og fast'], area: 'admin', minutes: 10, energy: 60, confidence: 0.5 },
+  { match: /\bmail\w*|\be-?mail\w*|\bindbakke\w*|\bsvar p[åa](?=\s|$)/i, path: ['Løst og fast'], area: 'admin', minutes: 10, energy: 60, confidence: 0.5 },
   { match: /\bpapir\w*|\bdokument\w*|\bblanket\w*|\bkontrakt\w*|\bans[øo]g\w*|\bborger\.dk\b|\bmitid\b|\be-?boks\b/i, path: ['Løst og fast'], area: 'admin', minutes: 25, energy: 60, confidence: 0.5 },
 ]
+
+/** Anything that opens with a verb we recognise is an instruction. */
+const STARTS_WITH_ACTION =
+  /^(?:Ring|Kontakt|K[øo]b|Skriv|Send|Svar|Betal|Book|Aflever|Hent|Vask|T[øo]m|Fyld|Ryd|Reng[øo]r|St[øo]vsug|Find|Ordn|Lav|Planl[æa]g|Print|Udfyld|Ans[øo]g|Opsig|Skift|Flyt|Pak|Post|Optag|Rediger|Tr[æa]n|L[æa]s|Tjek|Beslut|Sp[øo]rg|Mal|Reparér|Sortér|H[æa]ng|F[åa]|G[åa]|Tag|[ÅA]bn|Luk|Meld)\b/
+
+/** Feeling words. A sentence that is mostly one of these is not an errand. */
+const FEELING =
+  /\b(tr[æa]t af|stresset|irriteret|overv[æa]ldet|ked af|bange for|nerv[øo]s|flov|skyldig|forvirret|orker ikke|hader|elsker|savner|f[øo]ler|synes)\b/i
+
+/**
+ * Something that already happened.
+ *
+ * "Lægen ringede" is context, not an instruction — but it sits right next to
+ * the task it explains ("…jeg skal spørge om blodprøven"), so a splitter will
+ * hand it over on its own. Filed as a task it becomes an item she can never
+ * close, which is exactly the kind of thing that makes her stop trusting the
+ * list. The verbs here are past forms that cannot double as imperatives.
+ */
+const PAST_STATEMENT =
+  /\b(ringede|sagde|skrev|kom|var|havde|fik|sendte|blev|har\s+ringet|har\s+sagt|har\s+skrevet|har\s+sendt|er\s+kommet|nævnte|fortalte|spurgte|mailede|afleverede|meldte)\b/i
+
+
+/**
+ * Past tense wrapped around a live instruction: "hun sagde at jeg skulle sende
+ * papirerne". The reporting verb is history; the thing she has to do is not.
+ * Without this the whole line was filed as a note and the deadline vanished.
+ */
+const REPORTED_TASK = /\b(?:jeg|vi|man)\s+(?:skulle|skal|m[åa]|b[øo]r|burde|er\s+n[øo]dt\s+til\s+at)\b/i
 
 /**
  * Wording that means "here is something I know", not "here is something to do".
@@ -118,10 +155,6 @@ const RULES: Rule[] = [
  */
 const NOTE_OPENERS =
   /^(?:ved\s+(?:heller\s+)?ikke|jeg\s+ved\s+(?:heller\s+)?ikke|jeg\s+tror|jeg\s+f[øo]ler|jeg\s+er\s|jeg\s+har\s+det|det\s+f[øo]les|det\s+er\s|problemet\s+er|jeg\s+kan\s+ikke\s+finde\s+ud|jeg\s+orker|jeg\s+hader|jeg\s+elsker|jeg\s+savner|jeg\s+bliver|allerede|husk\s+at\s+jeg|i\s+[øo]vrigt|bare\s+s[åa]|synes)/i
-
-/** Feeling and state words with no action anywhere near them. */
-const STATE_WORDS =
-  /\b(tr[æa]t|stresset|irriteret|overv[æa]ldet|ked\s+af|bange|nerv[øo]s|flov|skyldig|forvirret|umulig\w*|un[øo]dvendig\w*|sv[æa]rt|nemt|god\s+til|d[åa]rlig\s+til|glad|lettet)\b/i
 
 /**
  * Decides whether a fragment is something to do or something to remember.
@@ -131,22 +164,88 @@ const STATE_WORDS =
  * worry that became a task quietly inflates the mental load number and can
  * never be closed.
  */
-export function classifySegment(fragment: string): ParsedKind {
+export interface Classification {
+  kind: ParsedKind
+  /** 0–1. Anything below CERTAIN is flagged for her to glance at. */
+  confidence: number
+}
+
+/** Below this, the review screen highlights the row and invites a second look. */
+export const CERTAIN = 0.75
+
+/**
+ * A fragment carrying an actual date or clock time. Month names appear without
+ * their ordinal full stop because normaliseAbbreviations has already removed it.
+ */
+const DATED =
+  /\b(?:\d{1,2}\s+(?:januar|februar|marts|april|maj|juni|juli|august|september|oktober|november|december)|\d{1,2}[./]\d{1,2}|kl\s*\d{1,2}|i\s*morgen|i\s*overmorgen|p[åa]\s+(?:mandag|tirsdag|onsdag|torsdag|fredag|l[øo]rdag|s[øo]ndag))\b/i
+
+/**
+ * Task or note.
+ *
+ * This has to be judged on the *action form* of the fragment, not the raw
+ * words. "Skal have booket en tid til synet af bilen" contains no imperative
+ * and reads like prose, so a raw check called it a note — while it is plainly
+ * a task. Converting to the imperative first ("Book en tid til synet af
+ * bilen") makes the verb visible.
+ *
+ * A local classifier cannot be perfect, and getting this wrong in either
+ * direction is expensive: a worry turned into a task can never be closed, and
+ * a task filed as a note silently disappears from the plan. So this returns a
+ * confidence as well, every row carries a one-tap task/note switch, and
+ * anything uncertain is marked for her to look at. The guarantee is not that
+ * the guess is always right — it is that a wrong guess is always visible and
+ * always one tap from fixed.
+ */
+export function classifySegment(fragment: string): Classification {
   const cleaned = cleanFragment(fragment)
-  if (!cleaned) return 'note'
+  if (!cleaned) return { kind: 'note', confidence: 1 }
 
-  if (NOTE_OPENERS.test(cleaned)) return 'note'
-  // A question is information-seeking, not an action.
-  if (/\?\s*$/.test(fragment.trim())) return 'note'
-  if (/^(?:hvordan|hvorn[åa]r|hvorfor|hvad|hvem|hvor)\b/i.test(cleaned)) return 'note'
+  const action = toImperativeSentence(cleaned)
+  const analysis = analyse(action)
+  const words = cleaned.split(/\s+/).length
 
-  const firstThree = cleaned.split(/\s+/).slice(0, 3).join(' ')
-  const hasVerb = ACTION_VERBS.test(firstThree) || ACTION_VERBS.test(cleaned)
+  // --- unambiguous notes ---------------------------------------------------
+  if (/\?\s*$/.test(fragment.trim())) return { kind: 'note', confidence: 0.95 }
+  if (/^(?:hvordan|hvorn[åa]r|hvorfor|hvad|hvem|hvor)\b/i.test(cleaned) && !hasAction(cleaned)) {
+    return { kind: 'note', confidence: 0.9 }
+  }
+  if (NOTE_OPENERS.test(cleaned) && !STARTS_WITH_ACTION.test(action)) {
+    return { kind: 'note', confidence: 0.9 }
+  }
+  // "Jeg er så træt af at der er rod" — a feeling, even though "rod" is a thing.
+  if (FEELING.test(cleaned) && !analysis.verb) return { kind: 'note', confidence: 0.88 }
+  // "Lægen ringede", "posten kom i går", "hun sagde at…" — something that has
+  // already happened. It may be why a task exists, but it is not the task, and
+  // filing it as one puts an impossible item on her list.
+  if (PAST_STATEMENT.test(cleaned) && !STARTS_WITH_ACTION.test(action) && !REPORTED_TASK.test(cleaned)) {
+    return { kind: 'note', confidence: 0.85 }
+  }
 
-  // Long, verbless, feeling-laden text is commentary.
-  if (!hasVerb && (STATE_WORDS.test(cleaned) || cleaned.split(/\s+/).length > 5)) return 'note'
+  // Something is wrong with a thing. It is a task, but not the task the noun
+  // suggests: "vaskemaskinen larmer" is a repair, and handing back a
+  // wash-the-clothes checklist is exactly the kind of not-reading-it that makes
+  // the whole list untrustworthy. Marked here so decompose can route it.
+  if (BROKEN.test(cleaned) && !analysis.verb) return { kind: 'task', confidence: 0.8 }
 
-  return 'task'
+  // --- unambiguous tasks ---------------------------------------------------
+  // A recognised verb in first position is as clear as it gets.
+  if (analysis.verb) return { kind: 'task', confidence: 0.95 }
+  // Something with a date on it is a commitment, even when it is written as a
+  // flat statement: "Mors fødselsdag er 14 marts", "Tandlæge på torsdag kl 9".
+  // Nobody writes a date down for the fun of it — there is something to do
+  // before it, and a note cannot carry a deadline.
+  if (DATED.test(cleaned)) return { kind: 'task', confidence: 0.85 }
+  // "En tid skal bookes" — the verb is late but the sentence is still an action.
+  if (hasAction(cleaned) && words <= 12) return { kind: 'task', confidence: 0.8 }
+
+  // --- genuinely unsure ----------------------------------------------------
+  // A short noun phrase is nearly always a task written as shorthand:
+  // "tandlæge", "vaskemiddel", "mors fødselsdag".
+  if (words <= 4) return { kind: 'task', confidence: 0.65 }
+
+  // Long, verbless prose is nearly always commentary.
+  return { kind: 'note', confidence: 0.6 }
 }
 
 /** Verbs that make a fragment stand on its own when splitting on "og". */
@@ -168,11 +267,11 @@ const INFINITIVE_TO_IMPERATIVE: Record<string, string> = {
 
 /** Adverbs that survive the modal strip and turn "skal snart købe ind" into nonsense. */
 const LEAD_ADVERBS =
-  /^(?:snart|lige|ogs[åa]|vist|nok|m[åa]ske|altid|tit|ofte|stadig|endelig|virkelig|bare|godt|vel)\s+/i
+  /^(?:snart|lige|ogs[åa]|vist|nok|m[åa]ske|altid|tit|ofte|stadig|endelig|virkelig|bare|godt|vel|egentlig|faktisk|jo|da|mon|alts[åa]|vist\s*nok|helst|gerne)\s+/i
 
 /** Filler that carries no task information. */
 const LEAD_FILLER =
-  /^(?:og\s+|s[åa]\s+|men\s+|ogs[åa]\s+|jeg\s+|man\s+|der\s+|vi\s+|det\s+|lige\s+|desuden\s+|derudover\s+|plus\s+at\s+|dertil\s+)/i
+  /^(?:og\s+|s[åa]\s+|men\s+|ogs[åa]\s+|jeg\s+|man\s+|der\s+|vi\s+|det\s+|lige\s+|desuden\s+|derudover\s+|plus\s+at\s+|dertil\s+|(?:hvorn[åa]r|hvordan|hvorfor|hvad|hvem|hvor)\s+(?=skal|kan|b[øo]r|skulle|m[åa]))/i
 
 const MODALS =
   /^(?:skal(?:\s+lige)?(?:\s+ogs[åa])?|mangler(?:\s+ogs[åa])?|b[øo]r|vil\s+gerne|vil|har\s+brug\s+for|er\s+n[øo]dt\s+til|n[øo]dt\s+til|trænger\s+til|skulle|kunne|burde|husk(?:e)?\s+p[åa]?|husk(?:e)?)\s*(?:at\s+)?/i
@@ -218,7 +317,20 @@ function normaliseAbbreviations(text: string): string {
     .replace(/\bevt\.\s*/gi, 'evt ')
     .replace(/\bdvs\.\s*/gi, 'dvs ')
     .replace(/\bbl\.\s*a\.\s*/gi, 'bla ')
+    // "14. marts" — the full stop is an ordinal marker, not a sentence end.
+    // Without this, "Mors fødselsdag er 14. marts" becomes two loops, one of
+    // which is called "Marts". Written without a lookbehind on purpose: those
+    // are still missing on older iOS Safari, and this has to work on her phone.
+    .replace(/(\d{1,2})\.\s+(?=[a-zæøå])/g, '$1 ')
 }
+
+/**
+ * A line that is one action followed by the things it applies to:
+ * "køb ind: mælk, brød, kaffe", "pak - toilettaske, oplader, bog".
+ * The head has to name an action, or every comma-separated thought would
+ * qualify.
+ */
+const LIST_LINE = /^(.{2,40}?)\s*(?::|\s[-–—]\s)\s*([^,]{1,30}(?:\s*,\s*[^,]{1,30}){1,})$/
 
 /** Splits a messy paragraph into separate loops. */
 export function splitSegments(raw: string): string[] {
@@ -228,12 +340,23 @@ export function splitSegments(raw: string): string[] {
     // regex anchored with ^ across the whole blob only ever matches the very
     // first bullet, which is how "- hold hjem rent" became a task title.
     .map((l) => l.replace(/^\s*[-–—*+]\s*/, '').trim())
-    .flatMap((l) => l.split(/\s+[-–—]\s+/))
+    // A dash usually separates two thoughts — but not when what follows it is a
+    // comma list belonging to what precedes it ("køb ind - mælk, brød, kaffe").
+    .flatMap((l) => (LIST_LINE.test(l) ? [l] : l.split(/\s+[-–—]\s+/)))
     .map((l) => l.trim())
     .filter(Boolean)
 
   const out: string[] = []
   for (const line of lines) {
+    // "købe ind - mælk, brød, kaffe" is one task with a list attached, not four
+    // tasks called Køb, Mælk, Brød and Kaffe. Splitting it produced three items
+    // she could never close and one that had lost its point.
+    const list = line.match(LIST_LINE)
+    if (list && hasAction(list[1])) {
+      out.push(`${list[1].trim()} (${list[2].trim()})`)
+      continue
+    }
+
     // Hard separators first — these are unambiguous.
     // A full stop followed by a digit is a date or a time, not a sentence end.
     const hard = line
@@ -278,7 +401,10 @@ function standsAlone(fragment: string): boolean {
 
 /** Removes "jeg skal huske at ..." style scaffolding. */
 export function cleanFragment(fragment: string): string {
-  let s = fragment.trim().replace(/^\s*[-–—*+]\s*/, '')
+  // "Hun sagde at jeg skulle sende papirerne" — who said it is context; what
+  // she has to do is the task. Left in, the title read as reported speech and
+  // the step generator had no verb to work with.
+  let s = fragment.trim().replace(/^\s*[-–—*+]\s*/, '').replace(REPORTED_PREFIX, '')
   for (let i = 0; i < 5; i++) {
     const before = s
     s = s.replace(LEAD_FILLER, '').replace(MODALS, '').replace(LEAD_ADVERBS, '').trim()
@@ -286,6 +412,10 @@ export function cleanFragment(fragment: string): string {
   }
   return s
 }
+
+/** "hun sagde at ", "lægen skrev at ", "de bad mig om at " — up to the instruction. */
+const REPORTED_PREFIX =
+  /^.{0,40}?\b(?:sagde|skrev|n[æa]vnte|fortalte|spurgte|bad\s+mig\s+om|mindede\s+mig\s+om|har\s+sagt|har\s+skrevet)\s+(?:at\s+)?(?=(?:jeg|vi|man)\s+(?:skal|skulle|m[åa]|b[øo]r|burde))/i
 
 /**
  * Splits off a trailing aside. "hold hjem rent (allerede ret god til det)" is
@@ -331,8 +461,19 @@ export function toImperative(text: string): string {
   return [head, ...rest].join(' ')
 }
 
-function matchRule(text: string): Rule | null {
-  for (const rule of RULES) if (rule.match.test(text)) return rule
+/**
+ * Category matching, on both the raw fragment and its cleaned action form.
+ *
+ * Rules are ordered specific-before-general and every pattern is anchored on
+ * word boundaries, because the whole class of bug here is a pattern matching
+ * inside another word — "vask" inside "vaskemiddel", "post" inside
+ * "posthuset". A rule that fires on a fragment of a word puts the task in the
+ * wrong world and gives it the wrong steps, and she has no way to tell why.
+ */
+function matchRule(segment: string, title: string): Rule | null {
+  for (const rule of RULES) {
+    if (rule.match.test(segment) || rule.match.test(title)) return rule
+  }
   return null
 }
 
@@ -373,6 +514,32 @@ function detectDue(text: string, date: string | undefined, now: Date): ParsedTim
   }
 }
 
+const MONTHS: Record<string, number> = {
+  januar: 0, februar: 1, marts: 2, april: 3, maj: 4, juni: 5,
+  juli: 6, august: 7, september: 8, oktober: 9, november: 10, december: 11,
+}
+
+/** "14 marts", "den 3 juni" — the ordinal full stop is already normalised away. */
+function monthDate(lower: string, now: Date): string | undefined {
+  const m = lower.match(
+    /\b(?:den\s+)?(\d{1,2})\s+(januar|februar|marts|april|maj|juni|juli|august|september|oktober|november|december)\b/,
+  )
+  if (!m) return undefined
+  const day = Number(m[1])
+  if (day < 1 || day > 31) return undefined
+  const month = MONTHS[m[2]]
+  let year = now.getFullYear()
+  const candidate = new Date(year, month, day)
+  // A date that has already passed this year means next year — nobody writes
+  // down a birthday that was three months ago as something to prepare for.
+  if (candidate.getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) {
+    year += 1
+  }
+  const final = new Date(year, month, day)
+  if (final.getMonth() !== month) return undefined // 31 februar
+  return isoDate(final)
+}
+
 function detectSchedule(text: string, now = new Date()): { date?: string; part?: TimePart } {
   let date: string | undefined
   const lower = text.toLowerCase()
@@ -380,6 +547,7 @@ function detectSchedule(text: string, now = new Date()): { date?: string; part?:
   if (/\b(i dag|idag)\b/.test(lower)) date = isoDate(now)
   else if (/\b(i morgen|imorgen)\b/.test(lower)) date = isoDate(addDays(now, 1))
   else if (/\b(i overmorgen)\b/.test(lower)) date = isoDate(addDays(now, 2))
+  else if (monthDate(lower, now)) date = monthDate(lower, now)
   else {
     for (const [name, dow] of Object.entries(WEEKDAYS)) {
       if (new RegExp(`\\b(?:p[åa]\\s+)?${name}\\b`, 'i').test(lower)) {
@@ -406,10 +574,18 @@ function detectSchedule(text: string, now = new Date()): { date?: string; part?:
  * makes the card noisy.
  */
 const TIME_PHRASES =
-  /\s*\b(?:p[åa]\s+)?(?:i\s*dag|i\s*morgen|i\s*overmorgen|i\s*aften|i\s*weekenden|denne\s+uge|n[æa]ste\s+uge|s[øo]ndag|mandag|tirsdag|onsdag|torsdag|fredag|l[øo]rdag|om\s+morgenen|om\s+eftermiddagen|om\s+aftenen|senest|hurtigst\s+muligt|kl(?:\.|okken)?\s*\d{1,2}(?:[.:]\d{2})?)\b\s*/gi
+  /\s*\b(?:p[åa]\s+)?(?:i\s*dag|i\s*morgen|i\s*overmorgen|i\s*aften|i\s*weekenden|denne\s+uge|n[æa]ste\s+uge|s[øo]ndag|mandag|tirsdag|onsdag|torsdag|fredag|l[øo]rdag|om\s+morgenen|om\s+eftermiddagen|om\s+aftenen|senest|hurtigst\s+muligt|kl(?:\.|okken)?\s*\d{1,2}(?:[.:]\d{2})?|(?:den\s+)?\d{1,2}\s+(?:januar|februar|marts|april|maj|juni|juli|august|september|oktober|november|december))\b\s*/gi
+
+/**
+ * Words left hanging when the time phrase they introduced is removed.
+ * "Mors fødselsdag er 14 marts" must not become "Mors fødselsdag er".
+ */
+const DANGLING = /\s+\b(?:er|var|bliver|den|det|d|p[åa]|til|om|i|kl|fra|inden)\b[\s.,]*$/i
 
 export function stripTimePhrases(title: string): string {
-  const stripped = title.replace(TIME_PHRASES, ' ').replace(/\s{2,}/g, ' ').trim()
+  let stripped = title.replace(TIME_PHRASES, ' ').replace(/\s{2,}/g, ' ').trim()
+  let guard = 0
+  while (DANGLING.test(stripped) && guard++ < 3) stripped = stripped.replace(DANGLING, '').trim()
   // Never strip a title down to nothing (e.g. a task literally called "I dag"),
   // but one solid word is a fine title: "Lægetid" beats "Lægetid på fredag kl 9".
   return stripped.length >= 3 ? stripped : title
@@ -446,18 +622,26 @@ function estimateWeight(minutes: number, stepCount: number, vague: boolean): Men
 }
 
 /** Parses a whole brain dump into placed, sized, pre-broken-down loops. */
-export function parseBrainDump(raw: string, now = new Date()): ParsedLoop[] {
+export interface ParseOptions {
+  now?: Date
+  granularity?: Granularity
+}
+
+export function parseBrainDump(raw: string, options: Date | ParseOptions = {}): ParsedLoop[] {
+  const opts: ParseOptions = options instanceof Date ? { now: options } : options
+  const now = opts.now ?? new Date()
+  const granularity = opts.granularity ?? DEFAULT_GRANULARITY
   const segments = splitSegments(raw)
   const seen = new Set<string>()
   const result: ParsedLoop[] = []
 
   for (const segment of segments) {
-    const kind = classifySegment(segment)
+    const classification = classifySegment(segment)
 
-    if (kind === 'note') {
+    if (classification.kind === 'note') {
       // Attach to the task just above it — that is nearly always what the note
       // is about — or keep it standalone for the "Hovedet" list.
-      const lastTask = lastTaskIndex(result)
+      const lastTask = belongsWithPreviousTask(segment, result)
       result.push({
         kind: 'note',
         attachTo: lastTask >= 0 ? lastTask : undefined,
@@ -471,7 +655,8 @@ export function parseBrainDump(raw: string, now = new Date()): ParsedLoop[] {
         energyRequired: 30,
         urgency: 'none',
         steps: [],
-        confidence: 0.6,
+        confidence: classification.confidence,
+        placed: lastTask >= 0,
       })
       continue
     }
@@ -479,18 +664,26 @@ export function parseBrainDump(raw: string, now = new Date()): ParsedLoop[] {
     const cleaned = cleanFragment(segment)
     if (cleaned.length < 2) continue
     const { main, aside } = splitAside(cleaned)
-    const title = toImperative(main)
+    const title = toImperativeSentence(main)
     const dedupeKey = title.toLowerCase()
     if (seen.has(dedupeKey)) continue
     seen.add(dedupeKey)
 
-    const rule = matchRule(segment)
-    const breakdown = decompose(title)
-    const minutes = breakdown?.minutes ?? rule?.minutes ?? guessMinutes(title)
-    const vague = /\b(styr p[åa]|ordne|overblik|planl[æa]g|organiser)\b/i.test(title)
+    const rule = matchRule(segment, title)
     const schedule = detectSchedule(segment, now)
     const due = detectDue(segment, schedule.date, now)
     const finalTitle = schedule.date || schedule.part ? stripTimePhrases(title) : title
+
+    // Break down the *cleaned* title. Running it on the raw one produced steps
+    // like "Find elregningen senest frem" and "Find Tandlæge torsdag kl 14s
+    // nummer" — the time words were still sitting inside the object.
+    //
+    // And an appointment gets no steps at all: "Tandlæge torsdag kl 14" is
+    // already booked. Handing her a checklist for booking it is the app not
+    // reading what she wrote.
+    const breakdown = due?.kind === 'appointment' ? null : decompose(finalTitle, { granularity })
+    const minutes = breakdown?.minutes ?? rule?.minutes ?? guessMinutes(finalTitle)
+    const vague = /\b(styr p[åa]|ordne|overblik|planl[æa]g|organiser)\b/i.test(finalTitle)
 
     result.push({
       kind: 'task',
@@ -502,14 +695,19 @@ export function parseBrainDump(raw: string, now = new Date()): ParsedLoop[] {
       area: rule?.area ?? 'other',
       estimatedMinutes: minutes,
       mentalWeight: rule?.weight ?? estimateWeight(minutes, breakdown?.steps.length ?? 0, vague),
-      energyRequired: rule?.energy ?? guessEnergy(title, minutes),
+      energyRequired: rule?.energy ?? guessEnergy(finalTitle, minutes),
       urgency: detectUrgency(segment),
       scheduledDate: schedule.date,
       scheduledPart: schedule.part,
       due,
       steps: breakdown?.steps ?? [],
       goodEnough: breakdown?.goodEnough,
-      confidence: rule ? (rule.confidence ?? 0.85) : 0.35,
+      // Only how sure we are that this is a task rather than a note. Whether we
+      // also worked out *where* it belongs is a separate question — a task with
+      // no matching category is still unmistakably a task, and flagging it as
+      // doubtful would teach her to ignore the flag that actually matters.
+      confidence: classification.confidence,
+      placed: rule ? (rule.confidence ?? 0.85) >= 0.75 : false,
     })
   }
 
@@ -518,6 +716,51 @@ export function parseBrainDump(raw: string, now = new Date()): ParsedLoop[] {
 
 function lastTaskIndex(items: ParsedLoop[]): number {
   for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'task') return i
+  return -1
+}
+
+/** Words that carry no topic, so they say nothing about what a note is about. */
+const STOPWORDS = new Set([
+  'jeg', 'du', 'han', 'hun', 'vi', 'de', 'den', 'det', 'der', 'som', 'og', 'at', 'er', 'var',
+  'har', 'havde', 'skal', 'kan', 'vil', 'en', 'et', 'til', 'for', 'med', 'om', 'på', 'af', 'i',
+  'så', 'men', 'ikke', 'min', 'mit', 'mine', 'lige', 'bare', 'meget', 'helt', 'også', 'nu',
+  'hele', 'alt', 'noget', 'nogle', 'man', 'være', 'blive', 'fra', 'ved', 'over', 'efter',
+])
+
+function topicWords(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^a-zæøå0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 3 && !STOPWORDS.has(w))
+      .map((w) => w.replace(/(?:erne|ene|ens|ers|en|et|er|s)$/, '')),
+  )
+}
+
+/**
+ * Should this note hang under the task written just before it?
+ *
+ * Usually yes — "Ring til værkstedet. De har lukket mandag" is one thought.
+ * But not always: "Aflever pakken. Jeg er så træt af at der er rod overalt" is
+ * two, and filing the second under the first buries a real feeling inside an
+ * errand where she will never see it again.
+ *
+ * So it only attaches when the note actually points back: either it opens with
+ * a word that refers to something ("de", "den", "hun"), or it shares a topic
+ * word with the task. Everything else stands on its own in Hovedet.
+ */
+const REFERS_BACK = /^(?:de[nt]?|dem|deres|han|hun|hans|hendes|det er|den er|de har|han har|hun har)\b/i
+
+function belongsWithPreviousTask(segment: string, items: ParsedLoop[]): number {
+  const i = lastTaskIndex(items)
+  if (i < 0) return -1
+  const note = segment.trim()
+  if (REFERS_BACK.test(note)) return i
+
+  const noteWords = topicWords(note)
+  const taskWords = topicWords(items[i].title)
+  for (const w of noteWords) if (taskWords.has(w)) return i
   return -1
 }
 

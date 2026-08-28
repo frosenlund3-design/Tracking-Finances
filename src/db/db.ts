@@ -4,6 +4,7 @@ import type {
   BrainDumpEntry,
   Note,
   ClaimedReward,
+  CoachMemory,
   CoachMessage,
   CoachSession,
   Completion,
@@ -30,6 +31,7 @@ export class LoopsDB extends Dexie {
   prefs!: Table<UserPreferences, string>
   auth!: Table<AuthRecord, string>
   notes!: Table<Note, string>
+  memories!: Table<CoachMemory, string>
 
   constructor() {
     super('loops')
@@ -72,6 +74,21 @@ export class LoopsDB extends Dexie {
       prefs: 'id',
       auth: 'id',
       notes: 'id, createdAt, nodeId',
+    })
+    // v4 gives the coach a memory and real, resumable conversations.
+    this.version(4).stores({
+      nodes: 'id, parentId, status, area, scheduledDate, updatedAt',
+      dumps: 'id, createdAt, processed',
+      coachMessages: 'id, sessionId, createdAt',
+      coachSessions: 'id, startedAt, updatedAt',
+      completions: 'id, nodeId, completedAt',
+      rewards: 'id, createdAt, kind',
+      claimed: 'id, claimedAt',
+      profile: 'id',
+      prefs: 'id',
+      auth: 'id',
+      notes: 'id, createdAt, nodeId',
+      memories: 'id, createdAt, kind',
     })
   }
 }
@@ -169,8 +186,10 @@ export async function putNode(node: LoopNode): Promise<void> {
 
 /** Reads the whole database into memory. It is small by design (personal scale). */
 export async function loadAll() {
-  const [nodes, profileRow, prefsRow, completions, rewards, dumps, claimed, coachMessages, notes] =
-    await Promise.all([
+  const [
+    nodes, profileRow, prefsRow, completions, rewards, dumps, claimed, coachMessages, notes,
+    coachSessions, memories,
+  ] = await Promise.all([
       db.nodes.toArray(),
       db.profile.get('me'),
       db.prefs.get('prefs'),
@@ -178,8 +197,10 @@ export async function loadAll() {
       db.rewards.orderBy('createdAt').reverse().limit(200).toArray(),
       db.dumps.orderBy('createdAt').reverse().limit(50).toArray(),
       db.claimed.toArray(),
-      db.coachMessages.orderBy('createdAt').limit(200).toArray(),
+      db.coachMessages.orderBy('createdAt').reverse().limit(400).toArray(),
       db.notes.orderBy('createdAt').reverse().limit(200).toArray(),
+      db.coachSessions.orderBy('updatedAt').reverse().limit(50).toArray(),
+      db.memories.orderBy('createdAt').reverse().limit(100).toArray(),
     ])
 
   return {
@@ -192,5 +213,9 @@ export async function loadAll() {
     claimed,
     coachMessages: await Promise.all(coachMessages.map(async (m) => ({ ...m, text: await openText(m.text) }))),
     notes: await Promise.all(notes.map(async (n) => ({ ...n, text: await openText(n.text) }))),
+    coachSessions: await Promise.all(
+      coachSessions.map(async (c) => ({ ...c, title: await openText(c.title) })),
+    ),
+    memories: await Promise.all(memories.map(async (m) => ({ ...m, text: await openText(m.text) }))),
   }
 }

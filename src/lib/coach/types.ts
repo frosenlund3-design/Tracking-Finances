@@ -57,9 +57,11 @@ export interface CoachState {
 }
 
 export interface CoachReply {
-  /** 1–4 very short lines. */
+  /** 1–4 short lines. */
   lines: string[]
   strategy: Strategy
+  /** The mechanism this reply named, so it is not repeated in one conversation. */
+  conceptId?: string
   /** Tap-able quick replies. */
   options?: string[]
   /** Optional action the UI can offer. */

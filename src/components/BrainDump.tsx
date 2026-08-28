@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Check, ChevronDown, NotebookPen, Pencil, Sparkles, Trash2 } from 'lucide-react'
+import { AlertCircle, ArrowRight, Check, ChevronDown, ListTree, NotebookPen, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { parseBrainDump, type ParsedLoop } from '@/lib/brainDump'
+import { CERTAIN, parseBrainDump, type ParsedLoop } from '@/lib/brainDump'
+import { DEFAULT_GRANULARITY, GRANULARITIES, GRANULARITY_LABELS, decompose, type Granularity } from '@/lib/decompose'
 import { WORLDS } from '@/db/seed'
 import { useStore } from '@/store/useStore'
 import { Button } from './ui/Button'
@@ -33,16 +34,44 @@ export function BrainDumpPanel({ onCommitted, footer, autoFinish }: Props) {
   const [raw, setRaw] = useState('')
   const [parsed, setParsed] = useState<ParsedLoop[] | null>(null)
   const [editing, setEditing] = useState(false)
+  const [granularity, setGranularity] = useState<Granularity>(DEFAULT_GRANULARITY)
   const [saved, setSaved] = useState<number | null>(null)
   const areaRef = useRef<HTMLTextAreaElement>(null)
 
   const worlds = useMemo(() => WORLDS.map((w) => w.title), [])
 
-  const analyse = () => {
-    const result = parseBrainDump(raw)
+  const analyse = (g: Granularity = granularity) => {
+    const result = parseBrainDump(raw, { granularity: g })
     if (!result.length) return
     haptic('tap')
     setParsed(result)
+  }
+
+  /** Flipping a row between task and note, and re-splitting to a new depth. */
+  const setKind = (index: number, kind: ParsedLoop['kind']) => {
+    if (!parsed) return
+    setParsed(
+      parsed.map((item, i) => {
+        if (i !== index) return item
+        if (kind === 'task') {
+          const breakdown = decompose(item.title, { granularity })
+          return { ...item, kind, confidence: 1, steps: breakdown?.steps ?? [], attachTo: undefined }
+        }
+        return { ...item, kind, confidence: 1, steps: [] }
+      }),
+    )
+  }
+
+  const changeGranularity = (g: Granularity) => {
+    setGranularity(g)
+    if (!parsed) return
+    setParsed(
+      parsed.map((item) =>
+        item.kind === 'task'
+          ? { ...item, steps: decompose(item.title, { granularity: g })?.steps ?? [] }
+          : item,
+      ),
+    )
   }
 
   const save = async () => {
@@ -105,7 +134,7 @@ export function BrainDumpPanel({ onCommitted, footer, autoFinish }: Props) {
               </div>
             </div>
             <div className="pt-4">
-              <Button full onClick={analyse} disabled={raw.trim().length < 2} className={raw.trim().length < 2 ? 'opacity-35' : ''}>
+              <Button full onClick={() => analyse()} disabled={raw.trim().length < 2} className={raw.trim().length < 2 ? 'opacity-35' : ''}>
                 <Sparkles size={17} className="mr-2 -mt-0.5 inline" />
                 Sortér det for mig
               </Button>
@@ -139,6 +168,34 @@ export function BrainDumpPanel({ onCommitted, footer, autoFinish }: Props) {
                 ` · ${parsed.filter((p) => p.kind === 'note').length} gemmes som noter, ikke som opgaver`}
             </p>
 
+            {parsed.some((p) => p.confidence < CERTAIN) && (
+              <p className="mt-2 flex items-start gap-2 rounded-xl2 bg-warm/12 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink/75">
+                <AlertCircle size={14} className="mt-0.5 shrink-0 text-warm" />
+                Jeg er i tvivl om dem med en streg. Tjek lige om de skal være opgaver eller noter —
+                ét tryk skifter.
+              </p>
+            )}
+
+            <div className="mt-3 rounded-xl2 border border-line bg-surface p-3.5">
+              <p className="flex items-center gap-2 text-[12.5px] text-muted">
+                <ListTree size={14} className="text-faint" />
+                Hvor småt skal det deles op?
+              </p>
+              <div className="mt-2.5 flex gap-1.5 overflow-x-auto no-scrollbar">
+                {GRANULARITIES.map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => changeGranularity(g)}
+                    className={`focus-ring min-h-[44px] shrink-0 rounded-full border px-3.5 text-[13px] active:scale-95 ${
+                      granularity === g ? 'border-ink/25 bg-accent-soft font-medium' : 'border-line bg-raised text-muted'
+                    }`}
+                  >
+                    {GRANULARITY_LABELS[g]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-3 min-h-0 flex-1 space-y-2.5 overflow-y-auto no-scrollbar pb-2">
               {parsed.map((item, i) => (
                 <ParsedRow
@@ -148,6 +205,7 @@ export function BrainDumpPanel({ onCommitted, footer, autoFinish }: Props) {
                   worlds={worlds}
                   onChange={(next) => setParsed(parsed.map((p, j) => (j === i ? next : p)))}
                   onRemove={() => setParsed(parsed.filter((_, j) => j !== i))}
+                  onKind={(kind) => setKind(i, kind)}
                 />
               ))}
               {parsed.length === 0 && (
@@ -176,12 +234,14 @@ function ParsedRow({
   worlds,
   onChange,
   onRemove,
+  onKind,
 }: {
   item: ParsedLoop
   editing: boolean
   worlds: string[]
   onChange: (next: ParsedLoop) => void
   onRemove: () => void
+  onKind: (kind: ParsedLoop['kind']) => void
 }) {
   const [open, setOpen] = useState(false)
 
@@ -196,6 +256,12 @@ function ParsedRow({
               Gemmes som note{item.attachTo !== undefined ? ' på opgaven ovenfor' : ''} — ikke som en
               opgave, så den fylder ikke i din mental load.
             </p>
+            <button
+              onClick={() => onKind('task')}
+              className="focus-ring mt-2 flex min-h-[40px] items-center gap-1.5 text-[13px] font-medium text-muted"
+            >
+              Nej — det er en opgave
+            </button>
           </div>
           {editing && (
             <button
@@ -211,8 +277,12 @@ function ParsedRow({
     )
   }
 
+  const unsure = item.confidence < CERTAIN
+
   return (
-    <div className="rounded-xl2 border border-line bg-surface p-4">
+    <div
+      className={`rounded-xl2 border bg-surface p-4 ${unsure ? 'border-warm/60' : 'border-line'}`}
+    >
       <div className="flex items-start gap-3">
         <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border border-ink/25" />
         <div className="min-w-0 flex-1">
@@ -261,6 +331,14 @@ function ParsedRow({
               ))}
             </div>
           )}
+
+          <button
+            onClick={() => onKind('note')}
+            className="focus-ring mt-2 flex min-h-[40px] items-center gap-1.5 text-[13px] text-faint"
+          >
+            <NotebookPen size={13} />
+            Det er ikke en opgave — gem som note
+          </button>
 
           <AnimatePresence>
             {open && (

@@ -148,7 +148,7 @@ export function StartMode({ nodeId }: { nodeId: string }) {
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between text-[12.5px] text-faint">
+      <div className="flex shrink-0 items-center justify-between text-[12.5px] text-faint">
         <span className="truncate pr-3">{node.title}</span>
         {steps.length > 0 && (
           <span className="shrink-0">
@@ -157,7 +157,14 @@ export function StartMode({ nodeId }: { nodeId: string }) {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
+      {/*
+        min-h-0 + its own scroll. Without it this flex child is allowed to
+        shrink below its content, and on a long step (heading, capture field,
+        good-enough note) the content spilled downwards and painted over the
+        "Jeg sidder fast" panel and the action buttons — they were visible,
+        looked normal, and swallowed taps.
+      */}
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto no-scrollbar py-2 text-center">
         <motion.div
           key={currentStep?.id ?? 'single'}
           initial={{ opacity: 0, y: 16 }}
@@ -240,7 +247,7 @@ export function StartMode({ nodeId }: { nodeId: string }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            className="shrink-0 overflow-hidden"
           >
             <div className="mb-4 rounded-xl2 border border-line bg-surface p-4">
               <p className="text-[15px] font-medium">
@@ -266,7 +273,7 @@ export function StartMode({ nodeId }: { nodeId: string }) {
         )}
       </AnimatePresence>
 
-      <div className="space-y-2.5">
+      <div className="shrink-0 space-y-2.5">
         <Button full onClick={finishStep}>
           <Check size={18} className="mr-2 -mt-0.5 inline" />
           {currentStep ? 'Gjort — næste' : 'Færdig'}

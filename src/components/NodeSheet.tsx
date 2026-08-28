@@ -11,6 +11,7 @@ import { calibratedMinutes } from '@/lib/calibration'
 import { useCalibration } from '@/store/useStore'
 import { canFocus, visibleChildren } from '@/lib/nodes'
 import { haptic } from '@/lib/haptics'
+import { DEFAULT_GRANULARITY, GRANULARITIES, GRANULARITY_LABELS, type Granularity } from '@/lib/decompose'
 
 /**
  * Everything you can do to one loop.
@@ -41,6 +42,9 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
   const notes = useStore((s) => s.notes)
 
   const [showPark, setShowPark] = useState(false)
+  const [showSplit, setShowSplit] = useState(false)
+  const [granularity, setGranularity] = useState<Granularity>(DEFAULT_GRANULARITY)
+  const [splitFailed, setSplitFailed] = useState(false)
   const [showTime, setShowTime] = useState(false)
   const [showValue, setShowValue] = useState(false)
   const [value, setValue] = useState('')
@@ -246,9 +250,9 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
           <SmallAction
             icon={<Split size={16} />}
             label="Del den op"
-            onClick={async () => {
-              const ok = await breakDown(node.id)
-              if (!ok) haptic('soft')
+            onClick={() => {
+              setSplitFailed(false)
+              setShowSplit((v) => !v)
             }}
           />
         )}
@@ -306,6 +310,44 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
       </div>
 
       <AnimatePresence>
+        {showSplit && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 rounded-xl2 border border-line bg-surface p-4">
+              <p className="text-[14px] text-muted">Hvor småt skal den deles op?</p>
+              <div className="mt-3 flex gap-1.5 overflow-x-auto no-scrollbar">
+                {GRANULARITIES.map((g) => (
+                  <button
+                    key={g}
+                    onClick={async () => {
+                      setGranularity(g)
+                      const ok = await breakDown(node.id, g)
+                      setSplitFailed(!ok)
+                      if (!ok) haptic('soft')
+                    }}
+                    className={`focus-ring min-h-[44px] shrink-0 rounded-full border px-3.5 text-[13px] active:scale-95 ${
+                      granularity === g && !splitFailed
+                        ? 'border-ink/25 bg-accent-soft font-medium'
+                        : 'border-line bg-raised text-muted'
+                    }`}
+                  >
+                    {GRANULARITY_LABELS[g]}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-[12.5px] leading-relaxed text-faint">
+                {splitFailed
+                  ? 'Den her er jeg ikke klog nok på til at dele fornuftigt op. Skriv selv et par trin — eller omformulér titlen, så der står hvad du skal gøre.'
+                  : 'Du kan skifte frem og tilbage. Trin du allerede har sat flueben ved, bliver stående.'}
+              </p>
+            </div>
+          </motion.div>
+        )}
+
         {showPark && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}

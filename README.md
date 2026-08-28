@@ -117,6 +117,47 @@ heuristikker for tid, vægt og energi. `" og "` deles kun, når det der følger
 kan stå alene — så "salt og peber" ikke bliver til to opgaver. Tidsudtryk
 fjernes fra titlen, når de er fanget som en dato.
 
+### Sætningen bliver læst, ikke scannet
+
+`lib/language.ts` finder udsagnsordet, det ordet handler om, og hvor det sker.
+Alt andet — kategori, steps, tid — bygger på *dem*, ikke på et vilkårligt ord
+i teksten. Det er hele forskellen på en app der forstår opgaven og en der
+mønstergenkender:
+
+| Skrevet | Læst som | Uden sætningslæsning |
+| --- | --- | --- |
+| Køb vaskemiddel | køb · vaskemiddel | vask → "Fyld maskinen" |
+| Betal regningen fra tandlægen | betal · regningen | tandlæge → "Book en tid" |
+| Ryd op i garagen | ryd op · garagen | "Gå ind til op" |
+| Print billetterne ud | print · billetterne | "Find billetterne ud frem" |
+| Ring til banken om mit lån | ring · banken | "spørge banken om mit lån om" |
+| Skal have booket en tid | book · en tid | "Have booket en tid" (og klassificeret som note) |
+
+Konkrete ting den håndterer: perfektum (*have booket* → **Book**), partikelverber
+både før og efter genstanden (*ryd **op***, *print billetterne **ud***), bestemt
+form, og at målet stopper ved næste forholdsord. Domæneviden må kun overtrumfe
+udsagnsordet, når udsagnsordet tillader det: `betal` slår aldrig om i tandlæge-
+booking, uanset hvem regningen er fra.
+
+En detalje der kostede en fejl: JavaScripts `\b` er kun ASCII, så `/p[åa]\b/`
+matcher aldrig "på" efterfulgt af et mellemrum. "Få styr på min pension" blev
+læst som udsagnsordet *få* med genstanden *styr*. Alle danske mønstre i
+`language.ts` slutter derfor på `(?=\s|$)` i stedet.
+
+### Hvor småt
+
+Samme opgave, seks detaljegrader — 1, 3, 5, 8, 12 eller 20 trin. Hvert trin har
+en `rank`, så en kortere liste er de *vigtigste* trin i rigtig rækkefølge, ikke
+de første fem. Skydeknappen sidder både i brain dump-gennemgangen og på den
+enkelte opgave. Skifter man detaljegrad, bliver listen skrevet om — men trin
+man allerede har sat flueben ved, bliver stående.
+
+Uspecifikke opgaver får flest trin, fordi det er dem der har brug for dem:
+*"Få styr på pensionen"* er ikke et gøremål, det er et manglende overblik, og
+det bliver aldrig færdigt, fordi det ikke har en ende. Så trinene giver den en.
+Tilsvarende for *"Find ud af …"* (en beslutning) og *"Vaskemaskinen larmer"*
+(en reparation, ikke en vask).
+
 ### Ikke alt i en brain dump er en opgave
 
 *"Ved ikke hvor det bliver af… ved heller ikke hvordan jeg skal kontakte dem"*
@@ -134,6 +175,28 @@ puster tallet op og aldrig kan lukkes.
 Appen må gerne gætte forkert. Bekræftelsesskærmen ("Ser det rigtigt ud?") er
 sikkerhedsnettet — men at gætte stille er langt bedre end at bede brugeren om
 at udfylde otte felter.
+
+Hver linje får en sikkerhed på om det er en opgave eller en note, og alt under
+`CERTAIN` bliver markeret på gennemgangsskærmen. **Sikkerheden handler kun om
+opgave-eller-note.** Om appen også vidste *hvor* den hørte hjemme er et andet
+spørgsmål (`placed`) — en opgave uden kendt kategori er stadig utvivlsomt en
+opgave, og at markere den som tvivlsom ville lære brugeren at ignorere den
+markering der faktisk betyder noget.
+
+Nogle af de skel der viste sig at være vigtige:
+
+- **Datid er ikke en instruks.** *"Lægen ringede"* er baggrund. Som opgave er
+  det noget der aldrig kan lukkes.
+- **… medmindre der ligger en instruks inde i den.** *"Hun sagde at jeg skulle
+  sende papirerne inden den 3. september"* er en opgave med en frist, og
+  indpakningen bliver skrællet af: **Send papirerne**.
+- **En dato gør en linje til en aftale.** *"Mors fødselsdag er 14. marts"*
+  skrives ikke ned for sjov. (Punktummet i "14." er også et ordenstal, ikke et
+  punktum — ellers blev linjen til to loops, hvoraf det ene hed "Marts".)
+- **En indkøbsliste er én opgave.** *"køb ind - mælk, brød, kaffe"* er ikke
+  fire loops, hvoraf tre aldrig kan lukkes.
+- **En allerede booket tid får ingen booking-liste.** *"Tandlæge torsdag kl 14"*
+  er ikke noget der skal bookes.
 
 ### Cirkel-layout
 
@@ -178,6 +241,12 @@ for det.
 
 Ekstra point for det der er svært: at *starte*, at bryde en scroll, at tømme
 hovedet, og især for opgaver man længe har cirklet om.
+
+Gavekortet koster 25 point pr. krone — 50 kr. er omkring 70 lukkede loops, 200
+kr. omkring 280. Det er med vilje en rigtig opsparing over uger. En belønning
+der kommer for let holder op med at være en belønning, og målet er ikke at nå
+tallet, det er at have noget der bliver ved med at trække. Skærmen siger tallet
+i loops og ikke kun i point, for "5.000 point" er bare en mur.
 
 ### "Der er ikke noget, du skal lige nu"
 
@@ -328,8 +397,47 @@ load, opgavens størrelse, hjerneprofil) og et strategivalg med mange
 formuleringer per strategi og tone. Den finder den opgave brugeren *nævner* —
 ikke bare den der tilfældigvis var på skærmen.
 
-`lib/coach/adapter.ts` er sømmen: implementér `CoachAdapter`, og en rigtig model
-kan kobles på uden at UI'et ændres. Appen er fuldt funktionel uden.
+Svaret bygges i en fast rækkefølge: **spejl først, navngiv mekanismen, og først
+derefter et forslag.** Et råd før tingen har fået et navn læses som en
+afvisning — og af en der allerede kender materialet læses det som at blive
+talt ned til.
+
+**Om dig** (Indstillinger → Din profil) er det eneste sted appen ved noget om
+diagnoser og udfordringer. Den gætter aldrig selv og udleder det aldrig af
+adfærd; den ville før eller siden gætte forkert og så tale skråsikkert om et
+andet menneske. Feltet styrer to ting:
+
+1. **Hvad der overhovedet må bringes op.** Monotropi nævnes kun, hvis hun selv
+   har skrevet autisme eller autistiske træk.
+2. **Hvor grundlæggende den må være.** "Jeg ved det meste" slår al forklaring
+   af hvad ADHD *er* fra. Når intet begreb passer, spørger den i stedet for at
+   dele et råd ud — et spørgsmål hun ikke har stillet sig selv gør arbejdet, et
+   råd hun kan remse op koster tillid.
+
+`lib/coach/knowledge.ts` er begrebsbanken. Barren for hver post er, om en
+velinformeret voksen med ADHD ville finde den *ny* — eller i det mindste
+skarpere skåret end den udgave hun går rundt med. "Del det op i mindre bidder"
+falder igennem. "Muren foran opgaven er følelsesmæssigt restmateriale fra
+tidligere forsøg, og den står foran opgaven, ikke inde i den" går igennem. Hver
+post skiller *indsigten* fra *handlingen*, og når flere passer, vinder den der
+er låst op af hendes egen profil, dernæst den der forklarer mest af det hun
+skrev.
+
+`lib/coach/memory.ts` kigger på hendes egne data — hvornår hun rent faktisk
+lukker ting, hvad der rådner, om steps hjælper — og siger det højt under "Hvad
+jeg har lagt mærke til". Minimum seks datapunkter, før noget overhovedet
+nævnes; ellers er det ikke et mønster, det er støj. Alt kan afvises med "det
+passer ikke på mig".
+
+Samtaler gemmes hver for sig og navngives efter det første hun selv skriver, så
+man kan gå tilbage i en gammel tråd og tage fat igen.
+
+**Hvad den ikke er:** den kører 100% lokalt uden sprogmodel, så den kan ikke
+formulere frit eller ræsonnere sig frem til noget nyt. Den kan genkende det den
+har begreber for, kende hende gennem hendes egne data, og undlade at sige det
+indlysende. `lib/coach/adapter.ts` er sømmen: implementér `CoachAdapter` — den
+får både profil, observationer og samtalehistorik med — og en rigtig model kan
+kobles på uden at UI'et ændres. Appen er fuldt funktionel uden.
 
 ---
 
@@ -351,6 +459,11 @@ Ingen knap i Loops lover noget browseren ikke kan:
   står både før hun vælger en kode og på låseskærmen.
 - **Diktering er ikke 100% præcis, og ikke rent lokal.** Begge dele står på
   skærmen, og teksten skal godkendes af hende, før den bruges.
+- **Coachen er ikke ChatGPT.** Der er ingen sprogmodel og ingen server — det
+  ville kræve en betalt API og at hendes ord blev sendt ud af telefonen. Den
+  er en regelmotor med en begrebsbank, mønstre fra hendes egne data og en
+  hukommelse. Den er skarp inden for det, og den kan ikke improvisere uden for
+  det. `CoachAdapter` er der, hvis den grænse en dag skal flyttes.
 
 ---
 
