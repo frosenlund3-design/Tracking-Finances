@@ -62,6 +62,8 @@ export interface CoachReply {
   strategy: Strategy
   /** The mechanism this reply named, so it is not repeated in one conversation. */
   conceptId?: string
+  /** The trigger this reply named, for the same reason. */
+  triggerNamed?: string
   /** Tap-able quick replies. */
   options?: string[]
   /** Optional action the UI can offer. */

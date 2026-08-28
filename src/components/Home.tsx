@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { AlarmClock, Battery, CalendarClock, Check, ChevronRight, Gift, MessageCircleHeart, Moon, NotebookPen, Plus, Settings as SettingsIcon, Waves } from 'lucide-react'
+import { AlarmClock, Battery, CalendarClock, Check, ChevronRight, Gift, Moon, NotebookPen, Plus, Settings as SettingsIcon, Waves } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useStore, useClosedToday, useMentalLoad, useNextTask, useParked, useAvailableXP } from '@/store/useStore'
 import { greeting, relativeDay, isoDate } from '@/lib/time'
@@ -20,7 +20,7 @@ import { useCalibration } from '@/store/useStore'
  *
  * One rule governs this screen: the very first thing on it is a physical
  * movement small enough that not doing it would feel silly. Not "Betal
- * elregningen · 10 min" — "Åbn netbanken · 30 sekunder", with the reward for
+ * elregningen · 10 min", "Åbn netbanken · 30 sekunder", with the reward for
  * starting shown on the button itself.
  *
  * Everything else is deliberately quieter than it used to be. Mental load is a
@@ -221,7 +221,7 @@ export function Home() {
             </button>
 
             <p className="mt-3 text-center text-[12.5px] opacity-60">
-              Point for at starte — ikke kun for at blive færdig.
+              Point for at starte, ikke kun for at blive færdig.
             </p>
 
             <div className="mt-4 flex items-center justify-between border-t pt-3 text-[12.5px]" style={{ borderColor: `${tone.text}22` }}>
@@ -276,7 +276,7 @@ export function Home() {
             <ul className="mt-2.5 space-y-1">
               {enough.necessary.slice(0, 3).map((n) => (
                 <li key={n.id} className="text-[13px] text-muted">
-                  {n.title} — <span className="text-warm">{shortWhen(n)}</span>
+                  {n.title}, <span className="text-warm">{shortWhen(n)}</span>
                 </li>
               ))}
             </ul>
@@ -346,7 +346,7 @@ export function Home() {
             <span className="text-[12px] text-faint">
               {closedToday === 0
                 ? `Nok for i dag: ${enough.goal} ${enough.goal === 1 ? 'loop' : 'loops'}`
-                : `${closedToday} af ${enough.goal} — nok for i dag`}
+                : `${closedToday} af ${enough.goal}, nok for i dag`}
             </span>
           </span>
         </button>
@@ -354,7 +354,6 @@ export function Home() {
         {/* ── Tools, one quiet row ────────────────────────────────────── */}
         <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
           <Chip icon={<Plus size={16} />} label="Ud af hovedet" onClick={() => openOverlay({ kind: 'braindump' })} />
-          <Chip icon={<MessageCircleHeart size={16} />} label="Coach" onClick={() => openOverlay({ kind: 'coach', nodeId: next?.node.id })} />
           <Chip icon={<Waves size={16} />} label="Scroll-stop" onClick={() => openOverlay({ kind: 'rescue' })} />
           <Chip
             icon={<NotebookPen size={16} />}

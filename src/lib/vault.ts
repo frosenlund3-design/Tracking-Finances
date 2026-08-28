@@ -6,7 +6,7 @@
  * open the app on this device, and which also encrypts the text she writes.
  *
  * What is protected: every title, description, micro-step, brain dump and
- * coach message — the actual content of her head.
+ * coach message, the actual content of her head.
  * What is not: the shape of the tree (how many loops, when they were made,
  * which are done). Those stay readable so the database keeps working without
  * the key, and so the app can still tell her something useful before unlocking.

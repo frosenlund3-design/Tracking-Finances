@@ -12,7 +12,7 @@ interface Props {
   y: number
   r: number
   isCenter?: boolean
-  /** Direction from the centre, in radians — the chain walks along it. */
+  /** Direction from the centre, in radians, the chain walks along it. */
   angle?: number
   overflowCount?: number
   onTap: () => void
@@ -28,7 +28,7 @@ interface Props {
  *
  * No outline: the shape is defined by a soft gradient fill that fades from a
  * light tone into the base, with the shadow tinted to match. Inside sit the
- * nested levels as progressively smaller, progressively lighter circles — so
+ * nested levels as progressively smaller, progressively lighter circles, so
  * you can see how deep a thing goes before you enter it.
  *
  * Those inner circles are deliberately inert. You step inward one level per
@@ -86,7 +86,7 @@ export function CircleView({
   /**
    * The chain outward: one bead per level beneath this circle, each smaller
    * than the last. It says the thing she needs to believe before she can
-   * start — that this gets smaller and smaller, and the last one is tiny.
+   * start, that this gets smaller and smaller, and the last one is tiny.
    *
    * The beads are deliberately inert. You still step inward one circle per
    * tap; the chain shows how far down it goes, it is not a shortcut past the

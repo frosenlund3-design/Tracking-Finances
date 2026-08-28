@@ -15,7 +15,7 @@ interface Props {
  * The mental-load ring.
  *
  * Deliberately not a red alarm gauge: the arc is warm at every value, and the
- * colour shifts from calm green through taupe to a soft plum — never to red.
+ * colour shifts from calm green through taupe to a soft plum, never to red.
  */
 export function LoadRing({ percent, size = 168, loops = 0, label, sublabel, onClick }: Props) {
   const stroke = 10

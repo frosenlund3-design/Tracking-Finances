@@ -7,7 +7,7 @@ import { calibratedMinutes, type Calibration } from './calibration'
 /**
  * Placing loops on the week.
  *
- * The point is not to fill a calendar — a full calendar is the thing she
+ * The point is not to fill a calendar, a full calendar is the thing she
  * already refuses to use. The point is that when something *does* have a
  * sensible moment, the app should know it and say so, instead of leaving her
  * to work it out at the exact moment she has least capacity to.
@@ -22,7 +22,7 @@ import { calibratedMinutes, type Calibration } from './calibration'
  *     during onboarding; a demanding loop goes there and a small one fills the
  *     flat parts of the day.
  *  3. Nothing lands after its deadline, and a deadline gets a day of slack in
- *     front of it — planning something for the afternoon it is due is planning
+ *     front of it, planning something for the afternoon it is due is planning
  *     to miss it.
  *  4. A slot holds far less than it technically could. Three quarters of an
  *     hour, and time already taken by a real appointment comes off the top.
@@ -196,7 +196,7 @@ function fit(node: LoopNode, slot: Slot, minutes: number, peak: UserProfile['ene
     score += Math.max(0, 22 - daysBefore * 4)
     if (daysBefore <= 2) reasons.push('i god tid inden fristen')
   } else {
-    // Without a deadline, sooner is mildly better — but not urgent.
+    // Without a deadline, sooner is mildly better, but not urgent.
     const daysOut = (new Date(slot.date).getTime() - now.getTime()) / 86_400_000
     score += Math.max(0, 8 - daysOut)
   }

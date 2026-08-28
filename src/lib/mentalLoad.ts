@@ -2,7 +2,7 @@ import type { LoopNode } from '@/db/types'
 import { isOpen, isParkedNow, type NodeMap } from './nodes'
 
 export interface MentalLoad {
-  /** 0–100. Never reaches 100 — the curve saturates on purpose. */
+  /** 0–100. Never reaches 100, the curve saturates on purpose. */
   percent: number
   /** Loops the brain is still holding. */
   openLoops: number
@@ -54,7 +54,7 @@ function loadSentence(percent: number, openLoops: number): string {
   if (percent < 25) return `Din hjerne holder ca. ${openLoops} ting aktive. Der er god plads.`
   if (percent < 50) return `Din hjerne holder ca. ${openLoops} ting aktive. Det er til at overskue.`
   if (percent < 72) return `Din hjerne holder ca. ${openLoops} ting aktive. Vi tager én ad gangen.`
-  return `Din hjerne holder ca. ${openLoops} ting aktive. Det er meget — lad os lukke noget eller parkere noget.`
+  return `Din hjerne holder ca. ${openLoops} ting aktive. Det er meget, lad os lukke noget eller parkere noget.`
 }
 
 /** Copy for the moment right after closing loops. Warm, never a scoreboard. */

@@ -12,12 +12,16 @@ import { MicButton } from './ui/MicButton'
 import { actionableLeaves } from '@/lib/nodes'
 import { BLOCK_ANSWERS, BLOCK_NAMED, scanAttention } from '@/lib/attention'
 import { observe } from '@/lib/coach/memory'
+import { handleAgentRequest, type AgentEffect } from '@/lib/coach/agent'
+import { matchTriggers } from '@/lib/coach/triggers'
+import { alreadyLine, captureOffer, detectCaptures, manyOffer } from '@/lib/coach/capture'
+import type { ParsedLoop } from '@/lib/brainDump'
 import type { ProcrastinationReason } from '@/db/types'
 
 /**
  * ADHD Coach.
  *
- * A coach, not a clinician — it says so in the footer and never behaves
+ * A coach, not a clinician, it says so in the footer and never behaves
  * otherwise. It reads the real task tree, so its suggestions point at things
  * that actually exist, and every reply is 1–4 short lines.
  */
@@ -42,6 +46,15 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const toggleStep = useStore((s) => s.toggleStep)
   const setGoodEnough = useStore((s) => s.setGoodEnough)
   const updateNode = useStore((s) => s.updateNode)
+  const breakDown = useStore((s) => s.breakDown)
+  const addStep = useStore((s) => s.addStep)
+  const scheduleNode = useStore((s) => s.schedule)
+  const renameNode = useStore((s) => s.renameNode)
+  const deleteNode = useStore((s) => s.deleteNode)
+  const completeNode = useStore((s) => s.completeNode)
+  const unparkNode = useStore((s) => s.unparkNode)
+  const addNote = useStore((s) => s.addNote)
+  const commitBrainDump = useStore((s) => s.commitBrainDump)
   const load = useMentalLoad()
   const closedToday = useClosedToday()
   const next = useNextTask()
@@ -52,6 +65,11 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const [action, setAction] = useState<CoachAction | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const usedConcepts = useRef<string[]>([])
+  const usedTriggers = useRef<string[]>([])
+  /** A destructive effect waiting for her yes. */
+  const [pending, setPending] = useState<AgentEffect | null>(null)
+  /** Things she said in chat that are not in the tree yet, waiting on her. */
+  const [queue, setQueue] = useState<ParsedLoop[]>([])
   const used = useRef<Strategy[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -92,7 +110,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
       const attention = ask ? scanAttention(map).find((a) => !nodeId || a.node.id === nodeId) : null
 
       if (attention) {
-        // Observation, then one open question. No advice yet — advice before
+        // Observation, then one open question. No advice yet, advice before
         // the reason is known is just guessing out loud.
         setNamedTaskId(attention.node.id)
         setDiagnosing(attention.node.id)
@@ -142,6 +160,66 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     mentalLoadPercent: load.percent,
   })
 
+  /**
+   * Carry out something the coach decided to do.
+   *
+   * Every one of these is reversible except the delete, and the delete is the
+   * only one that waits for a yes.
+   */
+  const applyEffect = async (e: AgentEffect) => {
+    switch (e.kind) {
+      case 'resplit':
+        await breakDown(e.nodeId, e.granularity)
+        break
+      case 'add-step':
+        await addStep(e.nodeId, e.title)
+        break
+      case 'schedule':
+        await scheduleNode(e.nodeId, e.date, e.part)
+        break
+      case 'park':
+        await parkNode(e.nodeId, e.until)
+        break
+      case 'unpark':
+        await unparkNode(e.nodeId)
+        break
+      case 'rename':
+        await renameNode(e.nodeId, e.title)
+        break
+      case 'estimate':
+        await updateNode(e.nodeId, { estimatedMinutes: e.minutes })
+        break
+      case 'good-enough':
+        await setGoodEnough(e.nodeId, e.note)
+        break
+      case 'complete':
+        await completeNode(e.nodeId, 'coach')
+        break
+      case 'delete':
+        await deleteNode(e.nodeId)
+        break
+    }
+    haptic('tap')
+  }
+
+  /** Say something back without running the whole engine. */
+  const say = async (lines: string[], opts?: string[]) => {
+    await addMessage({ sessionId, role: 'coach', text: lines.filter(Boolean).join('\n'), options: opts })
+    setOptions(opts ?? [])
+    setThinking(false)
+    haptic('soft')
+  }
+
+  /** Work through things she emptied out of her head, one at a time. */
+  const advanceQueue = async (rest: ParsedLoop[]) => {
+    setQueue(rest)
+    if (!rest.length) {
+      await say(['Så er de ude af hovedet.', 'Du skal ikke huske på nogen af dem nu.'], ['Hvad skal jeg starte med?', 'Jeg stopper her'])
+      return
+    }
+    await say([`Næste: “${rest[0].title}”. Er den din?`], ['Ja', 'Nej, den skal ikke ind', 'Det er bare en note'])
+  }
+
   const send = async (text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
@@ -151,10 +229,91 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     await addMessage({ sessionId, role: 'user', text: trimmed })
     setThinking(true)
 
-    // If she names a task, talk about that one — not whatever was on screen.
+    // If she names a task, talk about that one, not whatever was on screen.
     const named = findTaskByText(trimmed, actionableLeaves(map))
     if (named) setNamedTaskId(named.id)
     const focus = named ?? task
+
+    const yes = /^\s*(ja|jep|jeps|yes|okay|ok|gerne|k[øo]r|please|g[øo]r det)\b/i.test(trimmed)
+    const no = /^\s*(nej|n[åa]h|nope|ellers tak|ikke|drop det)\b/i.test(trimmed)
+
+    // 1. Something destructive is waiting on her word.
+    if (pending) {
+      const effect = pending
+      setPending(null)
+      if (yes) {
+        await applyEffect(effect)
+        await say(['Væk.', 'Det tæller også som at få hovedet tilbage.'], ['Hvad så nu?'])
+      } else {
+        await say(['Så lader vi den stå.'], ['Parkér den i stedet', 'Hvad skal jeg lave?'])
+      }
+      return
+    }
+
+    // 2. Working through a head she emptied a moment ago.
+    if (queue.length) {
+      const [head, ...rest] = queue
+      if (yes) {
+        await commitBrainDump(head.raw, [head])
+        await say([`Lagt ind under ${head.path.join(' › ')}.`])
+        await advanceQueue(rest)
+        return
+      }
+      if (/note/i.test(trimmed)) {
+        await addNote(head.raw)
+        await say(['Gemt i Hovedet som en note. Den tæller ikke med som noget, du skal gøre.'])
+        await advanceQueue(rest)
+        return
+      }
+      if (no) {
+        await say(['Fint. Den ryger ikke ind.'])
+        await advanceQueue(rest)
+        return
+      }
+      // Anything else: she has moved on. Drop the queue rather than nag.
+      setQueue([])
+    }
+
+    // 3. An explicit request to change something wins over advice.
+    //
+    // With one exception. "Hvad nu hvis de bliver sure på mig?" is shaped like
+    // a question about the task, and answering it as one would step straight
+    // past the thing she actually said. So a request that only produces words
+    // yields to a live trigger. A request that changes data does not: if she
+    // says "parkér den", the task moves, whatever else is in the sentence.
+    const liveTrigger = matchTriggers(trimmed, profile.self?.triggers).some(
+      (h) => !usedTriggers.current.includes(h.trigger),
+    )
+    const agent = handleAgentRequest({ text: trimmed, task: focus })
+    if (agent && !(liveTrigger && !agent.effect)) {
+      if (agent.effect && agent.confirm) setPending(agent.effect)
+      else if (agent.effect) await applyEffect(agent.effect)
+      await new Promise((r) => setTimeout(r, prefs.reducedStimulation ? 100 : 320))
+      await say(agent.lines, agent.confirm ? [agent.confirm, ...(agent.options ?? [])] : agent.options)
+      return
+    }
+
+    // 4. Something she has to do, said out loud in passing.
+    const captured = detectCaptures(trimmed, map)
+    if (captured) {
+      await new Promise((r) => setTimeout(r, prefs.reducedStimulation ? 100 : 320))
+      const known = alreadyLine(captured.already)
+      if (!captured.items.length && known) {
+        await say([known, 'Du behøver ikke huske på den.'], ['Skal jeg finde noget til dig?', 'Nej tak'])
+        return
+      }
+      setQueue(captured.items)
+      if (captured.many) {
+        await say([known, ...manyOffer(captured.items)].filter(Boolean) as string[], [
+          'Ja',
+          'Nej, den skal ikke ind',
+          'Det er bare en note',
+        ])
+      } else {
+        await say([known, ...captureOffer(captured.items)].filter(Boolean) as string[], ['Ja', 'Nej tak'])
+      }
+      return
+    }
 
     // Answering the "what happens when you get to it?" question. We record it
     // on the task so the app stops asking and starts adapting.
@@ -176,9 +335,11 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
       self: profile.self,
       observations,
       usedConcepts: usedConcepts.current,
+      usedTriggers: usedTriggers.current,
       history: messages.slice(-10).map((m) => ({ role: m.role, text: m.text })),
     })
     if (reply.conceptId) usedConcepts.current = [...usedConcepts.current, reply.conceptId]
+    if (reply.triggerNamed) usedTriggers.current = [...usedTriggers.current, reply.triggerNamed]
     // A short beat so it does not feel like a lookup table firing back.
     await new Promise((r) => setTimeout(r, prefs.reducedStimulation ? 120 : 420))
 
@@ -269,6 +430,9 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
           onClick={async () => {
             await startSession()
             usedConcepts.current = []
+            usedTriggers.current = []
+            setPending(null)
+            setQueue([])
             setShowHistory(false)
             setOptions([])
           }}
@@ -295,6 +459,9 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
                 onClick={() => {
                   openSession(session.id)
                   usedConcepts.current = []
+                  usedTriggers.current = []
+                  setPending(null)
+                  setQueue([])
                   setShowHistory(false)
                   setOptions([])
                 }}
@@ -363,6 +530,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
             className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
+              data-role={m.role}
               className={`max-w-[85%] whitespace-pre-line rounded-xl2 px-4 py-3 text-[15.5px] leading-relaxed ${
                 m.role === 'user'
                   ? 'bg-ink text-canvas rounded-br-md'
@@ -440,7 +608,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
       )}
 
       <p className="pb-2 text-center text-[11.5px] leading-relaxed text-faint/80">
-        Coachen er en hjælper — ikke psykolog, læge eller behandler. Alt bliver på din telefon.
+        Coachen er en hjælper, ikke psykolog, læge eller behandler. Alt bliver på din telefon.
       </p>
     </div>
   )

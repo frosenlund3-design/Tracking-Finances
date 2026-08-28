@@ -8,7 +8,7 @@ import { Button } from './ui/Button'
  * Body double mode: "Bliv hos mig mens jeg gør det".
  *
  * A calm presence and one checkbox at a time. The breathing circle is the
- * whole point — it makes the screen feel occupied rather than empty.
+ * whole point, it makes the screen feel occupied rather than empty.
  */
 export function BodyDouble({ nodeId }: { nodeId: string }) {
   const node = useStore((s) => s.map[nodeId])
@@ -99,7 +99,7 @@ export function BodyDouble({ nodeId }: { nodeId: string }) {
           {current ? 'Gjort' : 'Færdig'}
         </Button>
         <button onClick={close} className="focus-ring min-h-[48px] w-full text-[14.5px] text-faint">
-          Vi stopper her — det er fint
+          Vi stopper her, det er fint
         </button>
       </div>
     </div>

@@ -13,7 +13,7 @@ import type { EnergyLevel } from '@/db/types'
 /**
  * "Hvad skal jeg gøre nu?"
  *
- * Shows ONE task. The ranked list exists underneath, but it is folded away —
+ * Shows ONE task. The ranked list exists underneath, but it is folded away,
  * the whole point is that she does not have to prioritise fifty things.
  *
  * The points shown are the same number the engine ranked on, so the advice is

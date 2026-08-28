@@ -11,7 +11,7 @@ import { Button } from './ui/Button'
 import { MicButton } from './ui/MicButton'
 
 /**
- * Start Mode — the anti-procrastination screen.
+ * Start Mode, the anti-procrastination screen.
  *
  * The gap this closes is "I know what to do but my body won't start". So the
  * screen strips everything away and shows exactly one physical action. Not
@@ -161,7 +161,7 @@ export function StartMode({ nodeId }: { nodeId: string }) {
         min-h-0 + its own scroll. Without it this flex child is allowed to
         shrink below its content, and on a long step (heading, capture field,
         good-enough note) the content spilled downwards and painted over the
-        "Jeg sidder fast" panel and the action buttons — they were visible,
+        "Jeg sidder fast" panel and the action buttons, they were visible,
         looked normal, and swallowed taps.
       */}
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto no-scrollbar py-2 text-center">
@@ -215,7 +215,7 @@ export function StartMode({ nodeId }: { nodeId: string }) {
                   onChange={(e) => setDraft(e.target.value)}
                   onBlur={() => void captureStep(node.id, currentStep.id, draft)}
                   rows={3}
-                  placeholder="Skriv løs — det bliver gemt på opgaven"
+                  placeholder="Skriv løs, det bliver gemt på opgaven"
                   className="min-h-[84px] flex-1 resize-none rounded-xl2 border border-line bg-surface p-3.5 text-[15.5px] leading-relaxed outline-none placeholder:text-faint/80 focus:border-ink/20"
                 />
                 <MicButton
@@ -276,7 +276,7 @@ export function StartMode({ nodeId }: { nodeId: string }) {
       <div className="shrink-0 space-y-2.5">
         <Button full onClick={finishStep}>
           <Check size={18} className="mr-2 -mt-0.5 inline" />
-          {currentStep ? 'Gjort — næste' : 'Færdig'}
+          {currentStep ? 'Gjort, næste' : 'Færdig'}
         </Button>
 
         {goodEnoughMode && (
@@ -288,7 +288,7 @@ export function StartMode({ nodeId }: { nodeId: string }) {
             }}
             className="focus-ring min-h-[48px] w-full rounded-xl2 bg-accent-soft text-[15px] font-medium active:scale-[0.99]"
           >
-            Godt nok — den tæller som færdig
+            Godt nok, den tæller som færdig
           </button>
         )}
 

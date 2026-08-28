@@ -14,7 +14,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'Loops — ro i hovedet',
+        name: 'Loops. Ro i hovedet',
         short_name: 'Loops',
         description:
           'Få tankerne ud af hovedet og ind i cirkler. Et roligt organiseringssystem bygget til ADHD-hjerner.',

@@ -21,7 +21,7 @@ import { BRAIN_PROFILES as BRAIN } from '@/lib/brainProfiles'
  * Onboarding.
  *
  * No account, no email, no workspace. Seven taps, one question per screen,
- * each answer auto-advances. It ends with her actually using the app — the
+ * each answer auto-advances. It ends with her actually using the app, the
  * last step is a real brain dump, not a "you're all set" screen.
  */
 
@@ -411,7 +411,7 @@ function Reveal({ profileId, onNext }: { profileId: string; onNext: () => void }
       </div>
 
       <p className="mt-5 text-[12.5px] leading-relaxed text-faint">
-        Det her er en måde at indstille appen på — ikke en test eller en diagnose.
+        Det her er en måde at indstille appen på, ikke en test eller en diagnose.
       </p>
 
       <div className="mt-8">

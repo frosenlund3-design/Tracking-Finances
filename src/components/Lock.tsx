@@ -54,7 +54,7 @@ export function CreateProfile({
             Vil du låse Loops med en kode?
           </h2>
           <p className="mt-2.5 text-[15px] leading-relaxed text-muted">
-            Så er dine tanker kun dine — også hvis nogen låner telefonen.
+            Så er dine tanker kun dine, også hvis nogen låner telefonen.
           </p>
         </div>
       )}
@@ -133,7 +133,7 @@ export function CreateProfile({
 
         <div className="rounded-xl2 border border-line bg-surface p-4">
           <p className="text-[12.5px] leading-relaxed text-faint">
-            Koden bliver på telefonen — den sendes ingen steder, og der er ingen konto at nulstille
+            Koden bliver på telefonen, den sendes ingen steder, og der er ingen konto at nulstille
             den fra. Glemmer du den, kan indholdet ikke låses op igen. Tag en backup i
             indstillinger, hvis du vil være helt sikker.
           </p>
@@ -146,7 +146,7 @@ export function CreateProfile({
         </Button>
         {onSkip && (
           <button onClick={onSkip} className="focus-ring min-h-[48px] w-full text-[14.5px] text-faint">
-            Ikke nu — jeg vil bare i gang
+            Ikke nu, jeg vil bare i gang
           </button>
         )}
       </div>

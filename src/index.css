@@ -2,7 +2,7 @@
  * Inter, latin subset only, bundled locally (~48 kB).
  *
  * On iPhone the system stack already resolves to SF Pro, which is both nicer
- * and free, so this face mainly serves Android and desktop — and it is bundled
+ * and free, so this face mainly serves Android and desktop, and it is bundled
  * rather than fetched from Google so the app stays offline-capable and sends
  * no requests to third parties.
  */
@@ -106,7 +106,7 @@ body {
   touch-action: manipulation;
 }
 
-/* iPhone safe areas — the app runs fullscreen from the home screen. */
+/* iPhone safe areas. The app runs fullscreen from the home screen. */
 .pt-safe {
   padding-top: max(env(safe-area-inset-top), 0.5rem);
 }

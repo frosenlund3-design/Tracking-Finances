@@ -5,7 +5,7 @@ import type { LoopNode } from '@/db/types'
  *
  * The home screen must never lead with "Betal elregningen, 10 min". That is a
  * task, and a task is something you can dread. It leads with "Åbn netbanken,
- * 30 sekunder", which is a movement — small enough that not doing it feels
+ * 30 sekunder", which is a movement, small enough that not doing it feels
  * sillier than doing it.
  */
 export interface FirstAction {

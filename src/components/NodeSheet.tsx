@@ -18,7 +18,7 @@ import { DEFAULT_GRANULARITY, GRANULARITIES, GRANULARITY_LABELS, type Granularit
  *
  * Section 19 of the brief made flesh: done is not the only way to close a
  * loop. Parking, dropping and delegating are first-class, equally sized
- * choices — deciding "this isn't important" also gives you your head back.
+ * choices, deciding "this isn't important" also gives you your head back.
  */
 export function NodeSheet({ nodeId }: { nodeId: string }) {
   const node = useStore((s) => s.map[nodeId])
@@ -224,7 +224,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
                 key={k.id}
                 onClick={() => {
                   // One level per step: if the child is two levels away from
-                  // where she is standing, walk into this circle first — the
+                  // where she is standing, walk into this circle first, the
                   // one she tapped is then right in front of her.
                   setFocus(canFocus(map, focusId, k.id) ? k.id : node.id)
                   close()
@@ -341,7 +341,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
               </div>
               <p className="mt-3 text-[12.5px] leading-relaxed text-faint">
                 {splitFailed
-                  ? 'Den her er jeg ikke klog nok på til at dele fornuftigt op. Skriv selv et par trin — eller omformulér titlen, så der står hvad du skal gøre.'
+                  ? 'Den her er jeg ikke klog nok på til at dele fornuftigt op. Skriv selv et par trin, eller omformulér titlen, så der står hvad du skal gøre.'
                   : 'Du kan skifte frem og tilbage. Trin du allerede har sat flueben ved, bliver stående.'}
               </p>
             </div>
@@ -425,7 +425,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
           >
             <div className="mt-4 rounded-xl2 border border-line bg-surface p-4">
               <p className="text-[14px] leading-relaxed text-muted">
-                Kun hvis den har en <strong className="font-medium text-ink">rigtig</strong> tid — en
+                Kun hvis den har en <strong className="font-medium text-ink">rigtig</strong> tid: en
                 lægetid, en eksamen, en frist. De fleste ting har ikke en, og så er det bedre at lade
                 være.
               </p>
@@ -477,7 +477,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
               </div>
 
               <p className="mt-3 text-[12px] leading-relaxed text-faint">
-                En fast tid bliver aldrig foreslået som "start nu" — den vises bare, når dagen kommer.
+                En fast tid bliver aldrig foreslået som "start nu", den vises bare, når dagen kommer.
                 En frist rykker op i rækkefølgen, jo tættere den kommer.
               </p>
 
@@ -569,7 +569,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
         <div className="mt-6 rounded-xl2 bg-accent-soft/50 p-4">
           <p className="flex items-start gap-2.5 text-[13px] leading-relaxed text-ink/70">
             <ArrowDownToLine size={15} className="mt-0.5 shrink-0 text-ink/50" />
-            Den her bliver tit udsat. Det er ikke en anklage — skal jeg gøre den nemmere?
+            Den her bliver tit udsat. Det er ikke en anklage, skal jeg gøre den nemmere?
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button

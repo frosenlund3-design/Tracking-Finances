@@ -49,7 +49,7 @@ const MAX_CHILD_R = 62
  * same place every time so the map becomes a place you remember.
  *
  * Solving order, given N children:
- *   1. centre radius from branch weight (a flat curve — a big project must not
+ *   1. centre radius from branch weight (a flat curve, a big project must not
  *      become a big threat)
  *   2. the largest child radius that still leaves room for the centre circle,
  *      the gap and the child itself inside the viewport
@@ -92,7 +92,7 @@ export function layoutRadial(
 
   // Try every sensible ring split and keep the one that leaves the circles
   // biggest. Splitting into two rings costs radial budget, so for small counts
-  // a single ring almost always wins — doing it eagerly was what made labels
+  // a single ring almost always wins, doing it eagerly was what made labels
   // shrink to "Skri v…".
   const candidates = slots <= 5 ? [[slots]] : [[slots], splitRings(slots)]
   let best: Solution | null = null
@@ -143,7 +143,7 @@ interface Solution {
 
 /**
  * Solves one ring split: how big can the children be, and where do the rings
- * sit? Two constraints bind — radial budget (everything must fit between the
+ * sit? Two constraints bind, radial budget (everything must fit between the
  * centre circle and the viewport edge) and angular spacing (neighbours on a
  * ring must clear each other). Shrinking pushes the rings outward, which
  * loosens the angular constraint, so we iterate twice.

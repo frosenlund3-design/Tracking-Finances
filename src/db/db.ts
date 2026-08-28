@@ -139,7 +139,7 @@ export const defaultPrefs = (): UserPreferences => ({
 /**
  * Encryption boundary.
  *
- * Only free text is sealed — the words she wrote. Structure (ids, parents,
+ * Only free text is sealed, the words she wrote. Structure (ids, parents,
  * status, timestamps) stays in the clear so Dexie's indexes keep working and
  * so the app can still count her loops before it has the key.
  */

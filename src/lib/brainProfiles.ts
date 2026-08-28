@@ -34,7 +34,7 @@ export const BRAIN_PROFILES: Record<string, BrainProfile> = {
     id: 'fog-brain',
     title: 'The Fog Brain',
     body: [
-      'Opgaverne er ikke for svære — de er for uklare.',
+      'Opgaverne er ikke for svære, de er for uklare.',
       'Når du ikke kan se det første skridt, går alting i stå.',
     ],
     promises: [
@@ -69,7 +69,7 @@ export const BRAIN_PROFILES: Record<string, BrainProfile> = {
     title: 'The Spark Brain',
     body: [
       'Din hjerne kører på interesse, ikke på vigtighed.',
-      'Kedelige ting er ikke svære at ville — de er svære at kunne.',
+      'Kedelige ting er ikke svære at ville, de er svære at kunne.',
     ],
     promises: [
       'tilbyde tidspres og små udfordringer',

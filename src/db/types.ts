@@ -2,7 +2,7 @@
  * Loops data model.
  *
  * Everything the user sees is a node in one tree. A "circle" in the UI and a
- * "task" in the data are the same object — a leaf is a task, a node with
+ * "task" in the data are the same object, a leaf is a task, a node with
  * children is a project, and the root is their life. That is what makes the
  * nesting arbitrarily deep without any special cases.
  */
@@ -12,7 +12,7 @@ export type NodeStatus =
   | 'active' // started, in progress
   | 'done' // closed loop, completed
   | 'parked' // deliberately out of mind until parkedUntil
-  | 'dropped' // "this is actually not important" — also a closed loop
+  | 'dropped' // "this is actually not important", also a closed loop
   | 'delegated' // handed to someone else
 
 /** How much brain the thing takes up, not how urgent it is. */
@@ -39,14 +39,14 @@ export interface LoopNode {
   startedAt?: number
   parkedUntil?: number
   /**
-   * A real time, when one genuinely exists. Loops never demands one — most
+   * A real time, when one genuinely exists. Loops never demands one, most
    * loops have no deadline, and inventing deadlines is how a calm system turns
    * into the stressful calendar she already refuses to use.
    */
   dueAt?: number
   /**
-   * 'deadline'    — must be finished by dueAt (an application, a bill).
-   * 'appointment' — happens at dueAt whether or not you did anything (a
+   * 'deadline'   , must be finished by dueAt (an application, a bill).
+   * 'appointment', happens at dueAt whether or not you did anything (a
    *                 doctor's appointment, an exam). These are never suggested
    *                 as "do this now"; you show up.
    */
@@ -75,18 +75,18 @@ export interface LoopNode {
   /** Marks a node created by the seed so it can be cleared without touching real data. */
   demo?: boolean
   color?: string
-  /** "Godt nok" target — completing at this level counts as a win. */
+  /** "Godt nok" target, completing at this level counts as a win. */
   goodEnoughNote?: string
   /**
    * What the user said is actually in the way, when the coach asked.
-   * Named by her, never inferred — the point of asking is that the app should
+   * Named by her, never inferred, the point of asking is that the app should
    * not guess why a person is stuck.
    */
   blockReason?: ProcrastinationReason
   /** When the coach last raised this task, so it does not nag. */
   lastAskedAt?: number
   /**
-   * What closing this is worth in kroner, if she says so. Never guessed — the
+   * What closing this is worth in kroner, if she says so. Never guessed, the
    * app has no way of knowing what a piece of work pays, and inventing a
    * number would make every statistic built on it a lie.
    */
@@ -97,12 +97,12 @@ export interface MicroStep {
   id: string
   title: string
   done: boolean
-  /** The very first physical action — used by Start Mode's "just do this" screen. */
+  /** The very first physical action, used by Start Mode's "just do this" screen. */
   physical?: boolean
   /**
    * Steps that ask her to write something down need somewhere to write it.
    * "Skriv de 3 vigtigste ting på listen" with only a checkbox is a step you
-   * cannot actually do inside the app — she has to go find another surface,
+   * cannot actually do inside the app, she has to go find another surface,
    * which is exactly the friction this app exists to remove.
    */
   captureLabel?: string
@@ -112,7 +112,7 @@ export interface MicroStep {
 export type TimePart = 'morning' | 'midday' | 'afternoon' | 'evening'
 
 /**
- * Something she wrote down that is not a task — context, a worry, a fact worth
+ * Something she wrote down that is not a task, context, a worry, a fact worth
  * keeping. Notes never enter the loop tree, so they never add mental load and
  * never show up as something to start.
  */
@@ -143,7 +143,7 @@ export interface CoachMessage {
   createdAt: number
   /** Quick-reply chips attached to a coach message. */
   options?: string[]
-  /** Which strategy produced this line — used to avoid repeating one. */
+  /** Which strategy produced this line, used to avoid repeating one. */
   strategy?: string
 }
 
@@ -163,7 +163,7 @@ export interface CoachSession {
  * Something the coach worked out and should not forget.
  *
  * Kept separate from the conversation so it survives long after the messages
- * scroll away, and so it can be shown to her — a pattern she cannot see
+ * scroll away, and so it can be shown to her, a pattern she cannot see
  * herself is only useful if she is told about it.
  */
 export interface CoachMemory {
@@ -184,7 +184,7 @@ export interface Completion {
   nodeId: string
   title: string
   completedAt: number
-  /** 'done' | 'dropped' — both close a loop. */
+  /** 'done' | 'dropped', both close a loop. */
   kind: 'done' | 'dropped' | 'delegated'
   xp: number
   /** How the loop got closed, for the friction model. */
@@ -236,7 +236,7 @@ export type ToneChoice = 'calm' | 'warm' | 'blunt' | 'humor' | 'peptalk'
 export type InfoDensity = 'minimal' | 'balanced' | 'detailed'
 
 /**
- * What she has told the app about herself. Never inferred, never guessed —
+ * What she has told the app about herself. Never inferred, never guessed,
  * the coach speaks from this, so a wrong entry here would make it speak
  * confidently about the wrong person.
  */
@@ -245,9 +245,19 @@ export interface SelfDescription {
   diagnoses: string[]
   /** Other things she struggles with, in her own words. */
   challenges: string[]
+  /**
+   * The things that set off a reaction before thinking gets a chance.
+   *
+   * Not the same as a challenge. "Perfektionisme" describes how she works;
+   * "hvis nogen virker sure på mig" describes something that happens to her
+   * and shuts the rest down. The coach reads these before it says anything,
+   * because advice offered on top of a live trigger response does not land,
+   * and pushing on one is how an app loses somebody permanently.
+   */
+  triggers: string[]
   /** Anything else she wants the coach to know. */
   freeText?: string
-  /** How much she already knows — changes how basic the coach is allowed to be. */
+  /** How much she already knows, changes how basic the coach is allowed to be. */
   familiarity: 'new' | 'some' | 'expert'
 }
 
@@ -292,7 +302,7 @@ export interface UserPreferences {
   voiceEnabled?: boolean
   voiceNoticeSeen?: boolean
   /**
-   * The day she has declared finished — either by reaching a small daily
+   * The day she has declared finished, either by reaching a small daily
    * goal, or by simply saying so. Stored as 'YYYY-MM-DD'.
    */
   doneForDay?: string
@@ -327,7 +337,7 @@ export interface ClaimedReward {
 }
 
 /**
- * The local profile lock. There is no account and no server — this record only
+ * The local profile lock. There is no account and no server, this record only
  * proves that a password matches, and never stores anything that could decrypt
  * her data on its own.
  */

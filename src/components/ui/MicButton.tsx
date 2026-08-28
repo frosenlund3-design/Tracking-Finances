@@ -17,7 +17,7 @@ interface Props {
 /**
  * Push-to-talk in Danish.
  *
- * Renders nothing at all when the browser has no speech recognition — a dead
+ * Renders nothing at all when the browser has no speech recognition, a dead
  * microphone button is worse than none, and the iPhone keyboard's own
  * microphone key does the same job anyway.
  *
@@ -109,7 +109,7 @@ export function MicButton({ onText, existing = '', size = 'sm', label }: Props) 
             <>
               <p className="text-[13px] leading-relaxed text-muted">
                 Diktering bruger telefonens egen stemmegenkendelse. Det er det ene sted, hvor lyden
-                forlader telefonen — den sendes til Apple eller Google for at blive lavet om til
+                forlader telefonen, den sendes til Apple eller Google for at blive lavet om til
                 tekst. Resten af Loops bliver liggende hos dig.
               </p>
               <p className="mt-2 text-[13px] leading-relaxed text-muted">

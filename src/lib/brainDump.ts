@@ -1,5 +1,5 @@
 /**
- * Brain dump parsing — the heart of "the user should not have to organise".
+ * Brain dump parsing, the heart of "the user should not have to organise".
  *
  * The user types one messy Danish paragraph. We split it into loops, guess
  * where each one belongs, rewrite it as a concrete action, estimate its size
@@ -7,7 +7,7 @@
  * heuristics. No API, no cost, works offline.
  *
  * We are allowed to be wrong. The confirm screen ("Ser det rigtigt ud?") is
- * the safety net — but being wrong quietly is far better than asking the user
+ * the safety net, but being wrong quietly is far better than asking the user
  * to fill in eight fields.
  */
 
@@ -27,7 +27,7 @@ export interface ParsedTime {
  * "Ved ikke hvor det bliver af… ved heller ikke hvordan jeg skal kontakte dem"
  * is context, not an action. Turning it into a loop is actively harmful: it
  * adds to the mental load number, it shows up as something to start, and it
- * cannot be finished — you cannot "do" a worry. So the parser classifies each
+ * cannot be finished, you cannot "do" a worry. So the parser classifies each
  * fragment, and anything that is information gets kept as a note attached to
  * the task it belongs with.
  */
@@ -92,7 +92,7 @@ const RULES: Rule[] = [
   { match: /\bskat\b|selvangivel|[åa]rsopg[øo]rel|forskudsopg[øo]rel/i, path: ['Økonomi', 'Skat'], area: 'money', minutes: 45, energy: 100 },
   { match: /\bregning\w*|\bbetal\w*|\brykker\w*|\bnetbank\w*|\bgiro\b/i, path: ['Økonomi', 'Regninger'], area: 'money', minutes: 10, energy: 60 },
   { match: /\bbudget\w*|\bopsparing\w*|\bl[åa]n\b|\bbank\w*|\bpension\w*|\bforsikring\w*|\babonnement\w*|\bops[iy]g\w*/i, path: ['Økonomi'], area: 'money', minutes: 25, energy: 60 },
-  // Public benefits: officialdom, forms and a portal — reliably heavy, and
+  // Public benefits: officialdom, forms and a portal, reliably heavy, and
   // reliably about money, whatever the form is called.
   { match: /\bboligst[øo]tte\w*|\bkontanthj[æa]lp\w*|\bSU\b|\bsygedagpeng\w*|\bbarselsdagpeng\w*|\bb[øo]rnepeng\w*|\bb[øo]rne(?:check|tilskud)\w*|udbetaling danmark|\bfriplads\w*|\btilskud\b/i, path: ['Økonomi', 'Det offentlige'], area: 'admin', minutes: 35, energy: 100 },
 
@@ -132,7 +132,7 @@ const FEELING =
 /**
  * Something that already happened.
  *
- * "Lægen ringede" is context, not an instruction — but it sits right next to
+ * "Lægen ringede" is context, not an instruction, but it sits right next to
  * the task it explains ("…jeg skal spørge om blodprøven"), so a splitter will
  * hand it over on its own. Filed as a task it becomes an item she can never
  * close, which is exactly the kind of thing that makes her stop trusting the
@@ -185,7 +185,7 @@ const DATED =
  *
  * This has to be judged on the *action form* of the fragment, not the raw
  * words. "Skal have booket en tid til synet af bilen" contains no imperative
- * and reads like prose, so a raw check called it a note — while it is plainly
+ * and reads like prose, so a raw check called it a note, while it is plainly
  * a task. Converting to the imperative first ("Book en tid til synet af
  * bilen") makes the verb visible.
  *
@@ -194,7 +194,7 @@ const DATED =
  * a task filed as a note silently disappears from the plan. So this returns a
  * confidence as well, every row carries a one-tap task/note switch, and
  * anything uncertain is marked for her to look at. The guarantee is not that
- * the guess is always right — it is that a wrong guess is always visible and
+ * the guess is always right, it is that a wrong guess is always visible and
  * always one tap from fixed.
  */
 export function classifySegment(fragment: string): Classification {
@@ -213,9 +213,9 @@ export function classifySegment(fragment: string): Classification {
   if (NOTE_OPENERS.test(cleaned) && !STARTS_WITH_ACTION.test(action)) {
     return { kind: 'note', confidence: 0.9 }
   }
-  // "Jeg er så træt af at der er rod" — a feeling, even though "rod" is a thing.
+  // "Jeg er så træt af at der er rod", a feeling, even though "rod" is a thing.
   if (FEELING.test(cleaned) && !analysis.verb) return { kind: 'note', confidence: 0.88 }
-  // "Lægen ringede", "posten kom i går", "hun sagde at…" — something that has
+  // "Lægen ringede", "posten kom i går", "hun sagde at…", something that has
   // already happened. It may be why a task exists, but it is not the task, and
   // filing it as one puts an impossible item on her list.
   if (PAST_STATEMENT.test(cleaned) && !STARTS_WITH_ACTION.test(action) && !REPORTED_TASK.test(cleaned)) {
@@ -233,10 +233,10 @@ export function classifySegment(fragment: string): Classification {
   if (analysis.verb) return { kind: 'task', confidence: 0.95 }
   // Something with a date on it is a commitment, even when it is written as a
   // flat statement: "Mors fødselsdag er 14 marts", "Tandlæge på torsdag kl 9".
-  // Nobody writes a date down for the fun of it — there is something to do
+  // Nobody writes a date down for the fun of it, there is something to do
   // before it, and a note cannot carry a deadline.
   if (DATED.test(cleaned)) return { kind: 'task', confidence: 0.85 }
-  // "En tid skal bookes" — the verb is late but the sentence is still an action.
+  // "En tid skal bookes", the verb is late but the sentence is still an action.
   if (hasAction(cleaned) && words <= 12) return { kind: 'task', confidence: 0.8 }
 
   // --- genuinely unsure ----------------------------------------------------
@@ -306,8 +306,8 @@ const PART_WORDS: Array<[RegExp, TimePart]> = [
 
 /**
  * Danish abbreviations whose full stop is not a sentence ending. Without this,
- * "Lægetid på fredag kl. 9" splits into "…kl" and "9", and the time — the one
- * piece of information that actually mattered — is thrown away.
+ * "Lægetid på fredag kl. 9" splits into "…kl" and "9", and the time, the one
+ * piece of information that actually mattered, is thrown away.
  */
 function normaliseAbbreviations(text: string): string {
   return text
@@ -317,7 +317,7 @@ function normaliseAbbreviations(text: string): string {
     .replace(/\bevt\.\s*/gi, 'evt ')
     .replace(/\bdvs\.\s*/gi, 'dvs ')
     .replace(/\bbl\.\s*a\.\s*/gi, 'bla ')
-    // "14. marts" — the full stop is an ordinal marker, not a sentence end.
+    // "14. marts", the full stop is an ordinal marker, not a sentence end.
     // Without this, "Mors fødselsdag er 14. marts" becomes two loops, one of
     // which is called "Marts". Written without a lookbehind on purpose: those
     // are still missing on older iOS Safari, and this has to work on her phone.
@@ -330,7 +330,7 @@ function normaliseAbbreviations(text: string): string {
  * The head has to name an action, or every comma-separated thought would
  * qualify.
  */
-const LIST_LINE = /^(.{2,40}?)\s*(?::|\s[-–—]\s)\s*([^,]{1,30}(?:\s*,\s*[^,]{1,30}){1,})$/
+const LIST_LINE = /^(.{2,40}?)\s*(?::|\s[-–,]\s)\s*([^,]{1,30}(?:\s*,\s*[^,]{1,30}){1,})$/
 
 /** Splits a messy paragraph into separate loops. */
 export function splitSegments(raw: string): string[] {
@@ -339,10 +339,10 @@ export function splitSegments(raw: string): string[] {
     // A list marker only starts a line. Stripping it per line matters: a
     // regex anchored with ^ across the whole blob only ever matches the very
     // first bullet, which is how "- hold hjem rent" became a task title.
-    .map((l) => l.replace(/^\s*[-–—*+]\s*/, '').trim())
-    // A dash usually separates two thoughts — but not when what follows it is a
+    .map((l) => l.replace(/^\s*[-–,*+]\s*/, '').trim())
+    // A dash usually separates two thoughts, but not when what follows it is a
     // comma list belonging to what precedes it ("køb ind - mælk, brød, kaffe").
-    .flatMap((l) => (LIST_LINE.test(l) ? [l] : l.split(/\s+[-–—]\s+/)))
+    .flatMap((l) => (LIST_LINE.test(l) ? [l] : l.split(/\s+[-–,]\s+/)))
     .map((l) => l.trim())
     .filter(Boolean)
 
@@ -357,7 +357,7 @@ export function splitSegments(raw: string): string[] {
       continue
     }
 
-    // Hard separators first — these are unambiguous.
+    // Hard separators first, these are unambiguous.
     // A full stop followed by a digit is a date or a time, not a sentence end.
     const hard = line
       .split(/[.;!?]+\s+(?![0-9])|,\s+|\s+samt\s+|\s+og\s+ogs[åa]\s+|\s+og\s+s[åa]\s+|\s+ogs[åa]\s+at\s+/i)
@@ -401,10 +401,10 @@ function standsAlone(fragment: string): boolean {
 
 /** Removes "jeg skal huske at ..." style scaffolding. */
 export function cleanFragment(fragment: string): string {
-  // "Hun sagde at jeg skulle sende papirerne" — who said it is context; what
+  // "Hun sagde at jeg skulle sende papirerne", who said it is context; what
   // she has to do is the task. Left in, the title read as reported speech and
   // the step generator had no verb to work with.
-  let s = fragment.trim().replace(/^\s*[-–—*+]\s*/, '').replace(REPORTED_PREFIX, '')
+  let s = fragment.trim().replace(/^\s*[-–,*+]\s*/, '').replace(REPORTED_PREFIX, '')
   for (let i = 0; i < 5; i++) {
     const before = s
     s = s.replace(LEAD_FILLER, '').replace(MODALS, '').replace(LEAD_ADVERBS, '').trim()
@@ -413,7 +413,7 @@ export function cleanFragment(fragment: string): string {
   return s
 }
 
-/** "hun sagde at ", "lægen skrev at ", "de bad mig om at " — up to the instruction. */
+/** "hun sagde at ", "lægen skrev at ", "de bad mig om at ", up to the instruction. */
 const REPORTED_PREFIX =
   /^.{0,40}?\b(?:sagde|skrev|n[æa]vnte|fortalte|spurgte|bad\s+mig\s+om|mindede\s+mig\s+om|har\s+sagt|har\s+skrevet)\s+(?:at\s+)?(?=(?:jeg|vi|man)\s+(?:skal|skulle|m[åa]|b[øo]r|burde))/i
 
@@ -466,7 +466,7 @@ export function toImperative(text: string): string {
  *
  * Rules are ordered specific-before-general and every pattern is anchored on
  * word boundaries, because the whole class of bug here is a pattern matching
- * inside another word — "vask" inside "vaskemiddel", "post" inside
+ * inside another word, "vask" inside "vaskemiddel", "post" inside
  * "posthuset". A rule that fires on a fragment of a word puts the task in the
  * wrong world and gives it the wrong steps, and she has no way to tell why.
  */
@@ -519,7 +519,7 @@ const MONTHS: Record<string, number> = {
   juli: 6, august: 7, september: 8, oktober: 9, november: 10, december: 11,
 }
 
-/** "14 marts", "den 3 juni" — the ordinal full stop is already normalised away. */
+/** "14 marts", "den 3 juni", the ordinal full stop is already normalised away. */
 function monthDate(lower: string, now: Date): string | undefined {
   const m = lower.match(
     /\b(?:den\s+)?(\d{1,2})\s+(januar|februar|marts|april|maj|juni|juli|august|september|oktober|november|december)\b/,
@@ -530,7 +530,7 @@ function monthDate(lower: string, now: Date): string | undefined {
   const month = MONTHS[m[2]]
   let year = now.getFullYear()
   const candidate = new Date(year, month, day)
-  // A date that has already passed this year means next year — nobody writes
+  // A date that has already passed this year means next year, nobody writes
   // down a birthday that was three months ago as something to prepare for.
   if (candidate.getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) {
     year += 1
@@ -569,7 +569,7 @@ function detectSchedule(text: string, now = new Date()): { date?: string; part?:
 
 /**
  * Removes the time expression from a title once we have captured it as a
- * schedule. "Betal elregningen på fredag" becomes "Betal elregningen" — the
+ * schedule. "Betal elregningen på fredag" becomes "Betal elregningen", the
  * Friday is already stored in scheduledDate, and repeating it in the title
  * makes the card noisy.
  */
@@ -639,8 +639,8 @@ export function parseBrainDump(raw: string, options: Date | ParseOptions = {}): 
     const classification = classifySegment(segment)
 
     if (classification.kind === 'note') {
-      // Attach to the task just above it — that is nearly always what the note
-      // is about — or keep it standalone for the "Hovedet" list.
+      // Attach to the task just above it, that is nearly always what the note
+      // is about, or keep it standalone for the "Hovedet" list.
       const lastTask = belongsWithPreviousTask(segment, result)
       result.push({
         kind: 'note',
@@ -676,7 +676,7 @@ export function parseBrainDump(raw: string, options: Date | ParseOptions = {}): 
 
     // Break down the *cleaned* title. Running it on the raw one produced steps
     // like "Find elregningen senest frem" and "Find Tandlæge torsdag kl 14s
-    // nummer" — the time words were still sitting inside the object.
+    // nummer", the time words were still sitting inside the object.
     //
     // And an appointment gets no steps at all: "Tandlæge torsdag kl 14" is
     // already booked. Handing her a checklist for booking it is the app not
@@ -703,7 +703,7 @@ export function parseBrainDump(raw: string, options: Date | ParseOptions = {}): 
       steps: breakdown?.steps ?? [],
       goodEnough: breakdown?.goodEnough,
       // Only how sure we are that this is a task rather than a note. Whether we
-      // also worked out *where* it belongs is a separate question — a task with
+      // also worked out *where* it belongs is a separate question, a task with
       // no matching category is still unmistakably a task, and flagging it as
       // doubtful would teach her to ignore the flag that actually matters.
       confidence: classification.confidence,
@@ -741,7 +741,7 @@ function topicWords(text: string): Set<string> {
 /**
  * Should this note hang under the task written just before it?
  *
- * Usually yes — "Ring til værkstedet. De har lukket mandag" is one thought.
+ * Usually yes, "Ring til værkstedet. De har lukket mandag" is one thought.
  * But not always: "Aflever pakken. Jeg er så træt af at der er rod overalt" is
  * two, and filing the second under the first buries a real feeling inside an
  * errand where she will never see it again.
@@ -765,7 +765,7 @@ function belongsWithPreviousTask(segment: string, items: ParsedLoop[]): number {
 }
 
 function sentenceCase(text: string): string {
-  const t = text.replace(/^\s*[-–—*+]\s*/, '').trim()
+  const t = text.replace(/^\s*[-–,*+]\s*/, '').trim()
   return t.charAt(0).toUpperCase() + t.slice(1)
 }
 

@@ -5,7 +5,7 @@
  * Loops has no backend, no payment integration and no partnership with any
  * shop. It therefore does NOT buy or issue gift cards. What it does is real:
  * it converts closed loops into points, tracks a savings goal, and tells the
- * user when they have genuinely earned the reward — then links them straight
+ * user when they have genuinely earned the reward, then links them straight
  * to a shop that actually sells a digital gift card in that amount, which they
  * buy for themselves. The UI says this in plain Danish; nothing is implied
  * that the app cannot do.
@@ -48,7 +48,7 @@ export const GIFT_CARD_STORES: GiftCardStore[] = [
   {
     id: 'panduro',
     name: 'Panduro',
-    blurb: 'Digitalt gavekort i faste beløb — bl.a. 100 og 200 kr. Kreative ting.',
+    blurb: 'Digitalt gavekort i faste beløb, bl.a. 100 og 200 kr. Kreative ting.',
     url: 'https://panduro.com/da-dk/products/gavekort/gavekort/digitale-gavekort',
     amounts: [100, 200],
     emoji: '🎨',
@@ -100,7 +100,7 @@ export const GIFT_CARD_STORES: GiftCardStore[] = [
  *
  * A closed loop pays roughly 12–25 point (see scoring.xpFor), so 25 point pr.
  * krone means 50 kr ≈ 70 lukkede loops, 100 kr ≈ 140, 200 kr ≈ 280. Det er
- * bevidst en rigtig opsparing over uger — ikke noget man snubler over på to
+ * bevidst en rigtig opsparing over uger, ikke noget man snubler over på to
  * dage. En belønning, der kommer for let, holder op med at være en belønning.
  */
 export const XP_PER_KRONE = 25

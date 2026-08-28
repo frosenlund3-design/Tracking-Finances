@@ -49,10 +49,10 @@ export function Settings() {
   const [lockError, setLockError] = useState<string | null>(null)
 
   const self = profile.self
-  const selfCount = (self?.diagnoses.length ?? 0) + (self?.challenges.length ?? 0)
-  const selfSummary = selfCount
-    ? `Om dig — ${[...(self?.diagnoses ?? []), ...(self?.challenges ?? [])].slice(0, 3).join(', ')}${
-        selfCount > 3 ? ` +${selfCount - 3}` : ''
+  const selfEntries = [...(self?.diagnoses ?? []), ...(self?.challenges ?? []), ...(self?.triggers ?? [])]
+  const selfSummary = selfEntries.length
+    ? `Om dig: ${selfEntries.slice(0, 3).join(', ')}${
+        selfEntries.length > 3 ? ` +${selfEntries.length - 3}` : ''
       }`
     : 'Fortæl coachen hvad du døjer med'
 
@@ -110,8 +110,8 @@ export function Settings() {
               <div className="rounded-xl2 border border-line bg-surface p-5">
                 <p className="text-[15px] font-medium">{authName ? `${authName}s profil` : 'Din profil'}</p>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
-                  Loops er låst med din kode. Det du skriver — titler, småting, brain dumps og
-                  samtaler med coachen — ligger krypteret på telefonen.
+                  Loops er låst med din kode. Alt det du skriver ligger krypteret på telefonen:
+                  titler, småting, brain dumps og samtaler med coachen.
                 </p>
               </div>
               <Row icon={<Lock size={17} />} label="Lås appen nu" onClick={lockNow} />
@@ -167,7 +167,7 @@ export function Settings() {
                 <p className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-muted">
                   <Info size={15} className="mt-0.5 shrink-0 text-faint" />
                   Der er ingen kode på Loops lige nu. Du kan oprette en profil med en kode, så
-                  appen låses — og det du skriver bliver krypteret på telefonen.
+                  appen låses, og det du skriver bliver krypteret på telefonen.
                 </p>
               </div>
               <Row icon={<Lock size={17} />} label="Opret profil med kode" onClick={() => setShowCreateLock(true)} />
@@ -203,7 +203,7 @@ export function Settings() {
             hint={
               hapticsSupported()
                 ? 'Små vibrationer når noget lukkes.'
-                : 'Din browser understøtter det ikke — på iPhone kan web-apps ikke vibrere.'
+                : 'Din browser understøtter det ikke. På iPhone kan web-apps ikke vibrere.'
             }
             on={prefs.haptics}
             disabled={!hapticsSupported()}
@@ -219,7 +219,7 @@ export function Settings() {
             label="Diktering"
             hint={
               speechSupported()
-                ? 'Tal i stedet for at skrive. Lyden sendes til telefonens egen stemmegenkendelse (Apple eller Google) for at blive til tekst — det er det ene sted, noget forlader telefonen.'
+                ? 'Tal i stedet for at skrive. Lyden sendes til telefonens egen stemmegenkendelse (Apple eller Google) for at blive til tekst. Det er det ene sted, hvor noget forlader telefonen.'
                 : 'Din browser har ikke stemmegenkendelse. På iPhone kan du bruge mikrofon-tasten på tastaturet i stedet.'
             }
             on={prefs.voiceEnabled !== false}
@@ -258,8 +258,9 @@ export function Settings() {
             <p className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-muted">
               <Info size={15} className="mt-0.5 shrink-0 text-faint" />
               Alt ligger i din browser på den her telefon. Ingen konto, ingen server, ingen sporing,
-              ingen reklamer. Tag en backup, hvis du vil kunne flytte det. Backup-filen er læsbar —
-              også hvis du har sat en kode — så gem den et sted, du ville gemme en kontoudskrift.
+              ingen reklamer. Tag en backup, hvis du vil kunne flytte det. Backup-filen kan læses
+              som den er, også selvom du har sat en kode. Gem den et sted, hvor du ville gemme
+              en kontoudskrift.
             </p>
           </div>
 
@@ -318,7 +319,7 @@ export function Settings() {
               <li>Tryk på del-ikonet nederst</li>
               <li>Vælg "Føj til hjemmeskærm"</li>
             </ol>
-            <p className="mt-3">Så ligger den som en almindelig app — også uden internet.</p>
+            <p className="mt-3">Så ligger den som en almindelig app, også uden internet.</p>
           </div>
         </Section>
 

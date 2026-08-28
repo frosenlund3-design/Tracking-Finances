@@ -2,7 +2,7 @@
  * Haptics.
  *
  * Reality check: iOS Safari does not expose navigator.vibrate. On iPhone this
- * is therefore a no-op, and nothing in the UI claims otherwise — the setting is
+ * is therefore a no-op, and nothing in the UI claims otherwise, the setting is
  * labelled as "hvor det er muligt". On Android and desktop Chrome it works.
  * We never let a missing vibration change what the app does.
  */

@@ -16,7 +16,7 @@ const STYLES: Record<Variant, string> = {
   quiet: 'text-muted active:scale-[0.98]',
 }
 
-/** Minimum 48px tall — comfortably above the 44px touch-target floor. */
+/** Minimum 48px tall, comfortably above the 44px touch-target floor. */
 export function Button({ variant = 'primary', full, className = '', children, onClick, ...rest }: Props) {
   return (
     <button

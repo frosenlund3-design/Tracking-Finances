@@ -8,13 +8,13 @@ import { ROOT_ID } from '@/db/db'
  *
  * Most loops have no deadline, and inventing deadlines is exactly how a calm
  * system turns back into the stressful calendar she already refuses to use. So
- * a time is optional everywhere — but when one is genuinely real, it has to be
+ * a time is optional everywhere, but when one is genuinely real, it has to be
  * treated as real.
  *
  * Two different things, which behave differently:
- *   deadline    — must be finished by then. It can be worked on early, and it
+ *   deadline   , must be finished by then. It can be worked on early, and it
  *                 should climb the priority list as it approaches.
- *   appointment — happens at that time whether or not you did anything. A
+ *   appointment, happens at that time whether or not you did anything. A
  *                 doctor's appointment or an exam is never "do this now"; it is
  *                 "be there at 14:30". Suggesting you start an exam at 09:12
  *                 would be nonsense, so appointments are kept out of the
@@ -58,7 +58,7 @@ export function appointmentsToday(map: NodeMap, now = Date.now()): LoopNode[] {
  * The things that genuinely cannot wait until tomorrow.
  *
  * This is the gate on "det var nok for i dag". Feeling finished while a
- * deadline runs out tonight is worse than not feeling finished at all — it is
+ * deadline runs out tonight is worse than not feeling finished at all, it is
  * the app actively helping her miss something. So the finished screen is only
  * allowed when nothing here is left.
  */

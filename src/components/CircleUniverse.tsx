@@ -14,7 +14,7 @@ import type { LoopNode } from '@/db/types'
 /**
  * The circle universe: the app's real navigation.
  *
- * Zooming into a circle is a shared-element transition — the tapped circle
+ * Zooming into a circle is a shared-element transition, the tapped circle
  * keeps its identity and travels to the centre while its new children unfold
  * around it. That is what makes it feel like moving inward rather than
  * changing page.
@@ -149,7 +149,7 @@ export function CircleUniverse() {
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      {/* Breadcrumb — discreet, as specified. */}
+      {/* Breadcrumb, discreet, as specified. */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-safe">
         <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar py-2">
           {focusId !== ROOT_ID && (

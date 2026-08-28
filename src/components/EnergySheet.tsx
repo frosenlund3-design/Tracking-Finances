@@ -3,7 +3,7 @@ import type { EnergyLevel } from '@/db/types'
 import { useMentalLoad } from '@/store/useStore'
 
 const LEVELS: Array<{ value: EnergyLevel; label: string; hint: string }> = [
-  { value: 10, label: '10%', hint: 'Tomt. Vi finder noget der tager 2 minutter — eller parkerer noget.' },
+  { value: 10, label: '10%', hint: 'Tomt. Vi finder noget der tager 2 minutter, eller parkerer noget.' },
   { value: 30, label: '30%', hint: 'Lidt tilbage. Korte, nemme ting.' },
   { value: 60, label: '60%', hint: 'Almindelig dag. Det meste kan lade sig gøre.' },
   { value: 100, label: '100%', hint: 'Fuld tank. Nu tager vi det store.' },

@@ -5,7 +5,7 @@ import { actionableLeaves, type NodeMap } from './nodes'
  * Finds the things that have quietly been sitting there.
  *
  * This is not a nagging engine. It exists so the coach can ask *one* good
- * question about *one* thing — problem finding before problem solving. An app
+ * question about *one* thing, problem finding before problem solving. An app
  * that lists twelve overdue items has told the user something she already
  * knew and feels bad about; an app that asks "what happens when you get to
  * this one?" can actually find out why.
@@ -71,7 +71,7 @@ export function scanAttention(map: NodeMap, now = Date.now()): AttentionItem[] {
     if (node.lastAskedAt && now - node.lastAskedAt < 7 * DAY) continue
 
     // A task she has already told us what's blocking is less urgent to ask
-    // about again — we know, and the app should act rather than interview.
+    // about again, we know, and the app should act rather than interview.
     if (node.blockReason) score -= 20
 
     items.push({ node, reason, days, headline: headlineFor(node, reason, days), score })
@@ -109,7 +109,7 @@ export const BLOCK_ANSWERS: Array<{ label: string; reason: ProcrastinationReason
   { label: 'Den skal være perfekt', reason: 'perfectionism' },
 ]
 
-/** Naming what it is — the sentence that makes it a problem instead of a flaw. */
+/** Naming what it is, the sentence that makes it a problem instead of a flaw. */
 export const BLOCK_NAMED: Record<ProcrastinationReason, string> = {
   'dont-know-where-to-start': 'Så er det ikke dovenskab. Det er et manglende første skridt.',
   'too-many-steps': 'Så er det ikke dovenskab. Opgaven er for stor til at holde i hovedet på én gang.',

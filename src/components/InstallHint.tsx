@@ -7,7 +7,7 @@ import { useStore } from '@/store/useStore'
  * "Føj til hjemmeskærm".
  *
  * The single most important thing a first-time visitor on an iPhone needs to
- * know, and Safari gives no prompt of its own — so without this, the link is
+ * know, and Safari gives no prompt of its own, so without this, the link is
  * just a web page she closes and never finds again.
  *
  * Shown once, only on an iPhone or iPad, only in Safari, and only when the app
@@ -34,7 +34,7 @@ function isStandalone(): boolean {
 
 export function InstallHint() {
   const [show, setShow] = useState(false)
-  // Never on top of a completion, and never in the middle of a focus mode —
+  // Never on top of a completion, and never in the middle of a focus mode,
   // the moment she closes a loop belongs to her, not to a banner.
   const busy = useStore((s) => s.celebration !== null || s.overlay.kind !== 'none')
 
@@ -43,7 +43,7 @@ export function InstallHint() {
     try {
       dismissed = localStorage.getItem(DISMISSED_KEY) === '1'
     } catch {
-      /* private mode — just show it */
+      /* private mode, just show it */
     }
     if (dismissed || isStandalone() || !isIosSafari()) return
     // Let her see the app first; a banner before anything has loaded reads
@@ -84,7 +84,7 @@ export function InstallHint() {
               Læg Loops på hjemmeskærmen
             </p>
             <p className="mt-2 pr-6 text-[13.5px] leading-relaxed text-muted">
-              Så ligger den som en almindelig app — også uden internet.
+              Så ligger den som en almindelig app, også uden internet.
             </p>
 
             <ol className="mt-3.5 space-y-2">

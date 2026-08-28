@@ -119,6 +119,17 @@ const list = parseBrainDump('købe ind - mælk, brød, kaffe', { now: NOW })
 check('a shopping list is one task, not four', list.length === 1, `${list.length}: ${list.map((l) => l.title).join(', ')}`)
 check('and the list is kept', /mælk/.test(list[0]?.aside ?? ''), list[0]?.aside)
 
+console.log('\ns-passiv')
+for (const [text, expected] of [
+  ['Der skal betales en regning inden fredag', 'Betal en regning'],
+  ['Bilen skal synes inden længe', 'Syn bilen inden længe'],
+  ['Regningen skal betales inden fredag', 'Betal regningen'],
+  ['Papirerne skal udfyldes', 'Udfyld papirerne'],
+] as Array<[string, string]>) {
+  const item = one(text)
+  check(`"${text}" -> "${expected}"`, item?.kind === 'task' && item.title === expected, `${item?.kind}: ${item?.title}`)
+}
+
 console.log('\ntvivl er synlig')
 check('a clear task is not flagged', (one('Ring til tandlægen')?.confidence ?? 0) >= CERTAIN)
 check('an unknown category does not fake doubt about kind',

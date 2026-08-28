@@ -29,7 +29,7 @@ export function parseIso(iso: string): Date {
   return new Date(y, (m ?? 1) - 1, d ?? 1)
 }
 
-/** ISO-8601 week number — Denmark uses Monday-first weeks. */
+/** ISO-8601 week number, Denmark uses Monday-first weeks. */
 export function isoWeek(date: Date): number {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
   const dayNum = d.getUTCDay() || 7

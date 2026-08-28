@@ -14,6 +14,7 @@
 
 import type { LoopNode, SelfDescription } from '@/db/types'
 import { conceptsFor, PROBES } from './knowledge'
+import { matchTriggers } from './triggers'
 import type { Observation } from './memory'
 import { CLOSERS, GREETINGS, RESPONSES, STEP_ACKS } from './responses'
 import type { CoachAction, CoachReply, CoachState, Intent, Strategy, Tone } from './types'
@@ -130,7 +131,7 @@ export function nextMicroStep(task: LoopNode | null): string {
 
 /**
  * Danish words that carry no signal when matching a message to a task.
- * Kept small on purpose — over-filtering loses the actual noun.
+ * Kept small on purpose, over-filtering loses the actual noun.
  */
 const STOPWORDS = new Set([
   'jeg', 'kan', 'ikke', 'komme', 'i', 'gang', 'med', 'at', 'det', 'den', 'de', 'og', 'er', 'en', 'et',
@@ -255,13 +256,15 @@ export interface RespondInput {
   observations?: Observation[]
   /** So the same insight is not offered twice in one conversation. */
   usedConcepts?: string[]
+  /** Triggers already named this conversation, so it is said once and not harped on. */
+  usedTriggers?: string[]
 }
 
 /**
  * The reply, assembled.
  *
  * Order matters and is deliberate: reflect what she said, name the mechanism,
- * then — and only then — say what to do. Advice offered before the thing is
+ * then (and only then) say what to do. Advice offered before the thing is
  * named reads as a brush-off, and to someone who already knows the material it
  * reads as being talked down to.
  *
@@ -289,6 +292,7 @@ export function respond({
   self,
   observations = [],
   usedConcepts = [],
+  usedTriggers = [],
 }: RespondInput): CoachReply {
   const intent = detectIntent(text)
   const tone = state.personalityProfile.tone
@@ -334,7 +338,7 @@ export function respond({
     const opening =
       tone === 'blunt'
         ? 'Du er ikke doven. Det er igangsætning, ikke karakter.'
-        : 'Du er ikke doven — det er en igangsætningsting, ikke en karakterbrist.'
+        : 'Du er ikke doven, det er en igangsætningsting, ikke en karakterbrist.'
     const strategy = pickStrategy(state, intent)
     const lines = pickVariation(strategy, tone, seed).map((l) => fill(l, state, { closed: closedToday }))
     return { lines: [opening, ...lines].slice(0, 4), strategy, options: optionsFor(strategy, state), action: actionFor(strategy, state) }
@@ -349,12 +353,44 @@ export function respond({
     }
   }
 
+  // A trigger outranks everything else that is not an emergency.
+  //
+  // Once one of these is live, advice does not reach her: the reaction is
+  // already running, and anything that sounds like a demand on top of it lands
+  // as pressure. So the coach names it, takes the demand away, and offers a
+  // way around instead of through. It says it once per conversation. Saying it
+  // every time would turn her own words into something being used against her.
+  //
+  // It sits below the "done" and "progress" handling above on purpose: when
+  // she has just finished something, that is the only thing worth answering.
+  //
+  // Her own words come first. The title of whatever task happens to be open is
+  // a much weaker signal, so it only counts when she has not said anything
+  // that points somewhere else, and never right after she has told the coach
+  // it guessed wrong. Naming a second wound in the same breath as being
+  // corrected about the first one is exactly the move that loses her.
+  const rejected = /^\s*(nej|n[åa]h|ikke det|det er ikke det|forkert|passer ikke)\b/i.test(text)
+  const fromWords = matchTriggers(text, self?.triggers)
+  const fromTask =
+    !rejected && !fromWords.length ? matchTriggers(state.currentTask?.title ?? '', self?.triggers) : []
+  const trigger = (rejected ? [] : [...fromWords, ...fromTask]).find(
+    (h) => !usedTriggers.includes(h.trigger),
+  )
+  if (trigger) {
+    return {
+      lines: [trigger.name, trigger.around],
+      strategy: 'reduce-scope',
+      triggerNamed: trigger.trigger,
+      options: [trigger.offer, 'Det er ikke det denne gang', state.currentTask ? 'Hjælp mig i gang' : 'Hvad skal jeg lave?'],
+    }
+  }
+
   // If something she said maps onto a mechanism worth naming, lead with that.
   // This is what separates a reply she has read a hundred times from one that
   // tells her something about her own situation.
   //
   // How much she already knows changes what counts as help. To someone who has
-  // read everything, a strategy tip is noise she has heard a hundred times —
+  // read everything, a strategy tip is noise she has heard a hundred times,
   // and being told the obvious is the fastest way to lose her. So: the more she
   // knows, the lower the bar for leading with a mechanism instead of advice.
   const expert = self?.familiarity === 'expert'
@@ -389,7 +425,7 @@ export function respond({
   const opening = reflect(text, tone)
 
   // Nothing matched, and she already knows every tip we have. Then the honest
-  // move is to ask rather than to dispense — a question she has not asked
+  // move is to ask rather than to dispense, a question she has not asked
   // herself does more than advice she could have written.
   if (expert && intent === 'unknown' && text.trim().split(/\s+/).length >= 3) {
     return {

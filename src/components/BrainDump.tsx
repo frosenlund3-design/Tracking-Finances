@@ -171,8 +171,8 @@ export function BrainDumpPanel({ onCommitted, footer, autoFinish }: Props) {
             {parsed.some((p) => p.confidence < CERTAIN) && (
               <p className="mt-2 flex items-start gap-2 rounded-xl2 bg-warm/12 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink/75">
                 <AlertCircle size={14} className="mt-0.5 shrink-0 text-warm" />
-                Jeg er i tvivl om dem med en streg. Tjek lige om de skal være opgaver eller noter —
-                ét tryk skifter.
+                Jeg er i tvivl om dem med den varme kant. Tjek lige, om de skal være opgaver eller
+                noter. Ét tryk skifter.
               </p>
             )}
 
@@ -253,14 +253,14 @@ function ParsedRow({
           <div className="min-w-0 flex-1">
             <p className="text-[14.5px] leading-snug text-muted">{item.title}</p>
             <p className="mt-1.5 text-[12px] text-faint">
-              Gemmes som note{item.attachTo !== undefined ? ' på opgaven ovenfor' : ''} — ikke som en
+              Gemmes som note{item.attachTo !== undefined ? ' på opgaven ovenfor' : ''}, ikke som en
               opgave, så den fylder ikke i din mental load.
             </p>
             <button
               onClick={() => onKind('task')}
               className="focus-ring mt-2 flex min-h-[40px] items-center gap-1.5 text-[13px] font-medium text-muted"
             >
-              Nej — det er en opgave
+              Nej, det er en opgave
             </button>
           </div>
           {editing && (
@@ -337,7 +337,7 @@ function ParsedRow({
             className="focus-ring mt-2 flex min-h-[40px] items-center gap-1.5 text-[13px] text-faint"
           >
             <NotebookPen size={13} />
-            Det er ikke en opgave — gem som note
+            Det er ikke en opgave, gem som note
           </button>
 
           <AnimatePresence>

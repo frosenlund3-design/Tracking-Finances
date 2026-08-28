@@ -7,7 +7,7 @@ import { useStore } from '@/store/useStore'
  * Hvad coachen ved om dig.
  *
  * Alt her er skrevet af hende selv. Appen gætter aldrig på en diagnose og
- * udleder den aldrig af adfærd — den ville før eller siden gætte forkert og
+ * udleder den aldrig af adfærd, den ville før eller siden gætte forkert og
  * så tale skråsikkert om et helt andet menneske. Derfor: kun det, hun selv
  * har skrevet, og hun kan altid slette det igen.
  *
@@ -15,7 +15,7 @@ import { useStore } from '@/store/useStore'
  *  1. Hvilke begreber der overhovedet må bringes op (monotropi f.eks. nævnes
  *     kun, hvis hun har skrevet autisme/autistiske træk).
  *  2. Hvor grundlæggende den må være. "Ved det meste" slår al forklaring af
- *     hvad ADHD er fra — den går direkte til mekanismen.
+ *     hvad ADHD er fra, den går direkte til mekanismen.
  */
 
 const COMMON_DIAGNOSES = [
@@ -58,7 +58,33 @@ const FAMILIARITY: Array<{ id: SelfDescription['familiarity']; label: string; hi
   },
 ]
 
-const EMPTY: SelfDescription = { diagnoses: [], challenges: [], freeText: '', familiarity: 'some' }
+/**
+ * Common triggers, phrased the way a person would say them rather than the way
+ * a clinician would. They are only suggestions: the important ones are usually
+ * the specific ones she types herself.
+ */
+const COMMON_TRIGGERS = [
+  'Hvis nogen virker sure på mig',
+  'Regninger og økonomi',
+  'Telefonopkald',
+  'At blive rettet',
+  'Uåbnet post',
+  'e-Boks',
+  'Rod og uorden',
+  'At komme for sent',
+  'Høje lyde',
+  'At blive spurgt hvorfor',
+  'Deadlines der nærmer sig',
+  'At skulle bede om hjælp',
+]
+
+const EMPTY: SelfDescription = {
+  diagnoses: [],
+  challenges: [],
+  triggers: [],
+  freeText: '',
+  familiarity: 'some',
+}
 
 export function SelfProfile() {
   const stored = useStore((s) => s.profile.self)
@@ -73,7 +99,7 @@ export function SelfProfile() {
     setSaved(false)
   }
 
-  const toggle = (key: 'diagnoses' | 'challenges', value: string) => {
+  const toggle = (key: 'diagnoses' | 'challenges' | 'triggers', value: string) => {
     const list = self[key]
     patch({
       [key]: list.some((v) => v.toLowerCase() === value.toLowerCase())
@@ -87,6 +113,7 @@ export function SelfProfile() {
       self: {
         diagnoses: self.diagnoses,
         challenges: self.challenges,
+        triggers: self.triggers,
         freeText: self.freeText?.trim() || undefined,
         familiarity: self.familiarity,
       },
@@ -97,13 +124,13 @@ export function SelfProfile() {
   return (
     <div className="pb-8">
       <p className="text-[15px] leading-relaxed text-muted">
-        Coachen taler ud fra det her — og kun det her. Den gætter aldrig selv, og den siger det ikke
+        Coachen taler ud fra det her, og kun det her. Den gætter aldrig selv, og den siger det ikke
         videre nogen steder. Du kan lade det stå tomt, og du kan slette det igen.
       </p>
 
       <Block
         title="Diagnoser"
-        sub="Det du selv har fået at vide — eller er ret sikker på. Der er ingen der tjekker."
+        sub="Det du selv har fået at vide, eller er ret sikker på. Der er ingen der tjekker."
       >
         <ChipRow
           options={COMMON_DIAGNOSES}
@@ -137,6 +164,31 @@ export function SelfProfile() {
           values={self.challenges}
           known={COMMON_CHALLENGES}
           onRemove={(v) => patch({ challenges: self.challenges.filter((d) => d !== v) })}
+        />
+      </Block>
+
+      <Block
+        title="Det der sætter noget i gang i dig"
+        sub="Ikke hvad du er dårlig til. Det der rammer, før du når at tænke."
+      >
+        <p className="rounded-xl2 border border-line bg-surface p-4 text-[13.5px] leading-relaxed text-muted">
+          Når en opgave eller en samtale rører ved noget herfra, holder jeg op med at give gode
+          råd. Så siger jeg det først, og så finder vi en vej udenom i stedet for igennem.
+        </p>
+        <ChipRow
+          options={COMMON_TRIGGERS}
+          selected={self.triggers}
+          onToggle={(v) => toggle('triggers', v)}
+        />
+        <FreeAdd
+          placeholder="Fx “hvis nogen virker sure på mig”"
+          existing={self.triggers}
+          onAdd={(v) => patch({ triggers: [...self.triggers, v] })}
+        />
+        <Custom
+          values={self.triggers}
+          known={COMMON_TRIGGERS}
+          onRemove={(v) => patch({ triggers: self.triggers.filter((d) => d !== v) })}
         />
       </Block>
 

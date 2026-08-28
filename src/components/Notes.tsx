@@ -5,7 +5,7 @@ import { useStore } from '@/store/useStore'
 import { MicButton } from './ui/MicButton'
 
 /**
- * "Hovedet" — the things she wrote down that are not tasks.
+ * "Hovedet", the things she wrote down that are not tasks.
  *
  * Worries, context, half-formed thoughts, facts worth keeping. They live here
  * precisely so they do not live in the loop tree: a note adds nothing to the

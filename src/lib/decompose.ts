@@ -6,7 +6,7 @@ import { analyse, BROKEN, type Analysis } from './language'
  * The old version looked up a template by keyword, which produced answers that
  * were not merely unhelpful but wrong: "Køb vaskemiddel" was told to fill the
  * washing machine, because "vask" sits inside "vaskemiddel". Being confidently
- * wrong is much worse than being generic — she stops trusting the steps, and
+ * wrong is much worse than being generic, she stops trusting the steps, and
  * the steps are the whole product.
  *
  * So steps are generated from what the sentence actually says. The verb decides
@@ -14,7 +14,7 @@ import { analyse, BROKEN, type Analysis } from './language'
  * dial, write down what was agreed) and the object is substituted in, so the
  * result is about her thing rather than about a category. Domain knowledge sits
  * on top for the handful of jobs where the real world has specific steps worth
- * knowing — the tax site, the MOT, a package at the post office.
+ * knowing, the tax site, the MOT, a package at the post office.
  *
  * Every generator returns a full, fine-grained chain. `granularity` then picks
  * how much of it she wants to see.
@@ -66,7 +66,7 @@ interface Domain {
   /**
    * The verbs this domain is allowed to override.
    *
-   * Domain knowledge beats the generic verb shape — except when the verb is
+   * Domain knowledge beats the generic verb shape, except when the verb is
    * the whole point. "Betal regningen fra tandlægen" mentions a dentist, but
    * she is not booking anything; giving her the dentist's booking steps is
    * exactly the kind of not-reading-the-task that makes the app useless. When
@@ -119,7 +119,7 @@ const DOMAINS: Domain[] = [
       s('Find ud af om du har dækkene selv, eller de står på hotel', 0),
       s('Find bilens nummerplade frem', 1),
       s('Ring til værkstedet, eller book online', 0),
-      s('Book en tid — book den tidligt, de fyldes op i sæsonen', 0),
+      s('Book en tid. Gør det tidligt, de fyldes op i sæsonen', 0),
       s('Sæt tiden i kalenderen', 1),
       s('Læg dækkene i bilen aftenen før, hvis du selv har dem', 2),
       s('Sæt en påmindelse dagen før', 3),
@@ -144,7 +144,7 @@ const DOMAINS: Domain[] = [
     verbs: ['ring', 'kontakt', 'skriv', 'spørg', 'book', 'aftal', 'tjek', 'find-ud-af', 'få-styr-på'],
     minutes: 20,
     steps: (a) => [
-      s(`Find det du vil spørge ${a.target ?? 'banken'} om — skriv det i én sætning`, 0),
+      s(`Find det du vil spørge ${a.target ?? 'banken'} om, skriv det i én sætning`, 0),
       s('Find dit kontonummer eller lånenummer frem', 1),
       s('Find åbningstiden og nummeret', 1),
       s('Ring, eller skriv i netbankens beskedfunktion hvis det er nemmere', 0),
@@ -158,7 +158,7 @@ const DOMAINS: Domain[] = [
     verbs: ['ring', 'kontakt', 'skriv', 'send', 'spørg', 'meld', 'anmeld', 'tjek', 'find-ud-af', 'få-styr-på'],
     minutes: 25,
     steps: (a) => [
-      s('Find policenummeret — det står i appen eller på en mail', 0),
+      s('Find policenummeret, det står i appen eller på en mail', 0),
       s(`Skriv i tre linjer hvad du vil have ${a.target ?? 'dem'} til`, 0),
       s('Find selskabets kontaktside', 1),
       s('Send beskeden eller ring', 0),
@@ -205,7 +205,7 @@ const DOMAINS: Domain[] = [
     minutes: 10,
     steps: () => [
       s('Gå hen til vasketøjskurven', 0),
-      s('Tag den største bunke — sortér ikke i dag', 1),
+      s('Tag den største bunke, sortér ikke i dag', 1),
       s('Fyld maskinen', 0),
       s('Kom sæbe i', 1),
       s('Tryk start', 0),
@@ -223,7 +223,7 @@ const DOMAINS: Domain[] = [
       s('Fyld opvaskemaskinen', 0),
       s('Smid det åbenlyse skrald ud', 1),
       s('Tør bordet af', 1),
-      s('Stop her — resten er ikke i dag', 2),
+      s('Stop her, resten er ikke i dag', 2),
     ],
   },
 ]
@@ -283,13 +283,13 @@ const BY_VERB: Record<string, (a: Analysis) => Step[]> = {
     a.target
       ? [
           s(`Skriv i én linje hvad du vil have ${a.target} til`, 0),
-          s('Skriv resten groft — det skal ikke være pænt', 0),
+          s('Skriv resten groft, det skal ikke være pænt', 0),
           s('Læs det igennem én gang', 1),
           s('Send det', 0),
         ]
       : [
           s(`Skriv i én linje hvad ${a.object || 'det'} skal handle om`, 0),
-          s('Skriv en grim første udgave — den skal ikke være god', 0),
+          s('Skriv en grim første udgave, den skal ikke være god', 0),
           s('Læs den igennem én gang', 1),
           s('Send eller gem den', 0),
         ],
@@ -301,7 +301,7 @@ const BY_VERB: Record<string, (a: Analysis) => Step[]> = {
   ],
   svar: (a) => [
     s(`Åbn beskeden fra ${a.target ?? a.object ?? 'dem'}`, 0),
-    s('Læs den én gang — kun én', 1),
+    s('Læs den én gang, kun én', 1),
     s('Skriv tre linjer tilbage', 0),
     s('Send', 0),
   ],
@@ -315,7 +315,7 @@ const BY_VERB: Record<string, (a: Analysis) => Step[]> = {
   ansøg: () => [
     s('Åbn ansøgningen', 0),
     s('Skriv de tre ting de skal vide om dig', 0),
-    s('Skriv et groft udkast — grimt er fint', 1),
+    s('Skriv et groft udkast, grimt er fint', 1),
     s('Læs igennem én gang', 2),
     s('Send den', 0),
   ],
@@ -347,13 +347,13 @@ const BY_VERB: Record<string, (a: Analysis) => Step[]> = {
   støvsug: (a) => [
     s('Find støvsugeren frem', 0),
     s('Flyt de to største ting på gulvet', 1),
-    s(`Støvsug ${a.object || 'midt i rummet'} — kanterne behøver du ikke`, 0),
+    s(`Støvsug ${a.object || 'midt i rummet'}, kanterne behøver du ikke`, 0),
     s('Sæt den væk igen', 2),
   ],
   skift: (a) => {
     const thing = a.object || a.target || 'den'
     return [
-      s(`Find ud af hvad ${thing} skal skiftes til — og hvad du skal bruge`, 0),
+      s(`Find ud af hvad ${thing} skal skiftes til, og hvad du skal bruge`, 0),
       s('Tjek om du har det hjemme', 1),
       s('Køb eller bestil det du mangler', 0),
       s(`Skift ${thing}`, 0),
@@ -374,17 +374,17 @@ const BY_VERB: Record<string, (a: Analysis) => Step[]> = {
   ],
   post: (a) => [
     s('Find én idé', 0),
-    s('Skriv en hook — den første linje', 0),
+    s('Skriv en hook, den første linje', 0),
     s('Lav opslaget', 0),
     s(`Post det på ${a.target ?? 'kanalen'}`, 0),
   ],
   optag: () => [
     s('Find et sted med ordentligt lys', 1),
     s('Skriv de tre ting du vil sige', 0),
-    s('Optag én take — den behøver ikke være god', 0),
+    s('Optag én take, den behøver ikke være god', 0),
     s('Gem den', 1),
   ],
-  træn: () => [s('Tag tøjet på', 0), s('Gå ud af døren', 0), s('Ti minutter — så må du stoppe', 0)],
+  træn: () => [s('Tag tøjet på', 0), s('Gå ud af døren', 0), s('Ti minutter, så må du stoppe', 0)],
   tjek: (a) => [s(`Åbn der hvor ${a.object || 'det'} står`, 0), s('Kig efter det ene tal du skal bruge', 0), s('Skriv det ned', 1)],
   beslut: (a) => [
     s(`Skriv de to muligheder for ${a.object || 'det'} ned`, 0),
@@ -401,7 +401,7 @@ const BY_VERB: Record<string, (a: Analysis) => Step[]> = {
 
 /**
  * The fallback, for tasks that name no recognised verb. It is deliberately
- * about deciding what the thing even is — because a task you cannot name is
+ * about deciding what the thing even is, because a task you cannot name is
  * a task you cannot start, and that is the actual blocker.
  */
 /**
@@ -412,7 +412,7 @@ const BY_VERB: Record<string, (a: Analysis) => Step[]> = {
  * one, so these steps do that work explicitly: define done, list what stands
  * between here and there, pick one, shrink it until it is embarrassingly
  * small, and start. The longer versions add the parts a specific task gets
- * for free — where it happens, what you need in front of you, when it stops.
+ * for free, where it happens, what you need in front of you, when it stops.
  */
 function vagueSteps(a: Analysis, title: string): Step[] {
   const thing = shorten(a.object || title)
@@ -422,7 +422,7 @@ function vagueSteps(a: Analysis, title: string): Step[] {
     s('Sæt ring om den nemmeste af dem', 1),
     s('Skriv den om, så den starter med et udsagnsord: hvad gør du helt konkret?', 2),
     s('Gør den mindre, indtil den tager under 10 minutter', 2),
-    s('Find det frem du skal bruge — papir, kode, nummer, nøgler', 3),
+    s('Find det frem, du skal bruge: papir, kode, nummer, nøgler', 3),
     s('Beslut hvor du sidder eller står, mens du gør det', 4),
     s('Sæt en timer, så der er en slutning', 3),
     s('Lav kun den ene', 0),
@@ -437,7 +437,7 @@ function vagueSteps(a: Analysis, title: string): Step[] {
  * The question form matters for the wording: "find ud af hvad jeg skal med
  * bilen" already contains its own question, and wrapping it in another one
  * ("hvad valget om hvad jeg skal…") reads like the app didn't parse the
- * sentence — which is exactly the impression that loses trust.
+ * sentence, which is exactly the impression that loses trust.
  */
 const QUESTION_FORM = /^(?:hvad|hvem|hvor|hvorn[åa]r|hvorfor|hvilke[nt]?|om)\b/i
 
@@ -467,7 +467,7 @@ const DECIDE: (a: Analysis) => Step[] = (a) => {
 const VAGUE_VERBS = new Set(['ordn', 'lav', 'gør', 'få', 'klar', 'tag', 'se', 'kig', 'styr', 'håndter'])
 
 /**
- * "Få styr på pensionen" is not a decision and not a chore — it is a missing
+ * "Få styr på pensionen" is not a decision and not a chore, it is a missing
  * overview, and the reason it never happens is that it has no end. So these
  * steps give it one: decide what you want to be able to answer, go to the one
  * place that answers it, write the answer down, and split off any action that
@@ -477,12 +477,12 @@ const OVERVIEW: (a: Analysis) => Step[] = (a) => {
   const thing = shorten(a.object || a.target || 'det', 32)
   return [
     s(`Skriv i én linje hvad du gerne vil kunne svare på om ${thing}`, 0),
-    s('Find det ene sted, svaret ligger — brev, app, hjemmeside, mappe', 0),
+    s('Find det ene sted, hvor svaret ligger: brev, app, hjemmeside eller mappe', 0),
     s('Find login eller papirer frem, før du åbner noget', 2),
     s('Åbn det, og lad være med at rette noget endnu', 1),
     s('Skriv de 2–3 tal eller datoer ned, du faktisk skal bruge', 0),
     s('Skriv ned hvad der ser forkert ud eller mangler', 1),
-    s('Beslut: skal der gøres noget — eller ville du bare vide det?', 0),
+    s('Beslut: skal der gøres noget, eller ville du bare vide det?', 0),
     s('Skriv den ene handling ned som sin egen opgave', 2),
     s('Gem noten et sted du kan finde den igen', 3),
   ]
@@ -491,7 +491,7 @@ const OVERVIEW: (a: Analysis) => Step[] = (a) => {
 /**
  * Something is broken.
  *
- * The real reason a broken thing sits for months is not the repair — it is the
+ * The real reason a broken thing sits for months is not the repair, it is the
  * unanswered question of who fixes it and what it costs. So the steps settle
  * that first, and put a decision point in the middle so it cannot turn into an
  * open-ended research project.
@@ -499,14 +499,14 @@ const OVERVIEW: (a: Analysis) => Step[] = (a) => {
 const REPAIR: (title: string) => Step[] = (title) => {
   const thing = shorten(title.split(/\s+/)[0] ?? 'den', 24)
   return [
-    s(`Skriv i én linje hvad ${thing} gør — og hvornår den gør det`, 0),
+    s(`Skriv i én linje hvad ${thing} gør, og hvornår den gør det`, 0),
     s('Find mærke og model (det står som regel bagpå eller indeni lugen)', 0),
-    s('Søg på mærke + model + det den gør — brug 10 minutter, ikke mere', 1),
+    s('Søg på mærke, model og det den gør. Brug 10 minutter, ikke mere', 1),
     s('Beslut: kan du selv, eller skal der en anden til?', 0),
     s('Tjek om der er garanti eller en serviceaftale', 2),
     s('Find ét sted der reparerer den slags', 1),
     s('Spørg om pris og ventetid, før du beslutter noget', 2),
-    s('Book tiden — eller skriv i kalenderen hvornår du gør det selv', 0),
+    s('Book tiden, eller skriv i kalenderen hvornår du gør det selv', 0),
     s('Skriv ned hvad du må bruge på den, før det bedre kan betale sig at købe ny', 3),
   ]
 }
@@ -539,13 +539,13 @@ export function decompose(title: string, opts: DecomposeOptions = {}): Decomposi
   const granularity = opts.granularity ?? DEFAULT_GRANULARITY
   const a = analyse(t)
 
-  // "Vaskemaskinen larmer" — something is broken. This has to be caught before
+  // "Vaskemaskinen larmer", something is broken. This has to be caught before
   // the domains, or the washing machine gets a laundry checklist.
   if (!a.verb && BROKEN.test(t)) {
     return { steps: toGranularity(REPAIR(t), granularity), minutes: 25, recognised: 'reparation' }
   }
 
-  // Domain knowledge first — it beats the generic verb shape when it applies.
+  // Domain knowledge first, it beats the generic verb shape when it applies.
   for (const domain of DOMAINS) {
     if (!domain.test(a, t)) continue
     if (domain.verbs && a.verb && !domain.verbs.includes(a.verb)) continue
@@ -565,7 +565,7 @@ export function decompose(title: string, opts: DecomposeOptions = {}): Decomposi
     return { steps: toGranularity(OVERVIEW(a), granularity), minutes: 30, recognised: 'overblik' }
   }
 
-  // "Ordn mit rod", "lav noget ved haven" — a real verb that still says nothing
+  // "Ordn mit rod", "lav noget ved haven", a real verb that still says nothing
   // about what to do. It is the vague case, not a chore with known steps, so it
   // gets the make-it-concrete chain rather than nothing at all.
   if (a.verb && VAGUE_VERBS.has(a.verb) && !BY_VERB[a.verb]) {

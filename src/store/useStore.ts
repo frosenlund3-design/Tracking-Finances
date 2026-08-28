@@ -113,6 +113,7 @@ interface State {
   unparkNode: (id: string) => Promise<void>
   postponeNode: (id: string) => Promise<void>
   toggleStep: (nodeId: string, stepId: string) => Promise<void>
+  addStep: (nodeId: string, title: string) => Promise<void>
   captureStep: (nodeId: string, stepId: string, text: string) => Promise<void>
   addNote: (text: string, nodeId?: string) => Promise<void>
   deleteNote: (id: string) => Promise<void>
@@ -416,6 +417,21 @@ export const useStore = create<State>((set, get) => ({
     haptic('step')
   },
 
+  /**
+   * A step she asked for herself, added at the bottom.
+   *
+   * At the bottom on purpose: dropping a new step into the middle of a list
+   * she is halfway through moves the goalposts while she is looking at them.
+   */
+  async addStep(nodeId, title) {
+    const node = get().map[nodeId]
+    const text = title.trim()
+    if (!node || !text) return
+    if (node.steps.some((s) => s.title.trim().toLowerCase() === text.toLowerCase())) return
+    await get().updateNode(nodeId, { steps: [...node.steps, toStep(text, node.steps.length)] })
+    haptic('step')
+  },
+
   async captureStep(nodeId, stepId, text) {
     const node = get().map[nodeId]
     if (!node) return
@@ -485,7 +501,7 @@ export const useStore = create<State>((set, get) => ({
       dueAt: when.getTime(),
       dueKind: kind,
       dueHasTime: !!time,
-      // Urgency is derived, never typed in — one source of truth for "haster".
+      // Urgency is derived, never typed in, one source of truth for "haster".
       urgency: urgencyFor(node),
       scheduledDate: isoDate(when),
     })
@@ -556,7 +572,7 @@ export const useStore = create<State>((set, get) => ({
       touched.add(parentId)
     }
 
-    // Notes never become loops — they carry no mental load and cannot be
+    // Notes never become loops, they carry no mental load and cannot be
     // "done". They hang off the task they belong with, or stand alone.
     const noteRecords: Note[] = []
     parsed.forEach((item, i) => {
@@ -624,7 +640,7 @@ export const useStore = create<State>((set, get) => ({
 
   async wantMoreToday() {
     // Never a lock. Asking for one more raises today's bar by one and clears
-    // the "finished" flag — clearing the flag alone would do nothing, since
+    // the "finished" flag, clearing the flag alone would do nothing, since
     // the goal she already reached would immediately close the day again.
     const today = isoDate(new Date())
     const { prefs } = get()
@@ -679,7 +695,7 @@ export const useStore = create<State>((set, get) => ({
         updatedAt: message.createdAt,
         messageCount: session.messageCount + 1,
         // The first thing *she* says names the conversation. Not the message
-        // count — the coach opens with a greeting, so by the time she writes
+        // count, the coach opens with a greeting, so by the time she writes
         // anything the count is already 1 and every session stayed "Ny samtale".
         title:
           session.title === NEW_SESSION_TITLE && m.role === 'user'
@@ -902,7 +918,7 @@ function measuredMinutes(node: LoopNode, now: number): number | undefined {
   return Math.round(minutes * 10) / 10
 }
 
-/** Shared path for done / dropped / delegated — all of them close a loop. */
+/** Shared path for done / dropped / delegated, all of them close a loop. */
 async function closeLoop(
   get: () => State,
   set: (partial: Partial<State>) => void,
@@ -924,7 +940,7 @@ async function closeLoop(
   const score = scoreTask(node, state.map, ctx).score
   const xp = kind === 'done' ? xpFor(node, score) : Math.round(xpFor(node, score) * 0.6)
 
-  // Closing a container closes what is left inside it — the whole branch stops
+  // Closing a container closes what is left inside it, the whole branch stops
   // costing mental load, which is the point.
   const closing: LoopNode[] = []
   const stack = [id]

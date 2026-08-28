@@ -11,7 +11,7 @@ import { Button } from './ui/Button'
  *
  * HONESTY NOTE: a web app on iOS cannot block TikTok or Instagram, cannot see
  * what other apps are running, and cannot read Screen Time. Nothing here
- * pretends otherwise — this is a way *out* of the scroll, opened by the user,
+ * pretends otherwise, this is a way *out* of the scroll, opened by the user,
  * not a blocker. The technical limit is stated in the UI rather than hidden.
  *
  * What it does do is real: break state, physical reset, then one tiny task.
@@ -24,7 +24,7 @@ export function ScrollRescue() {
   const [phase, setPhase] = useState<'intro' | 'count' | 'phone' | 'stand' | 'task'>('intro')
   const [count, setCount] = useState(5)
 
-  // The smallest, easiest thing we have — momentum matters more than value.
+  // The smallest, easiest thing we have, momentum matters more than value.
   const tiny = [...ranked].sort((a, b) => a.node.estimatedMinutes - b.node.estimatedMinutes)[0] ?? null
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export function ScrollRescue() {
                 onClick={() => setPhase('task')}
                 className="focus-ring min-h-[48px] w-full text-[14.5px] text-faint"
               >
-                Spring over — giv mig bare en lille ting
+                Spring over, giv mig bare en lille ting
               </button>
             </div>
           </Step>
@@ -129,7 +129,7 @@ export function ScrollRescue() {
                     Start den
                   </Button>
                   <button onClick={close} className="focus-ring min-h-[48px] w-full text-[14.5px] text-faint">
-                    Ikke nu — men tak
+                    Ikke nu, men tak
                   </button>
                 </div>
               </>
@@ -155,7 +155,7 @@ export function ScrollRescue() {
       <div className="mt-auto flex items-start gap-2.5 rounded-xl2 border border-line bg-surface p-4 text-left">
         <Info size={15} className="mt-0.5 shrink-0 text-faint" />
         <p className="text-[12.5px] leading-relaxed text-faint">
-          Loops kan ikke blokere andre apps. En web-app må ikke det på iPhone — og jeg vil hellere sige det
+          Loops kan ikke blokere andre apps. En web-app må ikke det på iPhone, og jeg vil hellere sige det
           ligeud end lade som om. Det her bryder loopet i stedet.
         </p>
       </div>

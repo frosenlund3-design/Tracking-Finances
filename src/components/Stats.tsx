@@ -9,7 +9,7 @@ import { calibrationSentence } from '@/lib/calibration'
  * "Det du har flyttet".
  *
  * Deliberately tucked away behind Settings. A number on the home screen turns
- * into a target, and a target turns into pressure — which is the one thing
+ * into a target, and a target turns into pressure, which is the one thing
  * this app is not allowed to add. Down here it does the other job: on a bad
  * day, evidence that the thing has actually been working.
  *
@@ -50,7 +50,7 @@ export function Stats() {
           </p>
         ) : (
           <>
-            {/* Money — only ever from numbers she gave the app. */}
+            {/* Money, only ever from numbers she gave the app. */}
             {money > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
@@ -64,7 +64,7 @@ export function Stats() {
                   {kr(money)}
                 </p>
                 <p className="mt-3 text-[13.5px] leading-relaxed text-muted">
-                  Fra de opgaver, du selv har sat et beløb på — fx kundearbejde. Du sætter beløbet
+                  Fra de opgaver, du selv har sat et beløb på, fx kundearbejde. Du sætter beløbet
                   på opgaven, når du opretter eller åbner den.
                 </p>
               </motion.div>
@@ -76,7 +76,7 @@ export function Stats() {
               {stats.avoidedClosed > 0 && (
                 <Tile
                   value={String(stats.avoidedClosed)}
-                  label="ting du havde skubbet — og alligevel klarede"
+                  label="ting du havde skubbet, og alligevel klarede"
                 />
               )}
               <Tile value={String(stats.starts)} label="gange du er kommet i gang" />
@@ -98,7 +98,7 @@ export function Stats() {
                   Du lukker flest loops <strong className="font-semibold">{partLabel(stats.bestPart).toLowerCase()}</strong>.
                 </p>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
-                  Ikke noget du skal rette dig efter — men det er værd at vide, hvornår det plejer at
+                  Ikke noget du skal rette dig efter, men det er værd at vide, hvornår det plejer at
                   være nemmest.
                 </p>
               </div>

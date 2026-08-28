@@ -5,13 +5,13 @@
  * da-DK. On iPhone that is Safari's dictation engine, the same one behind the
  * microphone key on the keyboard, and it handles Danish well.
  *
- * HONESTY NOTE — this matters, because the app promises that her thoughts stay
+ * HONESTY NOTE, this matters, because the app promises that her thoughts stay
  * on her phone:
  *  - Speech recognition is the one part of Loops that is not purely local. On
  *    iOS and Chrome the audio is sent to Apple's or Google's servers to be
  *    turned into text. The app says so before the first use, and the setting
  *    can be turned off. Everything after the text appears is local as usual.
- *  - It is not, and cannot be, 100% accurate — no dictation is. So the
+ *  - It is not, and cannot be, 100% accurate, no dictation is. So the
  *    transcript always lands in an editable field first. She reads it and
  *    sends it; the app never acts on unheard words.
  *  - Where the browser has no speech recognition, the button is not shown at
@@ -134,6 +134,6 @@ export class Dictation {
 export const DICTATION_ERRORS: Record<DictationError, string> = {
   denied: 'Loops må ikke bruge mikrofonen. Du kan give lov i browserens indstillinger.',
   'no-speech': 'Jeg hørte ikke noget. Prøv igen, eller skriv i stedet.',
-  network: 'Diktering kræver internet. Skriv i stedet — resten af appen virker offline.',
+  network: 'Diktering kræver internet. Skriv i stedet, resten af appen virker offline.',
   unknown: 'Dikteringen stoppede. Prøv igen, eller skriv i stedet.',
 }

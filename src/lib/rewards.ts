@@ -87,7 +87,7 @@ export function rewardLine(kind: RewardKind, seed = Math.random()): string {
 }
 
 /**
- * Occasional extra warmth — but rarely, and never as a slot machine.
+ * Occasional extra warmth, but rarely, and never as a slot machine.
  * Roughly one in seven closes gets a personal line on top.
  */
 export function shouldSurprise(prefs: { celebrationLevel: 'quiet' | 'normal'; reducedStimulation: boolean }): boolean {

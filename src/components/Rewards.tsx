@@ -110,7 +110,7 @@ export function Rewards() {
               </div>
               {/*
                 A bare "5000 point" is just a wall. What she needs to know is
-                whether it is reachable, so say it in loops — measured from her
+                whether it is reachable, so say it in loops, measured from her
                 own closed ones where there are any, not from an invented
                 average.
               */}
@@ -200,7 +200,7 @@ export function Rewards() {
           <div className="mt-5 flex items-start gap-2.5 rounded-xl2 bg-canvas p-4">
             <Info size={14} className="mt-0.5 shrink-0 text-faint" />
             <p className="text-[12px] leading-relaxed text-faint">
-              Loops sælger ikke gavekort og kan ikke købe et til dig — appen har ingen server og ingen betaling.
+              Loops sælger ikke gavekort og kan ikke købe et til dig, appen har ingen server og ingen betaling.
               Den holder styr på opsparingen og siger til, når du har fortjent det. Selve gavekortet køber du
               selv i butikken.
             </p>
@@ -268,7 +268,7 @@ export function Rewards() {
         </div>
 
         <p className="mt-10 text-center text-[12px] leading-relaxed text-faint/80">
-          Point gives for at starte, for at lukke loops, for at tømme hovedet — og ekstra for det, du har
+          Point gives for at starte, for at lukke loops, for at tømme hovedet, og ekstra for det, du har
           gået og undgået. Ikke for at bruge appen længe.
         </p>
       </div>

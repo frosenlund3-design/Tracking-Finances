@@ -7,12 +7,12 @@ import type { NodeMap } from './nodes'
  * "Der er ikke noget, du skal lige nu."
  *
  * That sentence is the most valuable screen in the app, and until now it was
- * unreachable — it only appeared when literally every loop was closed, which
+ * unreachable, it only appeared when literally every loop was closed, which
  * for a person with a full life is never. So it never did its job.
  *
  * Two ways to reach it now:
  *  1. Close a small number of loops. The number scales with the energy she
- *     said she had, and it is small on purpose — three closed loops on a
+ *     said she had, and it is small on purpose, three closed loops on a
  *     30% day is a good day, not a failure to reach ten.
  *  2. Say so. "Jeg er færdig for i dag" is a legitimate decision, exactly
  *     like parking something, and it takes one tap.
@@ -20,9 +20,9 @@ import type { NodeMap } from './nodes'
  * It is never a lock. There is always a quiet way to ask for one more.
  *
  * But it is gated. Feeling finished while a deadline runs out tonight is worse
- * than not feeling finished at all — that is the app helping her miss
+ * than not feeling finished at all, that is the app helping her miss
  * something. So the finished screen only appears when nothing that genuinely
- * cannot wait is still open. Everything else — the eighteen someday loops — is
+ * cannot wait is still open. Everything else (the eighteen someday loops) is
  * exactly what she is allowed to feel finished in spite of.
  */
 
@@ -74,7 +74,7 @@ export function enoughState(
     goal,
     extra,
     closed: closedToday,
-    // Declaring it done is hers to make even with things outstanding — she is
+    // Declaring it done is hers to make even with things outstanding, she is
     // asked to confirm first, and then it is a decision, not an accident.
     done: declared || (reached && necessary.length === 0),
     declared,
@@ -104,6 +104,6 @@ export function enoughBody(state: EnoughState): string {
 /** Shown when the goal is met but something real is still open. */
 export function blockedHeadline(state: EnoughState): string {
   const n = state.necessary.length
-  if (n === 1) return 'Du har lavet nok — der er bare én ting med en tid'
-  return `Du har lavet nok — der er ${n} ting med en tid i dag`
+  if (n === 1) return 'Du har lavet nok, der er bare én ting med en tid'
+  return `Du har lavet nok, der er ${n} ting med en tid i dag`
 }

@@ -24,7 +24,7 @@ export interface BackupFile {
  * Backups are exported in the clear, even when the profile lock is on.
  *
  * A backup that only opens with a password you might forget is not a backup.
- * The file is readable, which the UI says plainly — so she knows to keep it
+ * The file is readable, which the UI says plainly, so she knows to keep it
  * somewhere she'd keep a bank statement. The lock record itself is never
  * exported: restoring gives back the content, and she sets a new code if she
  * wants one.

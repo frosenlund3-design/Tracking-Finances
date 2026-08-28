@@ -11,7 +11,7 @@ import { Button } from './ui/Button'
  * "Fordel dem for mig".
  *
  * A proposal, never an action. The app works out when each loop actually fits
- * — opening hours, her energy peak, the deadline, what is already booked — and
+ * (opening hours, her energy peak, the deadline, what is already booked) and
  * then shows its reasoning and waits. She can drop any single line before
  * saying yes.
  *
@@ -56,7 +56,7 @@ export function PlanSheet() {
         <p className="mt-5 text-[20px] font-semibold tracking-[-0.02em]">Lagt ind</p>
         <p className="mx-auto mt-2 max-w-[18rem] text-[15px] leading-relaxed text-muted">
           {items.length} {items.length === 1 ? 'ting har' : 'ting har'} fået et tidspunkt. Du kan
-          flytte eller fjerne dem når som helst — intet er låst.
+          flytte eller fjerne dem når som helst, intet er låst.
         </p>
         <div className="mx-auto mt-7 max-w-[16rem]">
           <Button full onClick={close}>
@@ -127,7 +127,7 @@ export function PlanSheet() {
         <Info size={14} className="mt-0.5 shrink-0 text-faint" />
         <p className="text-[12px] leading-relaxed text-faint">
           Resten af dine loops får med vilje ikke et tidspunkt. En fyldt uge er lige præcis den
-          kalender, der ikke virker for dig — det her er kun de ting, hvor tidspunktet faktisk gør
+          kalender, der ikke virker for dig. Det her er kun de ting, hvor tidspunktet faktisk gør
           en forskel.
         </p>
       </div>

@@ -95,7 +95,7 @@ export function childrenOf(map: NodeMap, id: string): LoopNode[] {
   return parent.childIds.map((cid) => map[cid]).filter(Boolean)
 }
 
-/** Children that should be drawn — closed and parked ones leave the canvas. */
+/** Children that should be drawn, closed and parked ones leave the canvas. */
 export function visibleChildren(map: NodeMap, id: string, now = Date.now()): LoopNode[] {
   return childrenOf(map, id).filter((c) => !isClosed(c) && !isParkedNow(c, now))
 }
@@ -188,7 +188,7 @@ export function depthBelow(map: NodeMap, id: string, cap = 3, now = Date.now()):
  *
  * Allowed: stepping out to an ancestor, stepping in to a direct child, and
  * moving between the worlds at the top level. Not allowed: jumping from "Mit
- * liv" straight to a task three levels down — that skips the context that
+ * liv" straight to a task three levels down, that skips the context that
  * makes the map make sense, and skipping it is how a map turns back into a
  * list.
  */

@@ -2,7 +2,7 @@
  * Circle colours.
  *
  * Each task gets its own colour, filled as a soft gradient that fades from a
- * lighter tone into the base — no outline, no hard edge. The palette is muted
+ * lighter tone into the base, no outline, no hard edge. The palette is muted
  * and adult on purpose: these are the colours of a nice ceramics shop, not of
  * a children's app.
  *

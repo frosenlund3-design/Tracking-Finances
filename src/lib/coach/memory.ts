@@ -8,7 +8,7 @@ import type { TimePart } from '@/db/types'
  * Patterns in her own data.
  *
  * This is the part of the coach that can genuinely know something she does
- * not, and it does not require being clever about language — only about
+ * not, and it does not require being clever about language, only about
  * arithmetic on what actually happened. Which kinds of task rot. Which hour
  * she really finishes things. Whether breaking something down changes anything
  * for her specifically, or is just something the app believes.
@@ -71,7 +71,7 @@ function whenSheFinishes(done: Completion[]): Observation[] {
       kind: 'pattern',
       text: `Du lukker det meste ${PART_LABELS[top].toLowerCase()}.`,
       evidence: `${Math.round(share * 100)}% af dine lukkede loops (${count} af ${done.length}).`,
-      move: `Det er værd at lægge det, du helst vil undgå, ${PART_LABELS[top].toLowerCase()} — ikke fordi du burde, men fordi det er der, det rent faktisk sker.`,
+      move: `Det er værd at lægge det, du helst vil undgå, ${PART_LABELS[top].toLowerCase()}, ikke fordi du burde, men fordi det er der, det rent faktisk sker.`,
       weight: 60 + share * 20,
     },
   ]
@@ -81,7 +81,7 @@ function whenSheFinishes(done: Completion[]): Observation[] {
  * Which kind of task rots.
  *
  * Grouped by the verb, because "ring til lægen", "ring til banken" and "ring
- * til skolen" are the same problem wearing different clothes — and seeing that
+ * til skolen" are the same problem wearing different clothes, and seeing that
  * they are one problem is exactly what is hard from the inside.
  */
 function whatRots(map: NodeMap, now: number): Observation[] {
@@ -109,7 +109,7 @@ function whatRots(map: NodeMap, now: number): Observation[] {
     out.push({
       id: `rots-${verb}`,
       kind: 'pattern',
-      text: `Det er ikke opgaverne — det er én bestemt slags. ${VERB_NOUN[verb] ?? `"${verb}"-opgaver`} bliver liggende.`,
+      text: `Det er ikke opgaverne, det er én bestemt slags. ${VERB_NOUN[verb] ?? `"${verb}"-opgaver`} bliver liggende.`,
       evidence: `De ligger ${Math.round(avg)} dage i snit, mod ${Math.round(overallAvg)} for alt andet. ${entry.titles.slice(0, 2).join(', ')}${entry.titles.length > 2 ? ' og flere' : ''}.`,
       move: MOVE_FOR_VERB[verb],
       weight: 80 + Math.min(avg, 30),
@@ -138,10 +138,10 @@ const MOVE_FOR_VERB: Record<string, string> = {
   ring:
     'Et opkald har tre ting i sig: at finde nummeret, at vide hvad man siger, og selve samtalen. Det er sjældent samtalen, der stopper det. Prøv at lave de to første som separate, færdige opgaver.',
   skriv:
-    'Når du selv skal formulere noget, er der ingen ydre struktur at læne sig op ad. Dikter det i stedet — appen skriver ned, og du retter bagefter.',
+    'Når du selv skal formulere noget, er der ingen ydre struktur at læne sig op ad. Dikter det i stedet. Appen skriver ned, og du retter bagefter.',
   beslut:
     'En beslutning uden deadline har ingen naturlig afslutning. Sæt en tid på hvornår du vælger, ikke hvornår du er færdig.',
-  ryd: 'Oprydning har ingen defineret slutning — derfor starter den aldrig. Sæt en timer i stedet for et mål.',
+  ryd: 'Oprydning har ingen defineret slutning, derfor starter den aldrig. Sæt en timer i stedet for et mål.',
   rengør: 'Rengøring har ingen defineret slutning. En timer giver den en.',
   aflever:
     'Ærinder kræver en overgang ud af huset, og overgangen er det dyre. Kobl det på noget du alligevel skal.',
@@ -164,7 +164,7 @@ function doStepsHelp(nodes: LoopNode[], done: Completion[]): Observation[] {
       kind: 'pattern',
       text: 'Opdelte opgaver bliver lukket. De udelte bliver liggende.',
       evidence: `${Math.round(rateWith * 100)}% mod ${Math.round(rateWithout * 100)}% hos dig.`,
-      move: 'Det er værd at dele noget op, før du overhovedet beslutter om du gider — ikke bagefter.',
+      move: 'Det er værd at dele noget op, før du overhovedet beslutter om du gider, ikke bagefter.',
       weight: 70,
     },
   ]
@@ -184,7 +184,7 @@ function startedButUnfinished(nodes: LoopNode[], now: number): Observation[] {
       text: 'Du starter fint. Det er midten, der taber dig.',
       evidence: `${stalled.length} loops står som påbegyndte og har ikke rykket sig i over to dage.`,
       move:
-        'Det peger på afbrydelser og skift, ikke på igangsætning. Det, der hjælper der, er at gemme hvor du kom til — ikke en ny start.',
+        'Det peger på afbrydelser og skift, ikke på igangsætning. Det, der hjælper der, er at gemme hvor du kom til, ikke en ny start.',
       weight: 75,
     },
   ]

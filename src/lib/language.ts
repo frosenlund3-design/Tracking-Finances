@@ -7,7 +7,7 @@
  * is inside "vaskemiddel", and "post" is inside "posthuset".
  *
  * So this reads the sentence instead. It finds the verb, the thing the verb
- * acts on, and where it happens — and everything downstream keys off *those*
+ * acts on, and where it happens, and everything downstream keys off *those*
  * rather than off any word that happens to appear.
  */
 
@@ -75,11 +75,35 @@ const VERB_FORMS: Record<string, string[]> = {
   åbn: ['åbn', 'åbne', 'åbner', 'åbnet'],
   luk: ['luk', 'lukke', 'lukker', 'lukket'],
   meld: ['meld', 'melde', 'melder', 'meldt', 'tilmeld', 'tilmelde'],
+  syn: ['syn', 'syne', 'synes', 'synet'],
+  klip: ['klip', 'klippe', 'klipper', 'klippet'],
+  hjælp: ['hjælp', 'hjælpe', 'hjælper', 'hjulpet'],
+  bestil: ['bestil', 'bestille', 'bestiller', 'bestilt'],
+  aflys: ['aflys', 'aflyse', 'aflyser', 'aflyst'],
+  anmeld: ['anmeld', 'anmelde', 'anmelder', 'anmeldt'],
+  underskriv: ['underskriv', 'underskrive', 'underskriver', 'underskrevet', 'skriv under', 'skrive under'],
 }
 
 const FORM_TO_VERB = new Map<string, string>()
 for (const [canonical, forms] of Object.entries(VERB_FORMS)) {
   for (const form of forms) FORM_TO_VERB.set(form, canonical)
+}
+
+/**
+ * Danish s-passive: "der skal betales en regning", "bilen skal synes", "det
+ * skal gøres". It is everywhere in the way people write down obligations,
+ * precisely because it lets you avoid naming who has to do it. Without this,
+ * "Der skal betales en regning inden fredag" had no verb at all and never
+ * became a task.
+ */
+function lookupVerb(word: string): string | undefined {
+  const direct = FORM_TO_VERB.get(word)
+  if (direct) return direct
+  if (word.length > 4 && word.endsWith('s')) {
+    const active = word.slice(0, -1)
+    return FORM_TO_VERB.get(active) ?? FORM_TO_VERB.get(`${active}e`)
+  }
+  return undefined
 }
 
 /** Imperative surface form for each canonical verb. */
@@ -91,7 +115,9 @@ export const IMPERATIVE: Record<string, string> = {
   opsig: 'Opsig', skift: 'Skift', flyt: 'Flyt', pak: 'Pak', post: 'Post', optag: 'Optag',
   rediger: 'Rediger', træn: 'Træn', læs: 'Læs', tjek: 'Tjek', beslut: 'Beslut', spørg: 'Spørg',
   mal: 'Mal', reparer: 'Reparér', sorter: 'Sortér', hæng: 'Hæng', få: 'Få', gå: 'Gå',
-  tag: 'Tag', åbn: 'Åbn', luk: 'Luk', meld: 'Meld',
+  tag: 'Tag', åbn: 'Åbn', luk: 'Luk', meld: 'Meld', syn: 'Syn', klip: 'Klip',
+  hjælp: 'Hjælp', bestil: 'Bestil', aflys: 'Aflys', anmeld: 'Anmeld',
+  underskriv: 'Skriv under på',
 }
 
 /** Multi-word verbs, checked before single words. */
@@ -99,7 +125,7 @@ const PHRASE_VERBS: Array<[RegExp, string]> = [
   [/^find\s+ud\s+af\b/i, 'find-ud-af'],
   [/^g[øo]re?\s+rent\b/i, 'rengør'],
   // NB: (?=\s|$) rather than \b. JavaScript's \b is ASCII-only, so "å" counts
-  // as a non-word character — /p[åa]\b/ never matches "på" followed by a space,
+  // as a non-word character, /p[åa]\b/ never matches "på" followed by a space,
   // and "Få styr på min pension" was silently read as the verb "få" with the
   // object "styr". Every Danish-final pattern in this file needs the lookahead.
   [/^(?:f[åa]|have|har|havde|f[åa]r|f[åa]et)\s+styr\s+p[åa](?=\s|$)/i, 'få-styr-på'],
@@ -114,14 +140,14 @@ IMPERATIVE['få-styr-på'] = 'Få styr på'
 const PREPOSITIONS = ['til', 'på', 'hos', 'i', 'med', 'om', 'for', 'fra', 'ved', 'af']
 
 /**
- * Verb particles. Danish glues these onto verbs — "rydde op", "vaske op",
- * "skrive under", "printe ud", "melde fra" — and to a naive parser they sit in
+ * Verb particles. Danish glues these onto verbs, "rydde op", "vaske op",
+ * "skrive under", "printe ud", "melde fra", and to a naive parser they sit in
  * exactly the slot where the object should be. That is how "Ryd op i garagen"
  * produced the step "Gå ind til op".
  *
  * Only the unambiguous ones are listed. "af", "på", "til", "med" and "fra" are
  * particles in some constructions ("tør af", "tag med") but prepositions far
- * more often — stripping "til" out of "ring til banken" would eat the bank. A
+ * more often, stripping "til" out of "ring til banken" would eat the bank. A
  * missed particle costs nothing; a swallowed object costs the whole task.
  */
 const PARTICLES = new Set([
@@ -159,6 +185,24 @@ export function analyse(text: string): Analysis {
     }
   }
 
+  // Subject-first s-passive: "Bilen skal synes", "Regningen skal betales",
+  // "Papirerne skal udfyldes". The thing comes first and the doer is left out
+  // on purpose, which is exactly how obligations get written down. Read as
+  // verb plus object, so it becomes an instruction she can act on.
+  if (!verb) {
+    const passive = clean.match(/^([\wæøåÆØÅ]+)\s+(?:skal|skulle|b[øo]r|m[åa])\s+([\wæøå]+e?s)\b\s*(.*)$/i)
+    if (passive) {
+      const canonical = lookupVerb(passive[2].toLowerCase())
+      if (canonical) {
+        verb = canonical
+        // The subject was written first and therefore capitalised. Moved in
+        // behind the verb it is no longer the first word, and "Betal Regningen"
+        // reads like a proper noun.
+        remainder = `${passive[1].toLowerCase()} ${passive[3]}`.trim()
+      }
+    }
+  }
+
   if (!verb) {
     const parts = clean.split(' ')
     const word = (i: number) => (parts[i] ?? '').toLowerCase().replace(/[^a-zæøå]/g, '')
@@ -168,11 +212,11 @@ export function analyse(text: string): Analysis {
     // "Skal have booket en tid" stayed "Have booket en tid" instead of
     // becoming the instruction "Book en tid".
     const auxiliary = ['have', 'har', 'havde', 'få', 'får', 'fået', 'blive', 'bliver', 'blevet']
-    if (auxiliary.includes(word(0)) && FORM_TO_VERB.has(word(1))) {
-      verb = FORM_TO_VERB.get(word(1)) as string
+    if (auxiliary.includes(word(0)) && lookupVerb(word(1))) {
+      verb = lookupVerb(word(1)) as string
       remainder = parts.slice(2).join(' ')
     } else {
-      const canonical = FORM_TO_VERB.get(word(0))
+      const canonical = lookupVerb(word(0))
       if (canonical) {
         verb = canonical
         remainder = parts.slice(1).join(' ')
@@ -180,7 +224,7 @@ export function analyse(text: string): Analysis {
     }
   }
 
-  // `rest` keeps her own wording — determiner, particle and all. It is what
+  // `rest` keeps her own wording, determiner, particle and all. It is what
   // gets shown back to her, so "køb ind" must not become "køb".
   const rest = remainder.trim()
 
@@ -196,10 +240,10 @@ export function analyse(text: string): Analysis {
   }
 
   // Only the object is normalised, because that is what the domain rules match
-  // on — the determiner would stop "mit rod" from matching "rod".
+  // on, the determiner would stop "mit rod" from matching "rod".
   remainder = remainder.replace(STOP_AFTER_VERB, '').trim()
 
-  // Split off the first prepositional phrase — that is the target.
+  // Split off the first prepositional phrase, that is the target.
   let object = remainder
   let target: string | null = null
   let targetPreposition: string | null = null
@@ -233,7 +277,7 @@ export function analyse(text: string): Analysis {
   }
 
   // "Ryd op i garagen": nothing sits between the particle and the preposition,
-  // so the garage is what she is tidying — not somewhere she goes to tidy
+  // so the garage is what she is tidying, not somewhere she goes to tidy
   // something else.
   if (particle && !object && target) {
     object = target
@@ -271,7 +315,7 @@ export function hasAction(text: string): boolean {
   return text
     .toLowerCase()
     .split(/\s+/)
-    .some((w) => FORM_TO_VERB.has(w.replace(/[^a-zæøå]/g, '')))
+    .some((w) => lookupVerb(w.replace(/[^a-zæøå]/g, '')) !== undefined)
 }
 
 /**

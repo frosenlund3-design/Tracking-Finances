@@ -7,7 +7,7 @@ import { useStore } from '@/store/useStore'
  *
  * Under a second, no confetti by default. The ring closing and shrinking is
  * the reward; the XP is a quiet number next to it. Big celebrations are rare
- * on purpose — a party every time stops meaning anything.
+ * on purpose, a party every time stops meaning anything.
  */
 export function Celebration() {
   const celebration = useStore((s) => s.celebration)
@@ -34,7 +34,7 @@ export function Celebration() {
           {/*
             No pointer-events. The toast sits over whatever she is doing next,
             and for two seconds after closing a loop it was swallowing taps on
-            the buttons underneath — precisely the moment momentum matters most.
+            the buttons underneath, precisely the moment momentum matters most.
             It has nothing to tap, so it should never take a tap.
           */}
           <div className="flex items-center gap-3.5 rounded-xl3 border border-line bg-raised px-5 py-4 shadow-lift">

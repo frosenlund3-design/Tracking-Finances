@@ -6,7 +6,7 @@ import type { TimePart } from '@/db/types'
 /**
  * The quiet statistics.
  *
- * Kept out of the way on purpose — they live behind Settings, not on the home
+ * Kept out of the way on purpose, they live behind Settings, not on the home
  * screen, because a number on the front page becomes a target and a target
  * becomes pressure. Down here they do the other job: on a bad day, evidence
  * that the thing has actually been working.
@@ -137,7 +137,7 @@ export function partLabel(part: TimePart): string {
   return PART_LABELS[part]
 }
 
-/** "9 timer" / "45 minutter" — the time she is no longer carrying. */
+/** "9 timer" / "45 minutter", the time she is no longer carrying. */
 export function humanHours(minutes: number): string {
   if (minutes < 60) return `${Math.round(minutes)} minutter`
   const hours = minutes / 60

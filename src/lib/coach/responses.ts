@@ -4,7 +4,7 @@ import type { Strategy, Tone } from './types'
  * Variation banks.
  *
  * Every strategy has several phrasings per tone so the coach does not feel
- * like a macro. Lines are deliberately short — 1 to 4 of them, never an essay.
+ * like a macro. Lines are deliberately short, 1 to 4 of them, never an essay.
  * The `{task}` and `{step}` slots are filled by the engine.
  */
 
@@ -53,7 +53,7 @@ export const RESPONSES: Record<Strategy, Bank> = {
     warm: [['Jeg går ingen steder 💛', 'Tag {step} i dit eget tempo.']],
     blunt: [['Jeg venter. {step}. Sig til.']],
     humor: [['Jeg sidder her og kigger på dig (venligt).', '{step}. Jeg holder øje 👀']],
-    peptalk: [['Jeg er her hele vejen!', '{step} — så siger du til.']],
+    peptalk: [['Jeg er her hele vejen!', '{step}, så siger du til.']],
   },
 
   'reduce-scope': {
@@ -61,7 +61,7 @@ export const RESPONSES: Record<Strategy, Bank> = {
       ['Vi skærer den ned.', 'Ikke hele "{task}". Bare 20% af den.', 'Så er du færdig.'],
       ['Den er for stor lige nu.', 'Lav den halvt. Det tæller fuldt ud.'],
     ],
-    warm: [['Du skal ikke lave det hele.', 'Lav en lille del af "{task}" — så er den gjort for i dag.']],
+    warm: [['Du skal ikke lave det hele.', 'Lav en lille del af "{task}", så er den gjort for i dag.']],
     blunt: [['Halvér den. "{task}" behøver ikke være færdig.']],
     humor: [['"{task}" har lige fået en rabat på 80% 🏷️']],
     peptalk: [['En lille bid af "{task}" er stadig en sejr!']],
@@ -75,7 +75,7 @@ export const RESPONSES: Record<Strategy, Bank> = {
     warm: [['Du må gerne lave den halvdårligt 💛', 'Færdig slår perfekt. Hver gang.']],
     blunt: [['Godt nok. Send den.']],
     humor: [['Målet er 4 ud af 10. Sigt lavt 😌']],
-    peptalk: [['Bare kom i gang — du retter til bagefter hvis du vil!']],
+    peptalk: [['Bare kom i gang, du retter til bagefter hvis du vil!']],
   },
 
   timer: {
@@ -86,7 +86,7 @@ export const RESPONSES: Record<Strategy, Bank> = {
     warm: [['Vi laver en tidsramme, så det ikke er uendeligt.', '10 minutter, så er du fri.']],
     blunt: [['10 minutter. Start nu.']],
     humor: [['10 minutter. Så må du lovligt lave ingenting 🛋️']],
-    peptalk: [['10 minutter — det kan du sagtens!']],
+    peptalk: [['10 minutter, det kan du sagtens!']],
   },
 
   'compassionate-reset': {
@@ -105,10 +105,10 @@ export const RESPONSES: Record<Strategy, Bank> = {
       ['Skift rum.', 'Gå derhen hvor tingen er.', 'Så snakker vi videre.'],
       ['Læg telefonen fra dig med skærmen nedad.', 'Rejs dig.', 'Kom tilbage når du står op.'],
     ],
-    warm: [['Prøv at flytte dig fysisk — det hjælper tit mere end viljestyrke.', 'Gå ud i rummet hvor "{task}" hører til.']],
+    warm: [['Prøv at flytte dig fysisk, det hjælper tit mere end viljestyrke.', 'Gå ud i rummet hvor "{task}" hører til.']],
     blunt: [['Rejs dig. Gå derhen. Skriv "der".']],
     humor: [['Sofaen er ikke din ven lige nu 😌', 'Rejs dig, forræder.']],
-    peptalk: [['Kom — bare hen til rummet. Det er hele skridtet!']],
+    peptalk: [['Kom, bare hen til rummet. Det er hele skridtet!']],
   },
 
   novelty: {
@@ -116,7 +116,7 @@ export const RESPONSES: Record<Strategy, Bank> = {
       ['Den er kedelig. Det er en rigtig grund.', 'Sæt musik på, eller sæt et tidspres på.', 'Så bliver den lige til at holde ud.'],
       ['Kedeligt = svært. Det er ikke dovenskab.', 'Lav en leg ud af det: hvor meget når du på 7 minutter?'],
     ],
-    warm: [['Kedelige ting er faktisk sværere for din hjerne. Det passer.', 'Prøv med lyd på — podcast, musik, hvad som helst.']],
+    warm: [['Kedelige ting er faktisk sværere for din hjerne. Det passer.', 'Prøv med lyd på, podcast, musik, hvad som helst.']],
     blunt: [['Kedelig opgave. Sæt musik på og kør 7 minutter.']],
     humor: [['Din hjerne strejker mod kedsomhed. Fair nok.', 'Musik på. Så snyder vi den.']],
     peptalk: [['Sæt noget fed musik på og smadr den på 7 minutter!']],
@@ -129,7 +129,7 @@ export const RESPONSES: Record<Strategy, Bank> = {
     ],
     blunt: [['5 minutter. Se hvor langt du kommer.']],
     humor: [['Væddemål: du når mere på 5 min end du tror. Bevis mig forkert 😏']],
-    warm: [['Prøv bare fem minutter — uden krav om at blive færdig.']],
+    warm: [['Prøv bare fem minutter, uden krav om at blive færdig.']],
     peptalk: [['5 minutter! Jeg tipper på at du overrasker dig selv.']],
   },
 
@@ -152,7 +152,7 @@ export const RESPONSES: Record<Strategy, Bank> = {
     warm: [['Bagefter må du gøre noget rart. Uden at fortjene det yderligere 💛']],
     blunt: [['Gør den. Så har du fri.']],
     humor: [['Bestikkelse er tilladt. Hvad køber jeg dig for det her? ☕']],
-    peptalk: [['Klar den — så har du hele belønningen bagefter!']],
+    peptalk: [['Klar den, så har du hele belønningen bagefter!']],
   },
 
   externalise: {
@@ -163,13 +163,13 @@ export const RESPONSES: Record<Strategy, Bank> = {
     warm: [['Prøv at tømme hovedet ned i appen 💛', 'Så holder du ikke på det hele selv.']],
     blunt: [['Skriv det ned. Alt sammen. Nu.']],
     humor: [['Dit hoved er en elendig database. Brug appen 😄']],
-    peptalk: [['Smid det hele ud af hovedet — så bliver det meget lettere!']],
+    peptalk: [['Smid det hele ud af hovedet, så bliver det meget lettere!']],
   },
 
   'pick-for-you': {
     default: [
       ['Du skal ikke vælge.', 'Jeg vælger: "{task}"', 'Ca. {minutes} min.'],
-      ['Vi springer valget over.', '"{task}" — den passer til dig lige nu.'],
+      ['Vi springer valget over.', '"{task}", den passer til dig lige nu.'],
     ],
     warm: [['Lad mig tage beslutningen 💛', 'Prøv "{task}". Ca. {minutes} min.']],
     blunt: [['"{task}". {minutes} min. Kør.']],
@@ -185,7 +185,7 @@ export const RESPONSES: Record<Strategy, Bank> = {
     warm: [['Det er helt legitimt at sige "ikke nu" 💛', 'Skal vi parkere "{task}"?']],
     blunt: [['Parkér den. Den fylder unødigt.']],
     humor: [['"{task}" sendes på ferie 🌴 Vil du det?']],
-    peptalk: [['Ryd den af vejen — parkér den, så har du plads til det der tæller!']],
+    peptalk: [['Ryd den af vejen eller parkér den, så har du plads til det, der tæller!']],
   },
 }
 
@@ -194,7 +194,7 @@ export const GREETINGS: Record<Tone, string[]> = {
   calm: ['Hej. Hvad fylder lige nu?', 'Hej. Hvor er du henne i dag?', 'Hej. Hvad står i vejen?'],
   warm: ['Hej 💛 Hvad har du gang i?', 'Hej. Hvordan har du det lige nu?', 'Hej. Hvad kan jeg hjælpe dig i gang med?'],
   blunt: ['Hvad sidder du fast i?', 'Hvad skal der ske?', 'Sig frem.'],
-  humor: ['Hejsa. Hvem har svigtet dig i dag — opvasken eller skat? 😄', 'Hej. Hvad undgår vi i dag?'],
+  humor: ['Hejsa. Hvem har svigtet dig i dag? Opvasken eller skat? 😄', 'Hej. Hvad undgår vi i dag?'],
   peptalk: ['Hej! Hvad skal vi have knækket i dag?', 'Hejsa! Hvor skal vi starte?'],
 }
 
@@ -204,7 +204,7 @@ export const STEP_ACKS: Record<Tone, string[]> = {
   warm: ['Godt gået 💛', 'Dejligt.', 'Sådan, du.', 'Rigtig fint.'],
   blunt: ['Godt. Næste.', 'Fint.', 'Videre.'],
   humor: ['Se selv 😌', 'Utroligt hvad der sker når man rejser sig.', 'Nice.'],
-  peptalk: ['Yes! Sådan!', 'Perfekt — du er i gang!', 'Flot!'],
+  peptalk: ['Yes! Sådan!', 'Perfekt, du er i gang!', 'Flot!'],
 }
 
 export const CLOSERS: Record<Tone, string[]> = {
@@ -212,5 +212,5 @@ export const CLOSERS: Record<Tone, string[]> = {
   warm: ['Resten må godt vente 💛', 'Du skal ikke gøre mere end det her.'],
   blunt: ['Resten er ikke din opgave lige nu.'],
   humor: ['Resten af listen er sat på lydløs 🤫'],
-  peptalk: ['Én ting ad gangen — du klarer det!'],
+  peptalk: ['Én ting ad gangen, du klarer det!'],
 }

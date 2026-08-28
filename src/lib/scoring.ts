@@ -1,5 +1,5 @@
 /**
- * "Hvad skal jeg gøre nu?" — the executive function engine.
+ * "Hvad skal jeg gøre nu?", the executive function engine.
  *
  * Every actionable loop gets a score from 0–100 saying how good an idea it is
  * to do *right now*. The score is shown to the user as points, and the XP a
@@ -71,7 +71,7 @@ export function scoreTask(node: LoopNode, map: NodeMap, ctx: ScoreContext): Scor
   // --- urgency (max 45) ------------------------------------------------
   // A real deadline outranks everything else in the model. Nothing about
   // energy, novelty or quick wins should be able to push a bill due tonight
-  // below a nice little five-minute job — that is the whole point of letting
+  // below a nice little five-minute job, that is the whole point of letting
   // her put a real time on something.
   if (node.dueAt) {
     const hours = hoursUntil(node, ctx.now.getTime())
@@ -219,7 +219,7 @@ function isoOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-/** Label for the points badge — plain, no hype. */
+/** Label for the points badge, plain, no hype. */
 export function scoreLabel(score: number): string {
   if (score >= 85) return 'Den her først'
   if (score >= 70) return 'Rigtig god idé nu'
