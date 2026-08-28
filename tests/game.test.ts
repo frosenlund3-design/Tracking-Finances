@@ -66,7 +66,7 @@ describe('momentum', () => {
     const before = { momentum: 100, floor: floorFor(100) };
     const after = decayMomentum(before, 14);
     expect(after.momentum).toBe(60);
-    expect(momentumTier(after.momentum).label).toBe('Flowing');
+    expect(momentumTier(after.momentum).label).toBe('I flow');
   });
 
   it('is unchanged when no days have passed', () => {
@@ -100,10 +100,10 @@ describe('momentum', () => {
   });
 
   it('names every tier boundary', () => {
-    expect(momentumTier(0).label).toBe('Warming up');
-    expect(momentumTier(24).label).toBe('Warming up');
-    expect(momentumTier(25).label).toBe('Rolling');
-    expect(momentumTier(100).label).toBe('Unstoppable');
+    expect(momentumTier(0).label).toBe('Varmer op');
+    expect(momentumTier(24).label).toBe('Varmer op');
+    expect(momentumTier(25).label).toBe('Ruller');
+    expect(momentumTier(100).label).toBe('Ustoppelig');
   });
 });
 

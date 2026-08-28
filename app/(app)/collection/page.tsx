@@ -5,7 +5,7 @@ import { CREATURES, RARITY_LABEL, RARITY_ORDER, type Rarity } from '@/lib/creatu
 import { CreatureArt, CreatureLocked } from '@/components/creature';
 import { cn } from '@/lib/cn';
 
-export const metadata: Metadata = { title: 'Collection' };
+export const metadata: Metadata = { title: 'Samling' };
 export const dynamic = 'force-dynamic';
 
 const RING: Record<Rarity, string> = {
@@ -16,11 +16,11 @@ const RING: Record<Rarity, string> = {
 };
 
 /**
- * Everyone you have met.
+ * Alle du har mødt.
  *
- * Locked ones are shown, not hidden: a silhouette with its condition written
- * underneath is a reason to do something, and an empty grid is a reason to
- * close the app. Nothing here is bought, and nothing is drawn at random.
+ * De låste vises frem for at blive skjult: en silhuet med sin betingelse
+ * skrevet under er en grund til at gøre noget, og et tomt gitter er en grund
+ * til at lukke appen. Ingenting her kan købes, og ingenting trækkes tilfældigt.
  */
 export default async function CollectionPage() {
   const user = await requireUser();
@@ -35,10 +35,10 @@ export default async function CollectionPage() {
   return (
     <div className="rise space-y-5">
       <header>
-        <h1 className="text-[28px] font-bold tracking-tight">Collection</h1>
+        <h1 className="text-[28px] font-bold tracking-tight">Samling</h1>
         <p className="mt-0.5 text-[13.5px] leading-relaxed text-ink-muted">
-          {player.collection.length} of {CREATURES.length}. Every one is earned by doing something —
-          none of them are random, and none of them can be bought.
+          {player.collection.length} af {CREATURES.length}. Hver eneste er tjent ved at gøre noget —
+          ingen af dem er tilfældige, og ingen af dem kan købes.
         </p>
       </header>
 

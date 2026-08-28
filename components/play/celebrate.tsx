@@ -188,7 +188,7 @@ function UnlockCard({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`New: ${creature.name}`}
+      aria-label={`Ny figur: ${creature.name}`}
       onClick={onDismiss}
       className="fade-in fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
     >
@@ -201,7 +201,7 @@ function UnlockCard({
       >
         <div className="rounded-[calc(2rem-2px)] bg-surface p-6 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
-            {RARITY_LABEL[creature.rarity]} · new
+            {RARITY_LABEL[creature.rarity]} · ny
           </p>
           <CreatureArt creature={creature} className="mx-auto mt-3 h-32 w-32" />
           <h2 className="mt-2 text-[24px] font-bold tracking-tight">{creature.name}</h2>
@@ -214,7 +214,7 @@ function UnlockCard({
             onClick={onDismiss}
             className="pressable mt-4 w-full rounded-2xl bg-accent py-3 text-[15px] font-semibold text-white"
           >
-            {remaining > 0 ? `Next (${remaining} more)` : 'Nice'}
+            {remaining > 0 ? `Næste (${remaining} mere)` : 'Fedt'}
           </button>
         </div>
       </div>

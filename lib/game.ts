@@ -70,10 +70,10 @@ export const AREA_OF: Record<XpAction, Area> = {
 export type Area = 'kitchen' | 'home' | 'body' | 'money';
 
 export const AREAS: Array<{ key: Area; label: string; blurb: string }> = [
-  { key: 'kitchen', label: 'Kitchen', blurb: 'What you have, and what to cook' },
-  { key: 'home', label: 'Home', blurb: 'Sorting, supplies, two-minute tidying' },
-  { key: 'body', label: 'Body', blurb: 'Training, skincare, anything repeated' },
-  { key: 'money', label: 'Money', blurb: 'In, out, and what changed' },
+  { key: 'kitchen', label: 'Køkken', blurb: 'Hvad du har, og hvad du kan lave' },
+  { key: 'home', label: 'Hjem', blurb: 'Sortering, forbrugsvarer, to minutters oprydning' },
+  { key: 'body', label: 'Krop', blurb: 'Træning, hudpleje, alt der gentages' },
+  { key: 'money', label: 'Penge', blurb: 'Ind, ud, og hvad der har ændret sig' },
 ];
 
 /* ------------------------------------------------------------------ levels */
@@ -111,16 +111,16 @@ export interface LevelProgress {
 }
 
 const TITLES = [
-  'Getting started',
-  'Finding the drawer',
-  'Labelled',
-  'Colour-coded',
-  'Sorted',
-  'In order',
-  'Running smoothly',
-  'Frighteningly tidy',
-  'Systems person',
-  'Legendary',
+  'Lige begyndt',
+  'Fandt skuffen',
+  'Har fået labels på',
+  'Farvekodet',
+  'Sorteret',
+  'I orden',
+  'Kører af sig selv',
+  'Skræmmende ryddelig',
+  'Systemmenneske',
+  'Legendarisk',
 ];
 
 export function levelTitle(level: number): string {
@@ -164,11 +164,11 @@ export interface MomentumTier {
 }
 
 export const MOMENTUM_TIERS: MomentumTier[] = [
-  { at: 0, label: 'Warming up', floor: 0 },
-  { at: 25, label: 'Rolling', floor: 10 },
-  { at: 50, label: 'Flowing', floor: 25 },
-  { at: 75, label: 'On a roll', floor: 40 },
-  { at: 100, label: 'Unstoppable', floor: 60 },
+  { at: 0, label: 'Varmer op', floor: 0 },
+  { at: 25, label: 'Ruller', floor: 10 },
+  { at: 50, label: 'I flow', floor: 25 },
+  { at: 75, label: 'Godt i gang', floor: 40 },
+  { at: 100, label: 'Ustoppelig', floor: 60 },
 ];
 
 export function momentumTier(momentum: number): MomentumTier {

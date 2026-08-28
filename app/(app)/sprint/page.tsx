@@ -3,7 +3,7 @@ import { requireUser } from '@/lib/auth';
 import { ROOMS, SPRINT_SECONDS } from '@/lib/sprint';
 import { Sprint } from './sprint';
 
-export const metadata: Metadata = { title: 'Two-minute sprint' };
+export const metadata: Metadata = { title: 'To-minutters sprint' };
 export const dynamic = 'force-dynamic';
 
 export default async function SprintPage() {

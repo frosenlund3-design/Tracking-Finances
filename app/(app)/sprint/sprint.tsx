@@ -87,10 +87,10 @@ export function Sprint({ rooms, seconds }: { rooms: RoomOption[]; seconds: numbe
     return (
       <div className="rise space-y-5">
         <header>
-          <h1 className="text-[28px] font-bold tracking-tight">Two-minute sprint</h1>
+          <h1 className="text-[28px] font-bold tracking-tight">To-minutters sprint</h1>
           <p className="mt-0.5 text-[13.5px] leading-relaxed text-ink-muted">
-            Pick a room. You get three things, each genuinely doable in under a minute, and a
-            timer that does not tell you off when it runs out.
+            Vælg et rum. Du får tre ting, som hver især kan nås på under et minut, og et ur
+            der ikke skælder ud når det løber ud.
           </p>
         </header>
 
@@ -126,14 +126,14 @@ export function Sprint({ rooms, seconds }: { rooms: RoomOption[]; seconds: numbe
             {doneCount === tasks.length ? '🎉' : doneCount > 0 ? '👏' : '🤷'}
           </span>
           <h1 className="mt-2 text-[26px] font-bold tracking-tight">
-            {doneCount} of {tasks.length} done
+            {doneCount} af {tasks.length} klaret
           </h1>
           <p className="mt-1 text-[14px] leading-relaxed text-ink-muted">
             {doneCount === 0
-              ? 'Nothing this time. The room is no worse than it was.'
+              ? 'Ingenting denne gang. Rummet er ikke værre end det var.'
               : busy
-                ? 'Saving…'
-                : `That is ${doneCount} thing${doneCount === 1 ? '' : 's'} that is not on the floor any more.`}
+                ? 'Gemmer…'
+                : `Det er ${doneCount} ting der ikke ligger på gulvet mere.`}
           </p>
         </header>
 
@@ -144,13 +144,13 @@ export function Sprint({ rooms, seconds }: { rooms: RoomOption[]; seconds: numbe
             className="pressable flex-1 rounded-2xl py-3.5 text-[15px] font-semibold text-white"
             style={{ background: 'var(--color-play-money)' }}
           >
-            Another room
+            Et rum til
           </button>
           <Link
             href="/play"
             className="pressable flex-1 rounded-2xl border border-border bg-surface py-3.5 text-center text-[15px] font-semibold"
           >
-            Back to the board
+            Tilbage til brættet
           </Link>
         </div>
       </div>
@@ -175,7 +175,7 @@ export function Sprint({ rooms, seconds }: { rooms: RoomOption[]; seconds: numbe
           {minutes}:{String(secs).padStart(2, '0')}
         </p>
         <p className="mt-1 text-[13px] text-ink-muted">
-          {left === 0 ? 'Time is up — finish what you are holding.' : 'Whatever gets done, gets done.'}
+          {left === 0 ? 'Tiden er gået — gør det færdigt du står med.' : 'Det der bliver gjort, bliver gjort.'}
         </p>
       </header>
 
@@ -229,14 +229,14 @@ export function Sprint({ rooms, seconds }: { rooms: RoomOption[]; seconds: numbe
           disabled={busy}
           className="pressable flex-1 rounded-2xl bg-play-ink py-3.5 text-[15px] font-bold text-white disabled:opacity-60"
         >
-          {doneCount > 0 ? `Done — bank ${doneCount}` : 'Stop'}
+          {doneCount > 0 ? `Færdig — gem ${doneCount}` : 'Stop'}
         </button>
         <button
           type="button"
           onClick={() => setRunning((value) => !value)}
           className="pressable rounded-2xl border border-border bg-surface px-5 py-3.5 text-[15px] font-semibold"
         >
-          {running ? 'Pause' : 'Resume'}
+          {running ? 'Pause' : 'Fortsæt'}
         </button>
       </div>
     </div>

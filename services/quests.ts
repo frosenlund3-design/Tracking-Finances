@@ -52,8 +52,8 @@ export async function rightNow(userId: string, now: string = today()): Promise<Q
   if (needsDeciding > 0) {
     quests.push({
       key: 'expiry',
-      title: `${needsDeciding} thing${needsDeciding === 1 ? '' : 's'} to decide on`,
-      detail: 'Eat it, freeze it, or let it go. One swipe each.',
+      title: `${needsDeciding} ting at tage stilling til`,
+      detail: 'Spis, frys eller smid ud. Ét svirp hver.',
       href: '/kitchen/expiry',
       area: 'kitchen',
       glyph: '⏳',
@@ -65,8 +65,8 @@ export async function rightNow(userId: string, now: string = today()): Promise<Q
   if (expiring.length === 0) {
     quests.push({
       key: 'first-scan',
-      title: 'Scan the first thing into your kitchen',
-      detail: 'Point the camera at a barcode. Takes about four seconds.',
+      title: 'Scan den første ting ind i køkkenet',
+      detail: 'Hold kameraet på en stregkode. Det tager fire sekunder.',
       href: '/kitchen/scan',
       area: 'kitchen',
       glyph: '📷',
@@ -79,8 +79,8 @@ export async function rightNow(userId: string, now: string = today()): Promise<Q
   if (tonight && !tonight.meal) {
     quests.push({
       key: 'dinner',
-      title: 'No dinner decided for tonight',
-      detail: 'Spin it and let the kitchen choose from what you already have.',
+      title: 'Ingen aftensmad besluttet i aften',
+      detail: 'Drej hjulet og lad køkkenet vælge ud fra det du har.',
       href: '/dinner',
       area: 'kitchen',
       glyph: '🎰',
@@ -90,8 +90,8 @@ export async function rightNow(userId: string, now: string = today()): Promise<Q
   } else if (tonight?.meal && tonight.meal.status === 'planned') {
     quests.push({
       key: 'cooked',
-      title: `Did you cook the ${tonight.meal.recipe.name.toLowerCase()}?`,
-      detail: 'One tap, and tonight counts.',
+      title: `Fik du lavet ${tonight.meal.recipe.name.toLowerCase()}?`,
+      detail: 'Ét tryk, og aftenen tæller.',
       href: '/dinner',
       area: 'kitchen',
       glyph: '🍳',
@@ -107,7 +107,7 @@ export async function rightNow(userId: string, now: string = today()): Promise<Q
     quests.push({
       key: `routine:${routine.id}`,
       title: routine.name,
-      detail: `${left} more this week to hit your target. No rush about which day.`,
+      detail: `${left} mere i denne uge for at ramme dit mål. Ligegyldigt hvilken dag.`,
       href: '/routines',
       area: 'body',
       glyph: '✨',
@@ -123,9 +123,9 @@ export async function rightNow(userId: string, now: string = today()): Promise<Q
       key: `supply:${supply.id}`,
       title:
         supply.state === 'out'
-          ? `${supply.name} has probably run out`
-          : `${supply.name} runs out in ${supply.daysLeft} day${supply.daysLeft === 1 ? '' : 's'}`,
-      detail: 'Add it to the list, or mark it bought.',
+          ? `${supply.name} er formentlig sluppet op`
+          : `${supply.name} slipper op om ${supply.daysLeft} dag${supply.daysLeft === 1 ? '' : 'e'}`,
+      detail: 'Sæt den på listen, eller marker den som købt.',
       href: '/supplies',
       area: 'home',
       glyph: '🧺',
@@ -138,8 +138,8 @@ export async function rightNow(userId: string, now: string = today()): Promise<Q
     const left = bins.total - bins.answered;
     quests.push({
       key: 'bins',
-      title: `Which of the ten bins do you have?`,
-      detail: `${left} still unanswered. Sorting advice is no use without somewhere to put it.`,
+      title: 'Hvilke af de ti spande har du?',
+      detail: `${left} mangler stadig. Sorteringsråd nytter intet uden et sted at komme det.`,
       href: '/sort/bins',
       area: 'home',
       glyph: '🗑️',
@@ -152,8 +152,8 @@ export async function rightNow(userId: string, now: string = today()): Promise<Q
   if (toReview > 0) {
     quests.push({
       key: 'review',
-      title: `${toReview} transaction${toReview === 1 ? '' : 's'} need a category`,
-      detail: 'One tap each, and the answer sticks for that merchant.',
+      title: `${toReview} posteringer mangler en kategori`,
+      detail: 'Ét tryk hver, og svaret bliver hængende hos den forretning.',
       href: '/review',
       area: 'money',
       glyph: '💳',
@@ -168,12 +168,12 @@ export async function rightNow(userId: string, now: string = today()): Promise<Q
   // the line that keeps the screen from ever saying "nothing to do".
   quests.push({
     key: 'sort-round',
-    title: 'Play a round of Sorter',
-    detail: 'Ten items, ten bins. Thirty seconds, and you will learn something.',
+    title: 'Spil en runde Sorter!',
+    detail: 'Ti ting, ti spande. Tredive sekunder, og du lærer noget.',
     href: '/sort',
     area: 'home',
     glyph: '♻️',
-    reward: 'up to +100 XP',
+    reward: 'op til +100 XP',
     urgency: 10,
   });
 

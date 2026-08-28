@@ -17,10 +17,10 @@ export const AREA_COLOR: Record<Area | 'xp', string> = {
 };
 
 /**
- * Level, points to the next one, and momentum.
+ * Niveau, point til det næste, og momentum.
  *
- * Momentum is shown as a bar with a marked floor, because the floor is the
- * promise: the shaded part is what a fortnight away cannot take.
+ * Momentum vises med sit gulv markeret, for gulvet er hele løftet: den
+ * skraverede del er den fjorten dages fravær ikke kan tage.
  */
 export function PlayerBar({ player, xpToday }: { player: Player; xpToday: number }) {
   const { progress, tier, momentum, floor } = player;
@@ -30,7 +30,7 @@ export function PlayerBar({ player, xpToday }: { player: Player; xpToday: number
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/55">
-            Level {progress.level}
+            Niveau {progress.level}
           </p>
           <p className="truncate text-[19px] font-bold tracking-tight">{progress.title}</p>
         </div>
@@ -38,7 +38,7 @@ export function PlayerBar({ player, xpToday }: { player: Player; xpToday: number
           href="/collection"
           className="pressable shrink-0 rounded-full bg-white/12 px-3 py-1.5 text-[12.5px] font-medium"
         >
-          {player.collection.length} collected
+          {player.collection.length} samlet
         </Link>
       </div>
 
@@ -48,14 +48,14 @@ export function PlayerBar({ player, xpToday }: { player: Player; xpToday: number
         />
       </div>
       <p className="mt-1.5 text-[12px] text-white/65">
-        {progress.toNext} XP to level {progress.level + 1}
-        {xpToday > 0 ? ` · ${xpToday} today` : ''}
+        {progress.toNext} XP til niveau {progress.level + 1}
+        {xpToday > 0 ? ` · ${xpToday} i dag` : ''}
       </p>
 
       <div className="mt-3 flex items-center gap-2.5 border-t border-white/10 pt-3">
         <span className="text-[12.5px] font-medium text-white/80">{tier.label}</span>
         <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-white/15">
-          {/* The floor: what a fortnight away cannot take back. */}
+          {/* Gulvet: det fjorten dage væk ikke kan tage tilbage. */}
           <span
             className="absolute inset-y-0 left-0 rounded-full bg-white/25"
             style={{ width: `${floor}%` }}
@@ -69,7 +69,7 @@ export function PlayerBar({ player, xpToday }: { player: Player; xpToday: number
       </div>
       {floor > 0 ? (
         <p className="mt-1.5 text-[11.5px] leading-relaxed text-white/50">
-          Momentum never drops below {floor} now. Time off costs a little, never everything.
+          Momentum falder aldrig under {floor} nu. Fri koster lidt, aldrig det hele.
         </p>
       ) : null}
     </div>

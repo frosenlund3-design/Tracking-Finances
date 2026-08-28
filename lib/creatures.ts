@@ -35,18 +35,18 @@ export const RARITY_ORDER: Record<Rarity, number> = {
 };
 
 export const RARITY_LABEL: Record<Rarity, string> = {
-  common: 'Common',
-  rare: 'Rare',
-  epic: 'Epic',
-  legendary: 'Legendary',
+  common: 'Almindelig',
+  rare: 'Sjælden',
+  epic: 'Episk',
+  legendary: 'Legendarisk',
 };
 
 export const CREATURES: Creature[] = [
   {
     key: 'prik',
     name: 'Prik',
-    blurb: 'Turned up the moment you did. Has no other skills.',
-    unlock: 'Open the board for the first time',
+    blurb: 'Dukkede op i samme øjeblik som du gjorde. Kan ikke andet.',
+    unlock: 'Åbn brættet første gang',
     area: 'any',
     rarity: 'common',
     hue: 250,
@@ -54,8 +54,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'streg',
     name: 'Streg',
-    blurb: 'Reads barcodes at a glance. Cannot read anything else.',
-    unlock: 'Scan 3 things into the kitchen',
+    blurb: 'Læser stregkoder på et øjeblik. Kan ikke læse andet.',
+    unlock: 'Scan 3 ting ind i køkkenet',
     area: 'kitchen',
     rarity: 'common',
     hue: 205,
@@ -63,8 +63,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'frost',
     name: 'Frost',
-    blurb: 'Believes almost everything would be better frozen.',
-    unlock: 'Freeze something before it goes off',
+    blurb: 'Mener at næsten alt ville have godt af at blive frosset.',
+    unlock: 'Frys noget ned før det bliver dårligt',
     area: 'kitchen',
     rarity: 'common',
     hue: 190,
@@ -72,8 +72,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'krumme',
     name: 'Krumme',
-    blurb: 'Lives at the back of the cupboard. Knows what is back there.',
-    unlock: 'Keep 10 things in the kitchen at once',
+    blurb: 'Bor bagerst i skabet. Ved hvad der står derinde.',
+    unlock: 'Hav 10 ting i køkkenet på én gang',
     area: 'kitchen',
     rarity: 'rare',
     hue: 35,
@@ -81,8 +81,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'panden',
     name: 'Panden',
-    blurb: 'Hot, flat, deeply reliable.',
-    unlock: 'Cook a planned dinner',
+    blurb: 'Varm, flad, dybt pålidelig.',
+    unlock: 'Lav en planlagt aftensmad',
     area: 'kitchen',
     rarity: 'rare',
     hue: 20,
@@ -90,8 +90,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'gulerod',
     name: 'Gulerod',
-    blurb: 'Rescued from the drawer. Still a little cold about it.',
-    unlock: 'Use 5 things before their date',
+    blurb: 'Reddet ud af skuffen. Stadig lidt kølig over det.',
+    unlock: 'Brug 5 ting før deres dato',
     area: 'kitchen',
     rarity: 'epic',
     hue: 28,
@@ -99,8 +99,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'skrald',
     name: 'Skrald',
-    blurb: 'Has opinions about which bin. Is usually right.',
-    unlock: 'Finish a sorting round',
+    blurb: 'Har meninger om hvilken spand. Har som regel ret.',
+    unlock: 'Gennemfør en runde Sorter!',
     area: 'home',
     rarity: 'common',
     hue: 145,
@@ -108,8 +108,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'pap',
     name: 'Pap',
-    blurb: 'Flattens itself before anyone has to ask.',
-    unlock: 'Get a whole sorting round right',
+    blurb: 'Folder sig sammen før nogen når at bede om det.',
+    unlock: 'Få en hel runde Sorter! rigtig',
     area: 'home',
     rarity: 'rare',
     hue: 30,
@@ -117,8 +117,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'glasse',
     name: 'Glasse',
-    blurb: 'Rinsed, sorted, faintly smug.',
-    unlock: 'Score 200 in one sorting round',
+    blurb: 'Skyllet, sorteret, en anelse selvtilfreds.',
+    unlock: 'Få 200 point i én runde Sorter!',
     area: 'home',
     rarity: 'epic',
     hue: 165,
@@ -126,8 +126,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'ur',
     name: 'Ur',
-    blurb: 'Two minutes. Always two minutes.',
-    unlock: 'Finish a two-minute sprint',
+    blurb: 'To minutter. Altid to minutter.',
+    unlock: 'Gennemfør en to-minutters sprint',
     area: 'home',
     rarity: 'common',
     hue: 300,
@@ -135,8 +135,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'boble',
     name: 'Boble',
-    blurb: 'Does the whole routine. Even the last step.',
-    unlock: 'Tick off a routine 5 times',
+    blurb: 'Tager hele rutinen. Også det sidste trin.',
+    unlock: 'Kryds en rutine af 5 gange',
     area: 'body',
     rarity: 'rare',
     hue: 320,
@@ -144,8 +144,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'vaegt',
     name: 'Vægt',
-    blurb: 'Small, dense, extremely pleased with itself.',
-    unlock: 'Hit a weekly routine target',
+    blurb: 'Lille, tung, overordentlig tilfreds med sig selv.',
+    unlock: 'Ram et ugentligt rutinemål',
     area: 'body',
     rarity: 'epic',
     hue: 265,
@@ -153,8 +153,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'moent',
     name: 'Mønt',
-    blurb: 'Knows exactly where it went. Will tell you.',
-    unlock: 'Sort 10 transactions',
+    blurb: 'Ved præcis hvor den blev af. Fortæller dig det.',
+    unlock: 'Sortér 10 posteringer',
     area: 'money',
     rarity: 'rare',
     hue: 90,
@@ -162,8 +162,8 @@ export const CREATURES: Creature[] = [
   {
     key: 'stjerne',
     name: 'Stjerne',
-    blurb: 'Only turns up for people who kept going.',
-    unlock: 'Reach level 10',
+    blurb: 'Dukker kun op hos dem der blev ved.',
+    unlock: 'Nå niveau 10',
     area: 'any',
     rarity: 'legendary',
     hue: 50,

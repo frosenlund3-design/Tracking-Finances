@@ -170,10 +170,10 @@ interface NavItem {
  * the product — it is just no longer the whole of it.
  */
 const PRIMARY: NavItem[] = [
-  { href: '/play', label: 'Play', icon: 'play' },
-  { href: '/kitchen', label: 'Kitchen', icon: 'kitchen' },
-  { href: '/dashboard', label: 'Money', icon: 'accounts' },
-  { href: '/assistant', label: 'Ask', icon: 'ask' },
+  { href: '/play', label: 'Spil', icon: 'play' },
+  { href: '/kitchen', label: 'Køkken', icon: 'kitchen' },
+  { href: '/dashboard', label: 'Penge', icon: 'accounts' },
+  { href: '/assistant', label: 'Spørg', icon: 'ask' },
 ];
 
 interface NavGroup {
@@ -183,36 +183,37 @@ interface NavGroup {
 
 const SECONDARY_GROUPS: NavGroup[] = [
   {
-    title: 'Life',
+    title: 'Liv',
     items: [
-      { href: '/dinner', label: 'Dinner', icon: 'dinner', description: 'Tonight, from what you have' },
-      { href: '/sort', label: 'Sorter!', icon: 'sort', description: 'Ten items, ten bins' },
-      { href: '/sort/bins', label: 'Bins at home', icon: 'sort', description: 'Which ones you have, which you need' },
-      { href: '/routines', label: 'Routines', icon: 'body', description: 'Training, skincare, anything repeated' },
-      { href: '/supplies', label: 'Supplies', icon: 'supplies', description: 'What is about to run out' },
-      { href: '/collection', label: 'Collection', icon: 'collection', description: 'Everyone you have met' },
-      { href: '/inbox', label: 'Inbox', icon: 'inbox', description: 'Mail in one place, read-only' },
+      { href: '/scan', label: 'Rum-scanner', icon: 'play', description: 'Kameraet tændt, rummet scannet' },
+      { href: '/dinner', label: 'Aftensmad', icon: 'dinner', description: 'I aften, af det du har' },
+      { href: '/sort', label: 'Sorter!', icon: 'sort', description: 'Ti ting, ti spande' },
+      { href: '/sort/bins', label: 'Spande derhjemme', icon: 'sort', description: 'Hvilke du har, hvilke du mangler' },
+      { href: '/routines', label: 'Rutiner', icon: 'body', description: 'Træning, hudpleje, alt der gentages' },
+      { href: '/supplies', label: 'Forbrugsvarer', icon: 'supplies', description: 'Hvad der er ved at slippe op' },
+      { href: '/collection', label: 'Samling', icon: 'collection', description: 'Alle du har mødt' },
+      { href: '/inbox', label: 'Indbakke', icon: 'inbox', description: 'Post ét sted, kun læseadgang' },
     ],
   },
   {
-    title: 'Money',
+    title: 'Penge',
     items: [
-      { href: '/review', label: 'Review', icon: 'review', description: 'Sort what Kroner is unsure about' },
-      { href: '/transactions', label: 'Activity', icon: 'activity', description: 'Every krone, in and out' },
-      { href: '/accounts', label: 'Accounts', icon: 'accounts', description: 'Balances across every account' },
-      { href: '/business', label: 'Business', icon: 'business', description: 'Revenue, costs, gross profit' },
-      { href: '/advanced', label: 'Advanced', icon: 'advanced', description: 'Burn rate, runway, payment rails' },
-      { href: '/insights', label: 'Insights', icon: 'insights', description: 'What changed, and a forecast' },
-      { href: '/subscriptions', label: 'Subscriptions', icon: 'subscriptions', description: 'Every recurring payment' },
-      { href: '/mobilepay', label: 'MobilePay', icon: 'mobilepay', description: 'Who you pay, who pays you' },
+      { href: '/review', label: 'Gennemgang', icon: 'review', description: 'Sortér det Kroner er i tvivl om' },
+      { href: '/transactions', label: 'Aktivitet', icon: 'activity', description: 'Hver eneste krone, ind og ud' },
+      { href: '/accounts', label: 'Konti', icon: 'accounts', description: 'Saldi på tværs af alle konti' },
+      { href: '/business', label: 'Erhverv', icon: 'business', description: 'Omsætning, omkostninger, dækningsbidrag' },
+      { href: '/advanced', label: 'Avanceret', icon: 'advanced', description: 'Forbrugsrate, løbetid, betalingsveje' },
+      { href: '/insights', label: 'Indsigter', icon: 'insights', description: 'Hvad der har ændret sig, og en prognose' },
+      { href: '/subscriptions', label: 'Abonnementer', icon: 'subscriptions', description: 'Hver eneste faste betaling' },
+      { href: '/mobilepay', label: 'MobilePay', icon: 'mobilepay', description: 'Hvem du betaler, hvem der betaler dig' },
     ],
   },
   {
-    title: 'Setup',
+    title: 'Opsætning',
     items: [
-      { href: '/connect', label: 'Connect', icon: 'connect', description: 'Bank, Stripe, MobilePay' },
-      { href: '/privacy', label: 'Privacy & security', icon: 'privacy', description: 'What is stored, what never is' },
-      { href: '/settings', label: 'Settings', icon: 'settings', description: 'Profile, rules, your data' },
+      { href: '/connect', label: 'Forbind', icon: 'connect', description: 'Bank, Stripe, MobilePay' },
+      { href: '/privacy', label: 'Privatliv & sikkerhed', icon: 'privacy', description: 'Hvad der gemmes, hvad der aldrig gør' },
+      { href: '/settings', label: 'Indstillinger', icon: 'settings', description: 'Profil, regler, dine data' },
     ],
   },
 ];
@@ -274,13 +275,13 @@ export function BottomNav() {
               )}
             >
               <span className="h-[22px] w-[22px]">{ICONS.more}</span>
-              More
+              Mere
             </button>
           </li>
         </ul>
       </nav>
 
-      <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Everything else">
+      <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Alt det andet">
         {SECONDARY_GROUPS.map((group) => (
         <div key={group.title} className="pb-2">
         <h3 className="px-3 pb-1 pt-2 text-[11.5px] font-semibold uppercase tracking-wide text-ink-subtle">
@@ -358,7 +359,7 @@ export function Sidebar({ userLabel }: { userLabel: string }) {
         <p className="truncate">{userLabel}</p>
         <p className="mt-1 flex items-center gap-1.5">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-positive" aria-hidden="true" />
-          Read-only access
+          Kun læseadgang
         </p>
       </div>
     </aside>

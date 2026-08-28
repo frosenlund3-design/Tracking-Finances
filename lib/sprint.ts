@@ -1,11 +1,11 @@
 /**
- * Two-minute sprints.
+ * To-minutters sprints.
  *
- * Every task below is genuinely finishable in well under two minutes by
- * someone who has been putting it off for a month. That is the only rule the
- * list obeys, and it is the rule that matters: "tidy the kitchen" is a
- * project and gets avoided, "put everything on the counter where it lives"
- * is a task and gets done.
+ * Hver eneste opgave herunder kan nås på et godt stykke under to minutter af
+ * en der har udskudt den i en måned. Det er den eneste regel listen følger, og
+ * det er den regel der betyder noget: "ryd køkkenet" er et projekt og bliver
+ * undgået, "alt på bordet tilbage hvor det hører til" er en opgave og bliver
+ * gjort.
  */
 
 export interface Room {
@@ -18,75 +18,75 @@ export interface Room {
 export const ROOMS: Room[] = [
   {
     key: 'kitchen',
-    label: 'Kitchen',
+    label: 'Køkken',
     glyph: '🍳',
     tasks: [
-      'Everything on the counter, back where it lives',
-      'Wipe one surface — the worst one',
-      'Empty the dishwasher, or fill it',
-      'Bin whatever is obviously finished in the fridge door',
-      'Fold or bin the bags on the chair',
-      'Put the clean dishes away, just the clean ones',
+      'Alt på bordet tilbage hvor det hører til',
+      'Tør én flade af — den værste',
+      'Tøm opvaskemaskinen, eller fyld den',
+      'Smid det ud i køleskabsdøren der åbenlyst er færdigt',
+      'Fold eller smid poserne på stolen',
+      'Sæt det rene service på plads — kun det rene',
     ],
   },
   {
     key: 'bathroom',
-    label: 'Bathroom',
+    label: 'Badeværelse',
     glyph: '🛁',
     tasks: [
-      'Empty products you have not touched in a year',
-      'Wipe the sink and the tap',
-      'Fresh towel out, old one to the wash',
-      'Everything on the edge of the bath, back on a shelf',
-      'Bin the empties in the shower',
+      'Smid det ud du ikke har rørt i et år',
+      'Tør vask og hane af',
+      'Rent håndklæde frem, det gamle i vask',
+      'Alt på badekarskanten tilbage på en hylde',
+      'Smid de tomme flasker i bruseren ud',
     ],
   },
   {
     key: 'bedroom',
-    label: 'Bedroom',
+    label: 'Soveværelse',
     glyph: '🛏️',
     tasks: [
-      'Clothes off the chair: worn, wash, or away',
-      'Clear one surface completely',
-      'Make the bed, badly is fine',
-      'Glasses and mugs back to the kitchen',
-      'Everything under the bed that should not be there',
+      'Tøjet på stolen: brugt, vask eller væk',
+      'Ryd én flade helt',
+      'Red sengen — dårligt er fint',
+      'Glas og kopper tilbage i køkkenet',
+      'Alt under sengen der ikke hører til der',
     ],
   },
   {
     key: 'living',
-    label: 'Living room',
+    label: 'Stue',
     glyph: '🛋️',
     tasks: [
-      'Cushions back on the sofa',
-      'Everything on the coffee table, gone or straightened',
-      'Cables into one bundle',
-      'Post and paper into one pile',
-      'Anything belonging in another room, into that room',
+      'Puderne tilbage i sofaen',
+      'Alt på sofabordet: væk eller rettet op',
+      'Kablerne samlet i ét bundt',
+      'Post og papir i én bunke',
+      'Alt der hører til i et andet rum, ind i det rum',
     ],
   },
   {
     key: 'desk',
-    label: 'Desk',
+    label: 'Skrivebord',
     glyph: '💻',
     tasks: [
-      'Every mug and glass, back to the kitchen',
-      'Paper into one pile, bin the obvious',
-      'Cables untangled and behind the desk',
-      'Wipe the desk once the surface is clear',
-      'Close the tabs you will not read',
+      'Hver eneste kop og glas ud i køkkenet',
+      'Papir i én bunke, smid det åbenlyse ud',
+      'Kabler redt ud og bag bordet',
+      'Tør bordet af når fladen endelig er fri',
+      'Luk de faner du ikke læser',
     ],
   },
   {
     key: 'hallway',
-    label: 'Hallway',
+    label: 'Entré',
     glyph: '🚪',
     tasks: [
-      'Shoes into pairs and against the wall',
-      'Coats on hooks, not the floor',
-      'Post: bin, keep, or deal with',
-      'Bags off the floor',
-      'Anything that has been by the door for a week, moved',
+      'Skoene parvis og op ad væggen',
+      'Jakker på knager, ikke på gulvet',
+      'Post: smid ud, gem, eller gør noget ved den',
+      'Tasker op fra gulvet',
+      'Det der har stået ved døren i en uge, flyttes',
     ],
   },
 ];
@@ -97,13 +97,13 @@ export function room(key: string): Room | undefined {
   return BY_KEY.get(key);
 }
 
-/** Three tasks for a room. Three, because four is a list. */
+/** Tre opgaver til et rum. Tre, fordi fire er en liste. */
 export function pickTasks(roomKey: string, count = 3, random: () => number = Math.random): string[] {
   const found = BY_KEY.get(roomKey);
   if (!found) return [];
   const pool = [...found.tasks];
-  // Fixed before the loop: `pool` shrinks as tasks are drawn, so comparing
-  // against its live length would stop about halfway to the target.
+  // Låst før løkken: `pool` bliver tømt undervejs, så en sammenligning med
+  // dens aktuelle længde ville stoppe cirka halvvejs.
   const wanted = Math.min(count, pool.length);
   const picked: string[] = [];
   while (picked.length < wanted && pool.length > 0) {
