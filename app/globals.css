@@ -66,6 +66,22 @@
     1.0117 48.2%, 1.0195 54%, 1.0117 63.4%, 1 79.6%, 1
   );
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /*
+   * The play palette.
+   *
+   * The money screens stay calm on purpose — nobody wants their bank balance
+   * to sparkle. Everything in the organising game gets this set instead:
+   * saturated, warm, unmistakably a different room in the same building.
+   * Each area owns one hue and keeps it everywhere it appears.
+   */
+  --color-play-kitchen: oklch(0.68 0.17 45);
+  --color-play-home: oklch(0.66 0.16 155);
+  --color-play-body: oklch(0.66 0.19 330);
+  --color-play-money: oklch(0.68 0.15 250);
+  --color-play-xp: oklch(0.78 0.17 85);
+  --color-play-ink: oklch(0.16 0.02 265);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -238,4 +254,129 @@ body {
 ::selection {
   background: var(--color-accent-soft);
   color: var(--color-accent-ink);
+}
+
+
+/* ------------------------------------------------------------------ play */
+
+/*
+ * The game layer.
+ *
+ * Loud on purpose, and confined to the organising screens: chunky tiles, deep
+ * shadows, a bounce on everything that moves. The rule that keeps it from
+ * becoming noise is that motion only ever marks something that happened —
+ * a tap landing, points arriving, a creature turning up.
+ */
+
+.play-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  color: #fff;
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.28) inset,
+    0 10px 24px -10px oklch(0.2 0.06 265 / 0.55);
+  transition: transform 0.18s var(--ease-pop), box-shadow 0.18s ease;
+}
+.play-tile::after {
+  /* A single soft sheen, not a gradient stack. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 80% at 20% 0%, oklch(1 0 0 / 0.3), transparent 62%);
+  pointer-events: none;
+}
+.play-tile:active {
+  transform: scale(0.965) translateY(1px);
+}
+
+/* Creatures breathe. Nothing else on the screen does. */
+@keyframes creature-idle {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50%      { transform: translateY(-4%) rotate(1deg); }
+}
+.creature-idle {
+  animation: creature-idle 3.4s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+
+@keyframes pop-in {
+  0%   { opacity: 0; transform: scale(0.6) translateY(10px); }
+  70%  { opacity: 1; transform: scale(1.06) translateY(0); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.pop-in { animation: pop-in 0.42s var(--ease-pop) both; }
+
+/* Points arriving. Rises, fades, gone — never blocks a tap. */
+@keyframes xp-float {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.9); }
+  18%  { opacity: 1; transform: translateY(0) scale(1.08); }
+  70%  { opacity: 1; transform: translateY(-14px) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) scale(0.96); }
+}
+.xp-float { animation: xp-float 1.5s var(--ease-out) both; pointer-events: none; }
+
+/* The holo sweep on a legendary card. One pass, then it rests. */
+@keyframes holo {
+  0%   { transform: translateX(-120%) rotate(8deg); }
+  100% { transform: translateX(220%) rotate(8deg); }
+}
+.holo {
+  position: relative;
+  overflow: hidden;
+}
+.holo::before {
+  content: '';
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  width: 42%;
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.42), transparent);
+  animation: holo 2.6s var(--ease-out) 0.3s infinite;
+  pointer-events: none;
+}
+
+/* A correct answer flashes green through the card, not around it. */
+@keyframes flash-right {
+  0%   { box-shadow: 0 0 0 0 var(--color-positive); }
+  100% { box-shadow: 0 0 0 14px oklch(0.55 0.11 155 / 0); }
+}
+.flash-right { animation: flash-right 0.5s ease-out both; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-7px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(2px); }
+}
+.shake { animation: shake 0.36s ease-out both; }
+
+/* Confetti: plain divs the component positions, animated here. */
+@keyframes confetti-fall {
+  0%   { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); }
+  100% { opacity: 0; transform: translate3d(var(--dx), 78vh, 0) rotate(var(--spin)); }
+}
+.confetti-piece {
+  position: fixed;
+  top: 12vh;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  animation: confetti-fall var(--dur) cubic-bezier(0.2, 0.7, 0.4, 1) var(--delay) both;
+  pointer-events: none;
+  z-index: 60;
+}
+
+/* A bar that fills. Used for XP, momentum and round progress alike. */
+.meter {
+  overflow: hidden;
+  border-radius: 999px;
+  background: oklch(0.5 0.02 265 / 0.18);
+}
+.meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s var(--ease-out);
 }

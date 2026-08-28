@@ -8,12 +8,16 @@ import { updateTransaction } from '@/services/transactions';
 import { detectAndStoreSubscriptions } from '@/services/subscriptions';
 import { isKnownCategory } from '@/lib/categories';
 import { LIMITS, rateLimit } from '@/security/rate-limit';
+import { grantXp } from '@/services/player';
+import { rewardOf, type Reward } from '@/lib/reward';
 
 export interface ReviewResult {
   ok?: boolean;
   error?: string;
   /** How many other transactions the same decision was applied to. */
   alsoUpdated?: number;
+  /** Points, and anything the decision unlocked. Money is an area like any other. */
+  reward?: Reward;
 }
 
 const decideSchema = z.object({
@@ -56,7 +60,15 @@ export async function decideCategoryAction(formData: FormData): Promise<ReviewRe
     // is decided it would replace the summary with the empty state — losing
     // the one moment that shows the work paid off. finishReviewAction does
     // the revalidating, on the way out.
-    return { ok: true, alsoUpdated: outcome.pastUpdated };
+    // Sorting money counts towards the same level as sorting a fridge — one
+    // decision per transaction settled, so clearing nine siblings pays nine.
+    const grant = await grantXp(
+      user.id,
+      'transaction_sorted',
+      { category: parsed.data.category },
+      1 + outcome.pastUpdated,
+    );
+    return { ok: true, alsoUpdated: outcome.pastUpdated, reward: rewardOf(grant) };
   } catch (err) {
     console.error('[review] decide failed', err);
     return { error: 'Could not save that.' };

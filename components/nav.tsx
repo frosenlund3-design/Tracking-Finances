@@ -99,6 +99,48 @@ const ICONS = {
       <path d="M12 3.5 5 6.5v5c0 4.2 2.9 7.6 7 9 4.1-1.4 7-4.8 7-9v-5l-7-3Z" />
     </svg>
   ),
+  play: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <rect x="3" y="3.5" width="7.5" height="7.5" rx="2.2" />
+      <rect x="13.5" y="3.5" width="7.5" height="7.5" rx="2.2" />
+      <rect x="3" y="13" width="7.5" height="7.5" rx="2.2" />
+      <rect x="13.5" y="13" width="7.5" height="7.5" rx="2.2" />
+    </svg>
+  ),
+  kitchen: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M6 9h12l-1 11H7L6 9Z" />
+      <path d="M9 9V6.5a3 3 0 0 1 6 0V9" />
+    </svg>
+  ),
+  sort: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M5 8h14l-1.2 12H6.2L5 8Z" />
+      <path d="M9 8V5.5h6V8M9.5 12v4M14.5 12v4" />
+    </svg>
+  ),
+  body: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M4 10v4M20 10v4M7 7.5v9M17 7.5v9M7 12h10" />
+    </svg>
+  ),
+  dinner: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M7 3.5v7a2.5 2.5 0 0 0 5 0v-7M9.5 3.5v5" />
+      <path d="M9.5 13v7.5M17 3.5c-1.4 1.6-2 3.4-2 5.2 0 1.5.7 2.3 2 2.3v9.5" />
+    </svg>
+  ),
+  supplies: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M4 8.5 12 5l8 3.5-8 3.5-8-3.5Z" />
+      <path d="M4 12.5 12 16l8-3.5M4 16.5 12 20l8-3.5" />
+    </svg>
+  ),
+  collection: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z" />
+    </svg>
+  ),
   settings: (
     <svg viewBox="0 0 24 24" {...stroke}>
       <circle cx="12" cy="12" r="3" />
@@ -114,24 +156,61 @@ interface NavItem {
   description?: string;
 }
 
+/*
+ * Play comes first.
+ *
+ * The board is the screen that answers "what should I do right now", and the
+ * one worth landing on. Money keeps a tab of its own because it is still half
+ * the product — it is just no longer the whole of it.
+ */
 const PRIMARY: NavItem[] = [
-  { href: '/dashboard', label: 'Home', icon: 'home' },
-  { href: '/accounts', label: 'Accounts', icon: 'accounts' },
-  { href: '/transactions', label: 'Activity', icon: 'activity' },
+  { href: '/play', label: 'Play', icon: 'play' },
+  { href: '/kitchen', label: 'Kitchen', icon: 'kitchen' },
+  { href: '/dashboard', label: 'Money', icon: 'accounts' },
   { href: '/assistant', label: 'Ask', icon: 'ask' },
 ];
 
-const SECONDARY: NavItem[] = [
-  { href: '/review', label: 'Review', icon: 'review', description: 'Sort what Kroner is unsure about' },
-  { href: '/business', label: 'Business', icon: 'business', description: 'Revenue, costs, gross profit' },
-  { href: '/advanced', label: 'Advanced', icon: 'advanced', description: 'Burn rate, runway, payment rails' },
-  { href: '/insights', label: 'Insights', icon: 'insights', description: 'What changed, and a forecast' },
-  { href: '/subscriptions', label: 'Subscriptions', icon: 'subscriptions', description: 'Every recurring payment' },
-  { href: '/mobilepay', label: 'MobilePay', icon: 'mobilepay', description: 'Who you pay, who pays you' },
-  { href: '/connect', label: 'Connect', icon: 'connect', description: 'Bank, Stripe, MobilePay' },
-  { href: '/privacy', label: 'Privacy & security', icon: 'privacy', description: 'What is stored, what never is' },
-  { href: '/settings', label: 'Settings', icon: 'settings', description: 'Profile, rules, your data' },
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+const SECONDARY_GROUPS: NavGroup[] = [
+  {
+    title: 'Life',
+    items: [
+      { href: '/dinner', label: 'Dinner', icon: 'dinner', description: 'Tonight, from what you have' },
+      { href: '/sort', label: 'Sorter!', icon: 'sort', description: 'Ten items, ten bins' },
+      { href: '/sort/bins', label: 'Bins at home', icon: 'sort', description: 'Which ones you have, which you need' },
+      { href: '/routines', label: 'Routines', icon: 'body', description: 'Training, skincare, anything repeated' },
+      { href: '/supplies', label: 'Supplies', icon: 'supplies', description: 'What is about to run out' },
+      { href: '/collection', label: 'Collection', icon: 'collection', description: 'Everyone you have met' },
+    ],
+  },
+  {
+    title: 'Money',
+    items: [
+      { href: '/review', label: 'Review', icon: 'review', description: 'Sort what Kroner is unsure about' },
+      { href: '/transactions', label: 'Activity', icon: 'activity', description: 'Every krone, in and out' },
+      { href: '/accounts', label: 'Accounts', icon: 'accounts', description: 'Balances across every account' },
+      { href: '/business', label: 'Business', icon: 'business', description: 'Revenue, costs, gross profit' },
+      { href: '/advanced', label: 'Advanced', icon: 'advanced', description: 'Burn rate, runway, payment rails' },
+      { href: '/insights', label: 'Insights', icon: 'insights', description: 'What changed, and a forecast' },
+      { href: '/subscriptions', label: 'Subscriptions', icon: 'subscriptions', description: 'Every recurring payment' },
+      { href: '/mobilepay', label: 'MobilePay', icon: 'mobilepay', description: 'Who you pay, who pays you' },
+    ],
+  },
+  {
+    title: 'Setup',
+    items: [
+      { href: '/connect', label: 'Connect', icon: 'connect', description: 'Bank, Stripe, MobilePay' },
+      { href: '/privacy', label: 'Privacy & security', icon: 'privacy', description: 'What is stored, what never is' },
+      { href: '/settings', label: 'Settings', icon: 'settings', description: 'Profile, rules, your data' },
+    ],
+  },
 ];
+
+const SECONDARY: NavItem[] = SECONDARY_GROUPS.flatMap((group) => group.items);
 
 function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -195,8 +274,13 @@ export function BottomNav() {
       </nav>
 
       <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Everything else">
-        <ul className="space-y-1 pb-2">
-          {SECONDARY.map((item) => (
+        {SECONDARY_GROUPS.map((group) => (
+        <div key={group.title} className="pb-2">
+        <h3 className="px-3 pb-1 pt-2 text-[11.5px] font-semibold uppercase tracking-wide text-ink-subtle">
+          {group.title}
+        </h3>
+        <ul className="space-y-1">
+          {group.items.map((item) => (
             <li key={item.href}>
               <button
                 type="button"
@@ -225,6 +309,8 @@ export function BottomNav() {
             </li>
           ))}
         </ul>
+        </div>
+        ))}
       </Sheet>
     </>
   );
@@ -246,11 +332,20 @@ export function Sidebar({ userLabel }: { userLabel: string }) {
         ))}
       </ul>
 
-      <ul className="mt-6 space-y-0.5 border-t border-border pt-4">
-        {SECONDARY.map((item) => (
-          <SidebarLink key={item.href} item={item} pathname={pathname} compact />
+      <div className="mt-5 space-y-4 overflow-y-auto border-t border-border pt-4">
+        {SECONDARY_GROUPS.map((group) => (
+          <div key={group.title}>
+            <h3 className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">
+              {group.title}
+            </h3>
+            <ul className="space-y-0.5">
+              {group.items.map((item) => (
+                <SidebarLink key={item.href} item={item} pathname={pathname} compact />
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
 
       <div className="mt-auto px-2.5 pt-4 text-[12px] text-ink-subtle">
         <p className="truncate">{userLabel}</p>

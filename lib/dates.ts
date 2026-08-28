@@ -97,6 +97,25 @@ export function formatDateTime(value: string | Date): string {
   return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}, ${hours}:${minutes}`;
 }
 
+/**
+ * "Today", "Tomorrow", "Yesterday", or a short date.
+ *
+ * Wanted wherever a date is really a deadline: "Tomorrow" is read instantly
+ * and "26 Aug" has to be worked out against today's date first.
+ */
+export function nearDayLabel(iso: string, now: Date = new Date()): string {
+  const t = today(now);
+  if (iso === t) return 'Today';
+  const diff = Math.round(
+    (Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${t}T00:00:00Z`)) / 86_400_000,
+  );
+  if (diff === 1) return 'Tomorrow';
+  if (diff === -1) return 'Yesterday';
+  if (diff > 1 && diff <= 6) return `In ${diff} days`;
+  if (diff < -1 && diff >= -6) return `${-diff} days ago`;
+  return formatDay(iso);
+}
+
 export function relativeDayLabel(iso: string, now: Date = new Date()): string {
   const t = today(now);
   if (iso === t) return 'Today';

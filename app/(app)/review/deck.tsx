@@ -9,6 +9,7 @@ import { formatDayLong } from '@/lib/dates';
 import { BUSINESS_CATEGORIES, PERSONAL_CATEGORIES, categoryLabel } from '@/lib/categories';
 import { cn } from '@/lib/cn';
 import { confirmAsIsAction, decideCategoryAction, finishReviewAction } from './actions';
+import { useCelebrate } from '@/components/play/celebrate';
 import type { ReviewItem } from '@/services/review';
 
 /**
@@ -31,6 +32,7 @@ export function ReviewDeck({
   currency: string;
 }) {
   const router = useRouter();
+  const celebrate = useCelebrate();
   // The queue is walked client-side, so a decision that settles eight other
   // rows has to remove those eight from the deck. Asking about a transaction
   // the last tap already answered is the fastest way to make the flow feel
@@ -90,7 +92,14 @@ export function ReviewDeck({
     startTransition(async () => {
       const result = await decideCategoryAction(form);
       if (result.error) setError(result.error);
-      else advance(result.alsoUpdated ?? 0, true);
+      else {
+        advance(result.alsoUpdated ?? 0, true);
+        celebrate({
+          xp: result.reward?.xp,
+          levelUp: result.reward?.levelUp,
+          unlocked: result.reward?.unlocked,
+        });
+      }
       setAllCategoriesOpen(false);
     });
   }
@@ -103,7 +112,14 @@ export function ReviewDeck({
     startTransition(async () => {
       const result = await confirmAsIsAction(form);
       if (result.error) setError(result.error);
-      else advance(0, false);
+      else {
+        advance(0, false);
+        celebrate({
+          xp: result.reward?.xp,
+          levelUp: result.reward?.levelUp,
+          unlocked: result.reward?.unlocked,
+        });
+      }
     });
   }
 
