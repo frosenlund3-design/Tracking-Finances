@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState, useTransition } from 'react';
 import { Badge, Button, Input, Select } from '@/components/ui/primitives';
 import { ALL_CATEGORIES } from '@/lib/categories';
 import { RANGE_OPTIONS } from './search-params';
+import { parseSearchQuery } from '@/lib/search-query';
 import type { FinancialAccount } from '@/types/finance';
 
 /**
@@ -40,11 +41,31 @@ export function TransactionFilters({
     [params, pathname, router],
   );
 
-  // Debounce the search box; the rest apply immediately.
+  /**
+   * Debounce the search box, and let a typed phrase set real filters:
+   * "business expenses over 1000 kr" becomes an ownership filter, a direction
+   * and an amount floor, with whatever is left searched as text.
+   */
   useEffect(() => {
     const current = params.get('q') ?? '';
     if (query === current) return;
-    const id = setTimeout(() => update({ q: query || null }), 300);
+    const id = setTimeout(() => {
+      if (!query.trim()) {
+        update({ q: null });
+        return;
+      }
+      const parsed = parseSearchQuery(query);
+      update({
+        q: parsed.text || null,
+        ...(parsed.direction ? { direction: parsed.direction } : {}),
+        ...(parsed.ownership ? { ownership: parsed.ownership } : {}),
+        ...(parsed.category ? { category: parsed.category } : {}),
+        ...(parsed.range ? { range: parsed.range } : {}),
+        ...(parsed.recurring ? { recurring: 'only' } : {}),
+        ...(parsed.minAmountMajor !== undefined ? { min: String(parsed.minAmountMajor) } : {}),
+        ...(parsed.maxAmountMajor !== undefined ? { max: String(parsed.maxAmountMajor) } : {}),
+      });
+    }, 400);
     return () => clearTimeout(id);
   }, [query, params, update]);
 
@@ -58,7 +79,7 @@ export function TransactionFilters({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search merchant, description or note"
+            placeholder="Try “business expenses over 1000 kr”"
             aria-label="Search transactions"
             className="pl-9"
           />

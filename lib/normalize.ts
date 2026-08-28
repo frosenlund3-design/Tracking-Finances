@@ -43,14 +43,15 @@ export function normalizeMerchant(raw: string): string {
   for (const p of TRAILING_NOISE) s = s.replace(p, '');
   s = s.replace(/\s{2,}/g, ' ').trim();
   if (!s) return raw?.trim() || 'Unknown';
-  // Title-case words that are all-caps; leave mixed-case brands alone.
+  // Title-case shouted words, but leave short all-caps tokens alone: DSB, AWS
+  // and HBO are acronyms, and "Dsb" reads as a typo rather than a bank.
   return s
     .split(' ')
-    .map((word) =>
-      word.length > 1 && word === word.toUpperCase() && /[A-ZÆØÅ]/.test(word)
-        ? word.charAt(0) + word.slice(1).toLowerCase()
-        : word,
-    )
+    .map((word) => {
+      const isShouted = word.length > 1 && word === word.toUpperCase() && /[A-ZÆØÅ]/.test(word);
+      if (!isShouted || word.length <= 3) return word;
+      return word.charAt(0) + word.slice(1).toLowerCase();
+    })
     .join(' ');
 }
 

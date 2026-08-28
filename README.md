@@ -119,6 +119,14 @@ Four tiers, cheapest and most certain first:
 
 Most transactions never reach a model at all.
 
+### Search
+
+The search box takes sentences. "business expenses over 1000 kr" becomes an
+ownership filter, a direction and an amount floor; whatever is left over is
+searched as text, so a phrase never silently matches nothing because part of it
+was a qualifier rather than a merchant name. Everything it sets lands in the
+URL, so a filtered view is shareable and survives a reload.
+
 ### Subscription detection
 
 Statistical, not a name lookup. A merchant's charge dates are grouped, the
@@ -201,3 +209,8 @@ Password reset links are written to the server log — wire an email provider in
   `lib/auth.ts`; passkeys are a natural next step.
 - **The rate limiter is in-process.** Fine for one instance; move it to Redis
   before running several.
+- **Bookkeeping export is CSV.** Connectors for Dinero, Billy and e-conomic are
+  declared in `integrations/bookkeeping/` with the endpoints documented, but
+  posting entries automatically needs a mapping from Kroner's categories onto a
+  specific business's chart of accounts. Until that exists, CSV is the
+  supported path — a wrong automated posting is worse than a manual one.

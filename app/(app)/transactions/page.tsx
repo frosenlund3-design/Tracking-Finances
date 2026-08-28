@@ -107,8 +107,8 @@ export default async function TransactionsPage({
         </div>
       ) : null}
 
-      <Card className="overflow-hidden">
-        {groups.length === 0 ? (
+      {groups.length === 0 ? (
+        <Card>
           <EmptyState
             title="No transactions match"
             description={
@@ -130,23 +130,32 @@ export default async function TransactionsPage({
               )
             }
           />
-        ) : (
-          groups.map(([date, items]) => (
+        </Card>
+      ) : (
+        /*
+         * One card per day, with the date as a heading outside it. The heading
+         * has to sit outside a rounded, clipped container for `sticky` to
+         * resolve against the viewport at all.
+         */
+        <div className="space-y-4">
+          {groups.map(([date, items]) => (
             <section key={date}>
-              <h2 className="sticky top-0 z-10 border-y border-border bg-surface-muted/95 px-4 py-1.5 text-[12px] font-medium text-ink-muted backdrop-blur-sm sm:px-5">
+              <h2 className="sticky top-0 z-10 -mx-4 bg-canvas/95 px-5 py-1.5 text-[12px] font-medium text-ink-subtle backdrop-blur-sm sm:mx-0 sm:px-1">
                 {relativeDayLabel(date)}
               </h2>
-              <ul className="divide-y divide-border">
-                {items.map((t) => (
-                  <li key={t.id}>
-                    <TransactionRow transaction={t} showDate={false} />
-                  </li>
-                ))}
-              </ul>
+              <Card className="mt-1 overflow-hidden">
+                <ul className="divide-y divide-border">
+                  {items.map((t) => (
+                    <li key={t.id}>
+                      <TransactionRow transaction={t} showDate={false} />
+                    </li>
+                  ))}
+                </ul>
+              </Card>
             </section>
-          ))
-        )}
-      </Card>
+          ))}
+        </div>
+      )}
 
       {page.total > PAGE_SIZE ? (
         <nav className="flex items-center justify-between" aria-label="Pagination">

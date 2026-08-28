@@ -3,8 +3,10 @@ import { requireUser } from '@/lib/auth';
 import { listConnections } from '@/services/sync';
 import { listAccounts } from '@/services/accounts';
 import { integrationStatuses } from '@/integrations/registry';
+import { bookkeepingStatuses } from '@/integrations/bookkeeping';
 import { hasEncryptionKey } from '@/security/crypto';
 import { withUser } from '@/database';
+import Link from 'next/link';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/primitives';
 import { IntegrationsPanel } from './panel';
 
@@ -75,6 +77,38 @@ export default async function IntegrationsPage({
         accounts={accounts}
         encryptionReady={hasEncryptionKey()}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Bookkeeping</CardTitle>
+        </CardHeader>
+        <CardBody className="pt-0">
+          <p className="text-[13px] leading-relaxed text-ink-muted">
+            Business transactions carry a bookkeeping label — deductible, potentially deductible,
+            not deductible, or needs review — and export as CSV with those labels attached.
+          </p>
+          <ul className="mt-3 divide-y divide-border">
+            {bookkeepingStatuses().map((tool) => (
+              <li key={tool.id} className="py-2.5">
+                <p className="text-[13px] font-medium">{tool.displayName}</p>
+                <p className="mt-0.5 text-[12px] leading-relaxed text-ink-subtle">{tool.note}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[12px] leading-relaxed text-ink-subtle">
+            Posting entries automatically needs a mapping from these categories onto your chart of
+            accounts, which is specific to your business. Until that exists, CSV export is the
+            supported path — a wrong automated posting is worse than a manual one.
+          </p>
+          <Link
+            href="/api/export/transactions?ownership=business&range=this_year"
+            prefetch={false}
+            className="mt-3 inline-block text-[13px] font-medium text-accent"
+          >
+            Export this year’s business transactions
+          </Link>
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader>

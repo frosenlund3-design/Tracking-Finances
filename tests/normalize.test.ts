@@ -17,6 +17,12 @@ describe('merchant normalization', () => {
     expect(normalizeMerchant('OVERFØRSEL TIL Egen Konto')).toBe('Egen Konto');
   });
 
+  it('leaves short acronyms shouting', () => {
+    expect(normalizeMerchant('DSB BILLET')).toBe('DSB Billet');
+    expect(normalizeMerchant('AWS EMEA')).toBe('AWS Emea');
+    expect(normalizeMerchant('NETTO')).toBe('Netto');
+  });
+
   it('keeps a store number in the display label but not in the grouping key', () => {
     // "Rema 1000" and "Netto 5412" are indistinguishable to a stripper, so the
     // human-facing label keeps both and only the key drops the digits.
