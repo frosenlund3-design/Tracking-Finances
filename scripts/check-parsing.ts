@@ -27,7 +27,7 @@ function check(name: string, condition: boolean, detail = '') {
     console.log(`  ok   ${name}`)
   } else {
     failures++
-    console.log(`  FAIL ${name}${detail ? ` — ${detail}` : ''}`)
+    console.log(`  FAIL ${name}${detail ? `: ${detail}` : ''}`)
   }
 }
 

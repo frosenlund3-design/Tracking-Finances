@@ -3,8 +3,23 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 
+/**
+ * A stamp of when this build was made.
+ *
+ * Shown in Settings, so "which version is she actually running" is a question
+ * with an answer rather than a guess. A cached PWA looks identical to a fresh
+ * one from the outside, which is exactly what makes it hard to debug.
+ */
+const BUILD_ID = new Date()
+  .toISOString()
+  .slice(0, 16)
+  .replace('T', ' ')
+
 export default defineConfig({
   base: './',
+  define: {
+    __BUILD_ID__: JSON.stringify(BUILD_ID),
+  },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

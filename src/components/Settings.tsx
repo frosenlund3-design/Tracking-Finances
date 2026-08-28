@@ -1,4 +1,4 @@
-import { BarChart3, ChevronLeft, Download, Heart, Info, Lock, LockOpen, Share, Trash2, Upload } from 'lucide-react'
+import { BarChart3, ChevronLeft, Download, Heart, Info, Lock, LockOpen, RefreshCw, Share, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useStore } from '@/store/useStore'
 import { downloadBackup, importBackup, BackupError, wipeEverything } from '@/lib/backup'
@@ -7,6 +7,7 @@ import { speechSupported } from '@/lib/speech'
 import { BRAIN_PROFILES } from '@/lib/brainProfiles'
 import type { UserProfile } from '@/db/types'
 import { CreateProfile } from './Lock'
+import { BUILD_ID, forceUpdate } from '@/lib/update'
 
 const THEMES: Array<{ id: UserProfile['theme']; label: string }> = [
   { id: 'warm', label: 'Varm' },
@@ -309,6 +310,25 @@ export function Settings() {
           ) : (
             <Row icon={<Trash2 size={17} />} label="Slet alt og start forfra" onClick={() => setConfirmWipe(true)} />
           )}
+        </Section>
+
+        <Section title="Version">
+          <div className="rounded-xl2 border border-line bg-surface p-5">
+            <p className="text-[15px] font-medium">Bygget {BUILD_ID}</p>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
+              Når Loops ligger på hjemmeskærmen, opdaterer den sig selv, næste gang du lukker og
+              åbner den. Sidder den fast på en gammel udgave, kan du tvinge den her.
+            </p>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-faint">
+              Intet af det, du har skrevet, bliver rørt. Det ligger et andet sted end de filer, der
+              hentes ned.
+            </p>
+          </div>
+          <Row
+            icon={<RefreshCw size={17} />}
+            label="Hent den nyeste udgave"
+            onClick={() => void forceUpdate()}
+          />
         </Section>
 
         <Section title="Læg Loops på hjemmeskærmen">
