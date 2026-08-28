@@ -1,5 +1,83 @@
 import type { Ownership, TaxRelevance } from '@/types/finance';
 
+/**
+ * What kind of service a merchant sells.
+ *
+ * Used to notice overlap — three audio subscriptions is a thing worth saying
+ * out loud, and "Spotify" and "Storytel" being in the same category
+ * (Entertainment) is not enough to know that.
+ */
+export type ServiceKind =
+  | 'music'
+  | 'video'
+  | 'audiobooks'
+  | 'gaming'
+  | 'cloud'
+  | 'ai'
+  | 'design'
+  | 'fitness'
+  | 'transport_pass'
+  | 'news';
+
+export const SERVICE_KINDS: Record<string, ServiceKind> = {
+  spotify: 'music',
+  'youtube premium': 'music',
+  tidal: 'music',
+  netflix: 'video',
+  disney: 'video',
+  hbo: 'video',
+  viaplay: 'video',
+  'tv2 play': 'video',
+  'amazon prime': 'video',
+  skyshowtime: 'video',
+  storytel: 'audiobooks',
+  mofibo: 'audiobooks',
+  audible: 'audiobooks',
+  'nextory': 'audiobooks',
+  playstation: 'gaming',
+  nintendo: 'gaming',
+  steam: 'gaming',
+  'xbox': 'gaming',
+  dropbox: 'cloud',
+  'google one': 'cloud',
+  icloud: 'cloud',
+  openai: 'ai',
+  anthropic: 'ai',
+  'perplexity': 'ai',
+  figma: 'design',
+  adobe: 'design',
+  'fitness world': 'fitness',
+  sats: 'fitness',
+  puregym: 'fitness',
+  rejsekort: 'transport_pass',
+  'dsb': 'transport_pass',
+};
+
+export const SERVICE_KIND_LABELS: Record<ServiceKind, string> = {
+  music: 'music streaming',
+  video: 'video streaming',
+  audiobooks: 'audiobooks',
+  gaming: 'gaming',
+  cloud: 'cloud storage',
+  ai: 'AI assistants',
+  design: 'design tools',
+  fitness: 'gym memberships',
+  transport_pass: 'transport',
+  news: 'news',
+};
+
+/** Longest key first, so 'youtube premium' beats a bare 'youtube'. */
+const SORTED_KINDS = Object.keys(SERVICE_KINDS).sort((a, b) => b.length - a.length);
+
+export function serviceKindFor(merchantKey: string): ServiceKind | null {
+  for (const key of SORTED_KINDS) {
+    if (merchantKey === key || merchantKey.startsWith(`${key} `) || merchantKey.includes(` ${key}`)) {
+      return SERVICE_KINDS[key]!;
+    }
+  }
+  return null;
+}
+
 export interface SeedRule {
   /** Matched against the normalized merchant key as a whole-word substring. */
   match: string;
@@ -73,6 +151,25 @@ export const MERCHANT_SEEDS: SeedRule[] = [
   { match: 'telia', category: 'utilities', subcategory: 'Phone' },
   { match: 'cbb mobil', category: 'utilities', subcategory: 'Phone' },
   { match: 'oister', category: 'utilities', subcategory: 'Phone' },
+  // Insurance. Nearly every Danish household pays two or three of these by
+  // direct debit; without a home they all landed in Miscellaneous and filled
+  // the review queue with the same answer over and over.
+  { match: 'forsikring', category: 'insurance' },
+  { match: 'tryg', category: 'insurance' },
+  { match: 'topdanmark', category: 'insurance' },
+  { match: 'codan', category: 'insurance' },
+  { match: 'alka', category: 'insurance' },
+  { match: 'gf forsikring', category: 'insurance' },
+  { match: 'alm brand', category: 'insurance' },
+  { match: 'alm. brand', category: 'insurance' },
+  { match: 'lb forsikring', category: 'insurance' },
+  { match: 'if skadeforsikring', category: 'insurance' },
+  { match: 'pfa', category: 'insurance' },
+  { match: 'danica', category: 'insurance' },
+  { match: 'velliv', category: 'insurance' },
+  { match: 'sygeforsikring danmark', category: 'insurance' },
+  { match: 'falck', category: 'insurance' },
+
   { match: 'husleje', category: 'rent' },
   { match: 'boligselskab', category: 'rent' },
   { match: 'ejendomsselskab', category: 'rent' },

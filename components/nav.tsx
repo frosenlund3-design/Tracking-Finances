@@ -58,6 +58,12 @@ const ICONS = {
       <path d="M9 7.5V5.5h6v2" />
     </svg>
   ),
+  review: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M4 7h16M4 12h9M4 17h6" strokeLinecap="round" />
+      <path d="m15.5 16 2 2 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
   advanced: (
     <svg viewBox="0 0 24 24" {...stroke}>
       <path d="M4 19V9M9.5 19V5M15 19v-7M20.5 19v-4" />
@@ -116,6 +122,7 @@ const PRIMARY: NavItem[] = [
 ];
 
 const SECONDARY: NavItem[] = [
+  { href: '/review', label: 'Review', icon: 'review', description: 'Sort what Kroner is unsure about' },
   { href: '/business', label: 'Business', icon: 'business', description: 'Revenue, costs, gross profit' },
   { href: '/advanced', label: 'Advanced', icon: 'advanced', description: 'Burn rate, runway, payment rails' },
   { href: '/insights', label: 'Insights', icon: 'insights', description: 'What changed, and a forecast' },

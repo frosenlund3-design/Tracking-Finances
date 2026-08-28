@@ -13,6 +13,18 @@ import { ALL_CATEGORIES } from '@/lib/categories';
 
 type Period = Parameters<typeof resolvePeriod>[0];
 
+/**
+ * A period label as it reads inside a sentence.
+ *
+ * "Last 30 days" wants lowercasing after "in"; "July 2026" and "2026" do not —
+ * a month is a proper noun and "in july 2026" reads like a typo.
+ */
+export function periodPhrase(label: string): string {
+  return /^[A-Z][a-z]+ \d{4}$/.test(label) || /^\d{4}$/.test(label)
+    ? label
+    : label.toLowerCase();
+}
+
 function detectPeriod(q: string): Period {
   if (/\blast month\b|\bsidste m[åa]ned\b|\bprevious month\b/.test(q)) return 'last_month';
   if (/\blast week\b/.test(q)) return 'last_week';
@@ -127,8 +139,8 @@ export async function answerDeterministically(
       .join('\n');
     return {
       answer: list
-        ? `How money left your accounts in ${r.period.toLowerCase()}:\n\n${list}`
-        : `No spending recorded in ${r.period.toLowerCase()}.`,
+        ? `How money left your accounts in ${periodPhrase(r.period)}:\n\n${list}`
+        : `No spending recorded in ${periodPhrase(r.period)}.`,
       toolsUsed: [tool],
       evidence: [{ tool, result }],
     };
@@ -153,7 +165,7 @@ export async function answerDeterministically(
       .join('\n');
     return {
       answer: list
-        ? `Your accounts in ${r.period.toLowerCase()}:\n\n${list}\n\nMoney moved between your own accounts is excluded from the in and out figures.`
+        ? `Your accounts in ${periodPhrase(r.period)}:\n\n${list}\n\nMoney moved between your own accounts is excluded from the in and out figures.`
         : 'No accounts connected yet.',
       toolsUsed: [tool],
       evidence: [{ tool, result }],
@@ -204,7 +216,7 @@ export async function answerDeterministically(
       grossProfit: MoneyValue; processorRevenue: MoneyValue;
     };
     return {
-      answer: `In ${r.period.toLowerCase()}, business revenue was ${r.revenue.formatted} against ${r.totalExpenses.formatted} of recorded business costs — a gross profit of ${r.grossProfit.formatted}. Of that, ${r.processorRevenue.formatted} came through a payment processor. This is not a tax calculation; no tax rules are applied.`,
+      answer: `In ${periodPhrase(r.period)}, business revenue was ${r.revenue.formatted} against ${r.totalExpenses.formatted} of recorded business costs — a gross profit of ${r.grossProfit.formatted}. Of that, ${r.processorRevenue.formatted} came through a payment processor. This is not a tax calculation; no tax rules are applied.`,
       toolsUsed: [tool],
       evidence: [{ tool, result }],
     };
@@ -236,11 +248,11 @@ export async function answerDeterministically(
       expenses: Array<{ merchant: string; amount: MoneyValue; date: string; category: string }>;
     };
     if (r.expenses.length === 0) {
-      return { answer: `No expenses recorded in ${r.period.toLowerCase()}.`, toolsUsed: [tool], evidence: [{ tool, result }] };
+      return { answer: `No expenses recorded in ${periodPhrase(r.period)}.`, toolsUsed: [tool], evidence: [{ tool, result }] };
     }
     const list = r.expenses.map((e) => `• ${e.merchant} — ${e.amount.formatted} (${e.category}, ${e.date})`).join('\n');
     return {
-      answer: `Your largest expenses in ${r.period.toLowerCase()}:\n\n${list}`,
+      answer: `Your largest expenses in ${periodPhrase(r.period)}:\n\n${list}`,
       toolsUsed: [tool],
       evidence: [{ tool, result }],
     };
@@ -254,11 +266,11 @@ export async function answerDeterministically(
       categories: Array<{ label: string; amount: MoneyValue; sharePct: number; transactionCount: number }>;
     };
     if (r.categories.length === 0) {
-      return { answer: `No spending recorded in ${r.period.toLowerCase()}.`, toolsUsed: [tool], evidence: [{ tool, result }] };
+      return { answer: `No spending recorded in ${periodPhrase(r.period)}.`, toolsUsed: [tool], evidence: [{ tool, result }] };
     }
     const list = r.categories.map((c) => `• ${c.label} — ${c.amount.formatted} (${c.sharePct}%, ${c.transactionCount} transactions)`).join('\n');
     return {
-      answer: `Where your money went in ${r.period.toLowerCase()}:\n\n${list}`,
+      answer: `Where your money went in ${periodPhrase(r.period)}:\n\n${list}`,
       toolsUsed: [tool],
       evidence: [{ tool, result }],
     };
@@ -276,7 +288,7 @@ export async function answerDeterministically(
     const total = r.transactions.reduce((s, t) => s + Math.abs(t.amount.minor), 0);
     if (r.matchCount === 0) {
       return {
-        answer: `No transactions matching "${merchant}" in ${r.period.toLowerCase()}.`,
+        answer: `No transactions matching "${merchant}" in ${periodPhrase(r.period)}.`,
         toolsUsed: [tool],
         evidence: [{ tool, result }],
       };
@@ -284,7 +296,7 @@ export async function answerDeterministically(
     const { result: totals } = await call('get_period_summary', { period, ownership });
     const currency = (totals as { income: MoneyValue }).income.formatted.replace(/[\d.,\s-]/g, '');
     return {
-      answer: `${r.matchCount} transaction${r.matchCount === 1 ? '' : 's'} matching "${merchant}" in ${r.period.toLowerCase()}, totalling about ${(total / 100).toLocaleString('da-DK')} ${currency || 'DKK'} across the ones shown.`,
+      answer: `${r.matchCount} transaction${r.matchCount === 1 ? '' : 's'} matching "${merchant}" in ${periodPhrase(r.period)}, totalling about ${(total / 100).toLocaleString('da-DK')} ${currency || 'DKK'} across the ones shown.`,
       toolsUsed: [tool],
       evidence: [{ tool, result }],
     };
@@ -302,8 +314,8 @@ export async function answerDeterministically(
     const row = r.categories[0];
     return {
       answer: row
-        ? `You spent ${row.amount.formatted} on ${row.label.toLowerCase()} in ${r.period.toLowerCase()}, across ${row.transactionCount} transaction${row.transactionCount === 1 ? '' : 's'}.`
-        : `Nothing recorded in that category for ${r.period.toLowerCase()}.`,
+        ? `You spent ${row.amount.formatted} on ${row.label.toLowerCase()} in ${periodPhrase(r.period)}, across ${row.transactionCount} transaction${row.transactionCount === 1 ? '' : 's'}.`
+        : `Nothing recorded in that category for ${periodPhrase(r.period)}.`,
       toolsUsed: [tool],
       evidence: [{ tool, result }],
     };
@@ -318,8 +330,8 @@ export async function answerDeterministically(
   return {
     answer:
       r.transactionCount === 0
-        ? `No transactions recorded for ${r.period.toLowerCase()}${scope}.`
-        : `In ${r.period.toLowerCase()}${scope}: ${r.income.formatted} in, ${r.expenses.formatted} out, leaving ${r.net.formatted} across ${r.transactionCount} transactions.\n\nWithout an Anthropic API key I answer from a fixed set of question patterns. Add ANTHROPIC_API_KEY to ask anything in your own words.`,
+        ? `No transactions recorded for ${periodPhrase(r.period)}${scope}.`
+        : `In ${periodPhrase(r.period)}${scope}: ${r.income.formatted} in, ${r.expenses.formatted} out, leaving ${r.net.formatted} across ${r.transactionCount} transactions.\n\nWithout an Anthropic API key I answer from a fixed set of question patterns. Add ANTHROPIC_API_KEY to ask anything in your own words.`,
     toolsUsed: [tool],
     evidence: [{ tool, result }],
   };

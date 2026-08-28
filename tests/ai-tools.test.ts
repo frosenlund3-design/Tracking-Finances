@@ -175,3 +175,13 @@ describe('deterministic fallback answers', () => {
     expect(result.answer.toLowerCase()).toContain('no ');
   });
 });
+
+describe('period wording in fallback answers', () => {
+  it('keeps month names capitalised and lowercases the rest', async () => {
+    const { periodPhrase } = await import('@/ai/fallback');
+    expect(periodPhrase('July 2026')).toBe('July 2026');
+    expect(periodPhrase('2026')).toBe('2026');
+    expect(periodPhrase('Last 30 days')).toBe('last 30 days');
+    expect(periodPhrase('This week')).toBe('this week');
+  });
+});

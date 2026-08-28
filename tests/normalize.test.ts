@@ -116,3 +116,29 @@ describe('date helpers', () => {
     expect(addDays('2026-03-28', 2)).toBe('2026-03-30');
   });
 });
+
+describe('date display', () => {
+  it('formats dates the same way in every JavaScript runtime', async () => {
+    const { formatDay, formatDayLong } = await import('@/lib/dates');
+    // These strings are asserted exactly on purpose. `toLocaleDateString`
+    // disagrees between ICU builds — Node renders en-GB long dates with a
+    // comma after the weekday and Chromium without — and inside a client
+    // component that difference is a hydration mismatch.
+    expect(formatDay('2026-08-14')).toBe('14 Aug');
+    expect(formatDayLong('2026-08-14')).toBe('Fri 14 August 2026');
+    expect(formatDayLong('2026-01-01')).toBe('Thu 1 January 2026');
+    expect(formatDayLong('2026-12-31')).toBe('Thu 31 December 2026');
+  });
+
+  it('reads a date in UTC, never the runtime timezone', async () => {
+    const { formatDay, formatDayLong } = await import('@/lib/dates');
+    // A timestamp late in the day must not roll over to the next date.
+    expect(formatDay('2026-08-14T23:30:00Z')).toBe('14 Aug');
+    expect(formatDayLong('2026-03-01')).toBe('Sun 1 March 2026');
+  });
+
+  it('names the month without asking Intl for the whole pattern', async () => {
+    const { monthRange } = await import('@/lib/dates');
+    expect(monthRange(0, new Date('2026-08-14T12:00:00Z')).label).toBe('August 2026');
+  });
+});

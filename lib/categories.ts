@@ -17,12 +17,14 @@ export const PERSONAL_CATEGORIES: CategoryDef[] = [
   { key: 'beauty', label: 'Beauty', scope: 'personal' },
   { key: 'rent', label: 'Rent', scope: 'personal' },
   { key: 'utilities', label: 'Utilities', scope: 'personal' },
+  { key: 'insurance', label: 'Insurance', scope: 'personal' },
   { key: 'entertainment', label: 'Entertainment', scope: 'personal' },
   { key: 'travel', label: 'Travel', scope: 'personal' },
   { key: 'health', label: 'Health', scope: 'personal' },
   { key: 'salary', label: 'Salary', scope: 'personal', isRevenue: true },
   { key: 'transfers', label: 'Transfers', scope: 'personal' },
   { key: 'peer_transfer', label: 'Person to person', scope: 'personal' },
+  { key: 'cash_withdrawal', label: 'Cash withdrawal', scope: 'personal' },
   { key: 'savings', label: 'Savings', scope: 'personal' },
   { key: 'miscellaneous', label: 'Miscellaneous', scope: 'personal' },
 ];
@@ -60,6 +62,7 @@ export function isRevenueCategory(key: string): boolean {
   return BY_KEY.get(key)?.isRevenue === true;
 }
 
+/** Whether a key names a real category, so a typo cannot reach a button. */
 export function isKnownCategory(key: string): boolean {
   return BY_KEY.has(key);
 }

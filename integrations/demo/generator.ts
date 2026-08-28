@@ -411,12 +411,27 @@ export function generateDemoData(seedKey: string, months = 9, now: Date = new Da
     }
   }
 
-  const oneOffs = [
+  const oneOffs: Array<{
+    merchant: string | null;
+    description: string;
+    amount: number;
+    monthOffset: number;
+  }> = [
     { merchant: 'Ryanair', description: 'VISA/DANKORT RYANAIR DUB', amount: -1_240, monthOffset: 2 },
     { merchant: 'Booking.com', description: 'VISA/DANKORT BOOKING COM AMSTERDAM', amount: -3_180, monthOffset: 2 },
     { merchant: 'IKEA', description: 'VISA/DANKORT IKEA GENTOFTE', amount: -2_745, monthOffset: 4 },
     { merchant: 'Norwegian', description: 'VISA/DANKORT NORWEGIAN AIR', amount: -1_890, monthOffset: 6 },
     { merchant: 'Proshop', description: 'VISA/DANKORT PROSHOP A/S', amount: -8_995, monthOffset: 5 },
+
+    // Rows no categorizer can honestly resolve: a bare terminal ID, a foreign
+    // acquirer, a transfer whose only clue is a reference number. Every real
+    // bank feed has a handful, and they are what the review queue is for —
+    // a demo without them would hide the part of the product that asks.
+    { merchant: null, description: 'DANKORT-NOTA 4471 KBH K', amount: -1_150, monthOffset: 1 },
+    { merchant: null, description: 'VISA/DANKORT SUMUP  *MARKED', amount: -420, monthOffset: 3 },
+    { merchant: null, description: 'OVERFOERSEL REF 88213004', amount: -2_400, monthOffset: 4 },
+    { merchant: null, description: 'VISA/DANKORT PAYPAL *0000MERCH', amount: -899, monthOffset: 5 },
+    { merchant: null, description: 'DANKORT-NOTA 9902 AARHUS C', amount: -675, monthOffset: 6 },
   ];
   for (const one of oneOffs) {
     const ym = addMonths(startDate, one.monthOffset).slice(0, 7);
@@ -430,7 +445,7 @@ export function generateDemoData(seedKey: string, months = 9, now: Date = new Da
       currency: 'DKK',
       transactionDate: date,
       bookingDate: date,
-      merchant: one.merchant,
+      merchant: one.merchant ?? null,
       description: one.description,
       transactionType: 'expense',
       metadata: { source: 'demo', pattern: 'one_off' },

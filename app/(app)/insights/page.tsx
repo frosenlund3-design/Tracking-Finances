@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
 import { monthRange } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
-import { generateInsights } from '@/services/insights';
+import { generateInsights, listInsights } from '@/services/insights';
+import { detectFindings } from '@/services/anomalies';
+import { reviewCount } from '@/services/review';
 import {
   categoryBreakdown,
   compareCategories,
@@ -26,9 +28,13 @@ export default async function InsightsPage() {
   const now = new Date();
   const month = monthRange(0, now);
 
-  // Regenerated on view so the figures always match the current data.
-  const [insights, spending, merchants, movements, trend, forecast, biggest] = await Promise.all([
+  const [insights, findings, needsReview, spending, merchants, movements, trend, forecast, biggest] =
+    await Promise.all([
+    // Regenerated here rather than on every screen: this is the page whose
+    // whole job is to be current, and it is cheap enough to do on demand.
     generateInsights(user.id, currency, now),
+    detectFindings(user.id, currency),
+    reviewCount(user.id),
     categoryBreakdown(user.id, { from: month.start, to: month.end }, 'expense', 10),
     merchantBreakdown(user.id, { from: month.start, to: month.end }, 8),
     compareCategories(user.id, 'all', now),
@@ -65,12 +71,57 @@ export default async function InsightsPage() {
       <DemoBanner demoMode={user.demoMode} />
 
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
-        <p className="mt-1 text-[13px] text-ink-muted">
-          Computed from your transactions. Every figure here is a database query, not an estimate by
-          a language model.
+        <h1 className="text-[28px] font-semibold leading-tight tracking-tight">Insights</h1>
+        <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-muted">
+          Computed from your transactions. Every figure is a database query, not an estimate by a
+          language model.
         </p>
       </header>
+
+      {needsReview > 0 ? (
+        <Link href="/review" className="pressable block">
+          <Card className="flex items-center gap-3 p-4">
+            <span
+              aria-hidden="true"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <path d="M4 7h16M4 12h10M4 17h7" strokeLinecap="round" />
+                <path d="m16 16.5 2 2 4-4.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-medium">
+                {needsReview} transaction{needsReview === 1 ? '' : 's'} need a category
+              </span>
+              <span className="block text-[12.5px] text-ink-muted">
+                One tap each, and the answer sticks for that merchant.
+              </span>
+            </span>
+            <span aria-hidden="true" className="shrink-0 text-ink-subtle">
+              ›
+            </span>
+          </Card>
+        </Link>
+      ) : null}
+
+      {findings.length > 0 ? (
+        <section>
+          <h2 className="px-1 text-[13px] font-medium uppercase tracking-wide text-ink-subtle">
+            Worth a look
+          </h2>
+          <div className="mt-2 space-y-2">
+            {findings.slice(0, 6).map((finding) => (
+              <Link key={`${finding.kind}-${finding.title}`} href={finding.href} className="pressable block">
+                <Card className="p-4">
+                  <p className="text-[15px] font-medium leading-snug">{finding.title}</p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">{finding.body}</p>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {insights.length > 0 ? (
         <section className="space-y-2">

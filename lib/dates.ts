@@ -6,6 +6,26 @@ export interface DateRange {
   label: string;
 }
 
+/*
+ * Dates are assembled from parts rather than handed to toLocaleDateString.
+ *
+ * ICU builds disagree about the separators in a locale's date pattern —
+ * Node renders en-GB long dates as "Fri, 14 August 2026" and Chromium as
+ * "Fri 14 August 2026". Inside a client component that is a hydration
+ * mismatch: the server sends one string and the browser renders another.
+ * Month and weekday *names* are stable across builds, so those come from Intl
+ * and everything between them is ours.
+ */
+const MONTHS_SHORT = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+const MONTHS_LONG = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 export function today(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
@@ -16,7 +36,7 @@ export function monthRange(offset = 0, now: Date = new Date()): DateRange {
   const end = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + 1, 0))
     .toISOString()
     .slice(0, 10);
-  const label = base.toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const label = `${MONTHS_LONG[base.getUTCMonth()]} ${base.getUTCFullYear()}`;
   return { start, end, label };
 }
 
@@ -50,22 +70,31 @@ export function monthProgress(now: Date = new Date()): number {
   return Math.min(1, now.getUTCDate() / daysInMonth);
 }
 
-export function formatDay(iso: string, locale = 'en-GB'): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString(locale, {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC',
-  });
+function parseUtc(iso: string): Date {
+  const date = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) throw new Error(`Invalid date: ${iso}`);
+  return date;
 }
 
-export function formatDayLong(iso: string, locale = 'en-GB'): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString(locale, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+/** "14 Aug" */
+export function formatDay(iso: string): string {
+  const d = parseUtc(iso);
+  return `${d.getUTCDate()} ${MONTHS_SHORT[d.getUTCMonth()]}`;
+}
+
+/** "Fri 14 August 2026" */
+export function formatDayLong(iso: string): string {
+  const d = parseUtc(iso);
+  return `${WEEKDAYS_SHORT[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS_LONG[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+/** "14 Aug 2026, 09:32" — for timestamps, in the viewer's own zone. */
+export function formatDateTime(value: string | Date): string {
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}, ${hours}:${minutes}`;
 }
 
 export function relativeDayLabel(iso: string, now: Date = new Date()): string {

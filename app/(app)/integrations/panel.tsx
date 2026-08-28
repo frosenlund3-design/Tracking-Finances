@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { Badge, Button, Card, CardBody, Field, Input, Select } from '@/components/ui/primitives';
 import { formatMoney } from '@/lib/money';
+import { formatDateTime } from '@/lib/dates';
 import {
   connectStripeAction,
   disconnectBankAction,
@@ -99,10 +100,7 @@ export function IntegrationsPanel({
                     <p className="mt-0.5 text-[12px] text-ink-subtle">
                       {connection.accountCount} account{connection.accountCount === 1 ? '' : 's'}
                       {connection.lastSyncedAt
-                        ? ` · last synced ${new Date(connection.lastSyncedAt).toLocaleString('en-GB', {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          })}`
+                        ? ` · last synced ${formatDateTime(connection.lastSyncedAt)}`
                         : ' · not synced yet'}
                     </p>
                   </div>
@@ -199,10 +197,7 @@ export function IntegrationsPanel({
               <p className="mt-2 text-[13px] text-ink-muted">
                 {stripe.accountName ?? 'Stripe account'}
                 {stripe.lastSyncedAt
-                  ? ` · last synced ${new Date(stripe.lastSyncedAt).toLocaleString('en-GB', {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })}`
+                  ? ` · last synced ${formatDateTime(stripe.lastSyncedAt)}`
                   : ''}
               </p>
               {stripe.syncError ? (

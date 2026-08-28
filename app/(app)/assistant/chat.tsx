@@ -10,6 +10,8 @@ interface Turn {
   content: string;
   toolsUsed?: string[];
   evidence?: Array<{ tool: string; result: unknown }>;
+  /** Tools that have started but whose answer has not arrived yet. */
+  running?: string[];
   pending?: boolean;
   failed?: boolean;
 }
@@ -53,68 +55,127 @@ export function AssistantChat({
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [followUps, setFollowUps] = useState<string[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const conversationId = useRef<string>(crypto.randomUUID());
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [turns]);
 
+  /**
+   * Streams the answer.
+   *
+   * Which tools ran and the text itself both arrive as they happen, so the
+   * wait is filled with the work rather than a spinner. The numbers are
+   * identical to the non-streaming path — this is presentation, not accuracy.
+   */
   async function ask(question: string) {
     const trimmed = question.trim();
     if (!trimmed || busy) return;
 
     setInput('');
+    if (composerRef.current) composerRef.current.style.height = '';
     setBusy(true);
+    setFollowUps([]);
+
+    const history = turns
+      .filter((t) => !t.pending && !t.failed)
+      .slice(-8)
+      .map((t) => ({ role: t.role, content: t.content }));
+
     setTurns((prev) => [
       ...prev,
       { role: 'user', content: trimmed },
-      { role: 'assistant', content: '', pending: true },
+      { role: 'assistant', content: '', pending: true, running: [] },
     ]);
 
-    try {
-      const response = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          question: trimmed,
-          conversationId: conversationId.current,
-          history: turns
-            .filter((t) => !t.pending && !t.failed)
-            .slice(-8)
-            .map((t) => ({ role: t.role, content: t.content })),
-        }),
+    const patchLast = (patch: (turn: Turn) => Turn) =>
+      setTurns((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last) next[next.length - 1] = patch(last);
+        return next;
       });
 
-      if (!response.ok) {
+    try {
+      const response = await fetch('/api/assistant/stream', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ question: trimmed, conversationId: conversationId.current, history }),
+      });
+
+      if (!response.ok || !response.body) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? 'The assistant could not answer that.');
       }
 
-      const data = (await response.json()) as {
-        answer: string;
-        toolsUsed: string[];
-        evidence: Array<{ tool: string; result: unknown }>;
-      };
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-      setTurns((prev) => [
-        ...prev.slice(0, -1),
-        {
-          role: 'assistant',
-          content: data.answer,
-          toolsUsed: data.toolsUsed,
-          evidence: data.evidence,
-        },
-      ]);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Server-sent events are separated by a blank line.
+        const frames = buffer.split('\n\n');
+        buffer = frames.pop() ?? '';
+
+        for (const frame of frames) {
+          const line = frame.trim();
+          if (!line.startsWith('data:')) continue;
+          let event: {
+            type: string; text?: string; tool?: string;
+            toolsUsed?: string[]; evidence?: Turn['evidence']; followUps?: string[];
+          };
+          try {
+            event = JSON.parse(line.slice(5).trim());
+          } catch {
+            continue;
+          }
+
+          if (event.type === 'tool' && event.tool) {
+            const tool = event.tool;
+            patchLast((turn) => ({ ...turn, running: [...(turn.running ?? []), tool] }));
+          } else if (event.type === 'answer' && event.text) {
+            const text = event.text;
+            patchLast((turn) => ({ ...turn, pending: false, content: turn.content + text }));
+          } else if (event.type === 'done') {
+            patchLast((turn) => ({
+              ...turn,
+              pending: false,
+              running: undefined,
+              toolsUsed: event.toolsUsed ?? turn.toolsUsed,
+              evidence: event.evidence ?? turn.evidence,
+            }));
+            setFollowUps(event.followUps ?? []);
+          } else if (event.type === 'error') {
+            patchLast((turn) => ({
+              ...turn,
+              pending: false,
+              failed: true,
+              content: event.text ?? 'Something went wrong.',
+            }));
+          }
+        }
+      }
+
+      // A stream that ended without producing anything is still a failure.
+      patchLast((turn) =>
+        turn.content || turn.failed
+          ? turn
+          : { ...turn, pending: false, failed: true, content: 'No answer came back. Try again.' },
+      );
     } catch (err) {
-      setTurns((prev) => [
-        ...prev.slice(0, -1),
-        {
-          role: 'assistant',
-          content: err instanceof Error ? err.message : 'Something went wrong.',
-          failed: true,
-        },
-      ]);
+      patchLast((turn) => ({
+        ...turn,
+        pending: false,
+        failed: true,
+        content: err instanceof Error ? err.message : 'Something went wrong.',
+      }));
     } finally {
       setBusy(false);
     }
@@ -170,6 +231,22 @@ export function AssistantChat({
             ) : (
               turns.map((turn, i) => <TurnBubble key={i} turn={turn} />)
             )}
+
+            {followUps.length > 0 && !busy ? (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {followUps.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => ask(suggestion)}
+                    className="pressable rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] text-ink-muted hover:text-ink"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             <div ref={endRef} />
           </div>
 
@@ -182,8 +259,17 @@ export function AssistantChat({
           >
             <div className="flex items-end gap-2">
               <Textarea
+                ref={composerRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  // Grow with the question. A two-line question typed into a
+                  // one-line box scrolls its own first line out of sight,
+                  // which is a strange thing to do to someone mid-sentence.
+                  const el = e.target;
+                  el.style.height = 'auto';
+                  el.style.height = `${el.scrollHeight}px`;
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -192,7 +278,7 @@ export function AssistantChat({
                 }}
                 rows={1}
                 maxLength={1000}
-                placeholder="How much did I spend on restaurants?"
+                placeholder="Ask a question…"
                 aria-label="Ask a question about your finances"
                 className="max-h-32 min-h-[2.75rem] flex-1"
               />
@@ -224,6 +310,7 @@ function TurnBubble({ turn }: { turn: Turn }) {
   }
 
   if (turn.pending) {
+    const running = turn.running ?? [];
     return (
       <div className="flex items-center gap-2 px-1 py-2 text-[13px] text-ink-muted">
         <span className="flex gap-1" aria-hidden="true">
@@ -235,7 +322,9 @@ function TurnBubble({ turn }: { turn: Turn }) {
             />
           ))}
         </span>
-        Working it out from your transactions…
+        {running.length > 0
+          ? (TOOL_LABELS[running[running.length - 1]!] ?? 'Reading your transactions') + '…'
+          : 'Working it out from your transactions…'}
       </div>
     );
   }

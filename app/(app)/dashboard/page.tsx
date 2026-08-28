@@ -14,6 +14,8 @@ import { totalBalanceMinor, listAccounts } from '@/services/accounts';
 import { listTransactions } from '@/services/transactions';
 import { upcomingCharges, listSubscriptions } from '@/services/subscriptions';
 import { listInsights } from '@/services/insights';
+import { detectFindings } from '@/services/anomalies';
+import { reviewCount } from '@/services/review';
 import { StatTile } from '@/components/money';
 import { TransactionList } from '@/components/transaction-row';
 import { CategoryBars } from '@/components/charts/category-bars';
@@ -55,6 +57,8 @@ export default async function DashboardPage() {
     subscriptions,
     insights,
     business,
+    findings,
+    needsReview,
   ] = await Promise.all([
     totalBalanceMinor(user.id, currency),
     listAccounts(user.id),
@@ -68,6 +72,8 @@ export default async function DashboardPage() {
     listSubscriptions(user.id, { status: 'active' }),
     listInsights(user.id, 3),
     showBusiness ? businessSummary(user.id, month.start, month.end, currency) : null,
+    detectFindings(user.id, currency),
+    reviewCount(user.id),
   ]);
 
   const hasData = accounts.length > 0 && totals.transactionCount + recent.total > 0;
@@ -159,6 +165,54 @@ export default async function DashboardPage() {
               currency={currency}
               signed
             />
+          </div>
+        </section>
+      ) : null}
+
+      {needsReview > 0 ? (
+        <Link href="/review" className="pressable block">
+          <Card className="flex items-center gap-3 p-3.5">
+            <span
+              aria-hidden="true"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-[15px] font-semibold text-accent-ink"
+            >
+              {needsReview}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-medium leading-tight">
+                {needsReview === 1 ? 'One transaction needs' : `${needsReview} transactions need`} a
+                category
+              </span>
+              <span className="mt-0.5 block text-[12.5px] text-ink-muted">
+                One tap each — the answer sticks for that merchant.
+              </span>
+            </span>
+            <span aria-hidden="true" className="shrink-0 text-ink-subtle">
+              ›
+            </span>
+          </Card>
+        </Link>
+      ) : null}
+
+      {findings.length > 0 ? (
+        <section>
+          <SectionHeading
+            title="Worth a look"
+            action={
+              <Link href="/insights" className="text-[13px] font-medium text-accent">
+                All
+              </Link>
+            }
+          />
+          <div className="mt-2 space-y-2">
+            {findings.slice(0, 2).map((finding) => (
+              <Link key={`${finding.kind}-${finding.title}`} href={finding.href} className="pressable block">
+                <Card className="p-4">
+                  <p className="text-[14px] font-medium leading-snug">{finding.title}</p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">{finding.body}</p>
+                </Card>
+              </Link>
+            ))}
           </div>
         </section>
       ) : null}

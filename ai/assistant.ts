@@ -219,6 +219,206 @@ async function logTurn(
   }
 }
 
+export interface AssistantEvent {
+  type: 'thinking' | 'tool' | 'answer' | 'done' | 'error';
+  /** For 'answer': the delta of text to append. */
+  text?: string;
+  /** For 'tool': which read-only query just ran. */
+  tool?: string;
+  /** For 'done': everything the UI needs to finish the turn. */
+  toolsUsed?: string[];
+  evidence?: Array<{ tool: string; result: unknown }>;
+  followUps?: string[];
+}
+
+/**
+ * The same loop, streamed.
+ *
+ * Nothing about the answer changes — the numbers still come from the same
+ * read-only queries. What changes is that the person sees the tool run and
+ * the sentence appear as it is written, instead of watching a spinner for
+ * several seconds. That is most of the perceived speed of an assistant.
+ */
+export async function* streamAssistant(
+  user: User,
+  question: string,
+  history: AssistantMessage[] = [],
+  conversationId: string = randomUUID(),
+): AsyncGenerator<AssistantEvent> {
+  const started = Date.now();
+  const trimmed = question.trim().slice(0, MAX_QUESTION_LENGTH);
+  const ctx: ToolContext = { userId: user.id, currency: user.baseCurrency, now: new Date() };
+
+  await logTurn(user.id, conversationId, 'user', trimmed, []);
+
+  if (!assistantAvailable()) {
+    const fallback = await answerDeterministically(trimmed, ctx);
+    for (const tool of fallback.toolsUsed) yield { type: 'tool', tool };
+    yield { type: 'answer', text: fallback.answer };
+    await logTurn(user.id, conversationId, 'assistant', fallback.answer, fallback.toolsUsed, null, Date.now() - started);
+    yield {
+      type: 'done',
+      toolsUsed: fallback.toolsUsed,
+      evidence: fallback.evidence,
+      followUps: suggestFollowUps(trimmed, fallback.toolsUsed),
+    };
+    return;
+  }
+
+  const client = new Anthropic();
+  const toolsUsed: string[] = [];
+  const evidence: Array<{ tool: string; result: unknown }> = [];
+  const messages: BetaMessageParam[] = [
+    ...history.slice(-8).map((m) => ({ role: m.role, content: m.content })),
+    { role: 'user' as const, content: trimmed },
+  ];
+
+  let answer = '';
+  let servedModel: string | null = null;
+
+  try {
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      const stream = client.beta.messages.stream({
+        model: MODEL,
+        max_tokens: 16_000,
+        system: SYSTEM_PROMPT,
+        tools: anthropicToolDefinitions() as BetaTool[],
+        messages,
+        output_config: { effort: 'low' },
+        betas: ['server-side-fallback-2026-07-01'],
+        fallbacks: 'default',
+      });
+
+      let roundText = '';
+      const queue: string[] = [];
+      stream.on('text', (delta) => {
+        roundText += delta;
+        queue.push(delta);
+      });
+
+      // Surface deltas as they arrive, then settle the round.
+      const finalPromise = stream.finalMessage();
+      while (true) {
+        const settled = await Promise.race([
+          finalPromise.then(() => 'done' as const),
+          new Promise<'tick'>((resolve) => setTimeout(() => resolve('tick'), 40)),
+        ]);
+        while (queue.length > 0) yield { type: 'answer', text: queue.shift()! };
+        if (settled === 'done') break;
+      }
+
+      const response = await finalPromise;
+      servedModel = response.model;
+
+      if (response.stop_reason === 'refusal') {
+        answer = roundText ||
+          'I was not able to answer that one. Try rephrasing it, or ask about a specific period or category.';
+        break;
+      }
+
+      const toolUses = response.content.filter(
+        (b): b is BetaToolUseBlock => b.type === 'tool_use',
+      );
+      if (toolUses.length === 0) {
+        answer = roundText || textFrom(response.content);
+        break;
+      }
+
+      messages.push({ role: 'assistant', content: response.content });
+
+      const results: BetaToolResultBlockParam[] = [];
+      for (const use of toolUses) {
+        if (!ALLOWED_TOOL_NAMES.has(use.name)) {
+          results.push({
+            type: 'tool_result',
+            tool_use_id: use.id,
+            is_error: true,
+            content: 'This tool is not available. Only read-only financial queries are permitted.',
+          });
+          continue;
+        }
+        yield { type: 'tool', tool: use.name };
+        try {
+          const result = await runTool(use.name, use.input, ctx);
+          toolsUsed.push(use.name);
+          evidence.push({ tool: use.name, result });
+          results.push({ type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(result) });
+        } catch (err) {
+          results.push({
+            type: 'tool_result',
+            tool_use_id: use.id,
+            is_error: true,
+            content: err instanceof Error ? redact(err.message) : 'Tool failed.',
+          });
+        }
+      }
+      messages.push({ role: 'user', content: results });
+
+      if (round === MAX_TOOL_ROUNDS - 1) {
+        answer =
+          'That question needed more lookups than I can do in one go. Try narrowing it to a single period or category.';
+        yield { type: 'answer', text: answer };
+      }
+    }
+  } catch (err) {
+    console.error('[assistant] stream failed', err);
+    yield { type: 'error', text: 'The assistant could not finish that answer.' };
+    return;
+  }
+
+  if (!answer) answer = 'I could not put an answer together for that. Try rephrasing the question.';
+  await logTurn(user.id, conversationId, 'assistant', answer, toolsUsed, servedModel, Date.now() - started);
+  yield {
+    type: 'done',
+    toolsUsed,
+    evidence,
+    followUps: suggestFollowUps(trimmed, toolsUsed),
+  };
+}
+
+/**
+ * What to offer next.
+ *
+ * Derived from which tool actually ran rather than from the wording of the
+ * question, so a suggestion always leads somewhere the assistant can answer.
+ */
+export function suggestFollowUps(question: string, toolsUsed: string[]): string[] {
+  const used = new Set(toolsUsed);
+  const suggestions: string[] = [];
+
+  if (used.has('get_category_spending')) {
+    suggestions.push('Compare that to last month', 'Which merchants was that?');
+  }
+  if (used.has('get_period_summary')) {
+    suggestions.push('Where did most of it go?', 'How much can I safely spend?');
+  }
+  if (used.has('get_subscriptions')) {
+    suggestions.push('Which of those went up in price?', 'What renews in the next month?');
+  }
+  if (used.has('get_business_summary')) {
+    suggestions.push('What are my biggest business costs?', 'How does that compare to last month?');
+  }
+  if (used.has('get_mobilepay_summary')) {
+    suggestions.push('Who owes me the most?');
+  }
+  if (used.has('get_account_flows')) {
+    suggestions.push('How much moved between my own accounts?');
+  }
+  if (used.has('get_cash_flow_forecast')) {
+    suggestions.push('What is committed before I spend anything?');
+  }
+
+  if (suggestions.length === 0) {
+    suggestions.push(
+      'Where did most of my money go this month?',
+      'What subscriptions am I paying for?',
+      'How much can I safely spend this month?',
+    );
+  }
+
+  return [...new Set(suggestions)].slice(0, 3);
+}
+
 export async function loadConversation(
   userId: string,
   conversationId: string,

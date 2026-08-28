@@ -98,7 +98,24 @@ export function classify(input: ClassifyInput, userRules: MerchantRule[]): Class
     };
   }
 
-  // 4b. The description mentions a transfer and nothing else claimed it.
+  // 4b. Cash out of an ATM.
+  //
+  // Not a spending category — what the cash was spent on is unknowable from a
+  // bank feed, and saying so is more honest than filing it under Shopping.
+  // Naming it does mean fourteen withdrawals stop sitting in the review queue
+  // forever waiting for an answer nobody has.
+  if (input.paymentChannel === 'cash' && input.amountMinor < 0) {
+    return {
+      category: 'cash_withdrawal',
+      subcategory: null,
+      ownership: 'personal',
+      taxRelevant: 'non_deductible',
+      confidence: 0.9,
+      source: 'structural',
+    };
+  }
+
+  // 4c. The description mentions a transfer and nothing else claimed it.
   const weakTransfer = classifyWeakTransfer(input);
   if (weakTransfer) return weakTransfer;
 

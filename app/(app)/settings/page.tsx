@@ -8,6 +8,7 @@ import { assistantAvailable } from '@/ai/assistant';
 import { hasEncryptionKey } from '@/security/crypto';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/primitives';
 import { categoryLabel } from '@/lib/categories';
+import { formatDateTime } from '@/lib/dates';
 import { SettingsPanels } from './panels';
 import { signOutAction } from '@/app/auth-actions';
 import { Button } from '@/components/ui/primitives';
@@ -62,10 +63,7 @@ export default async function SettingsPage() {
                 <li key={i} className="flex items-center justify-between gap-3 py-2">
                   <span>{describeAction(event.action)}</span>
                   <span className="shrink-0 text-[12px] text-ink-subtle">
-                    {new Date(event.at).toLocaleString('en-GB', {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })}
+                    {formatDateTime(event.at)}
                   </span>
                 </li>
               ))}

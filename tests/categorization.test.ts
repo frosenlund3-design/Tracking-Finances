@@ -245,6 +245,52 @@ describe('categorization tiers', () => {
     expect(result.category).toBe('restaurants');
   });
 
+  it('gives Danish insurance premiums a home of their own', () => {
+    for (const [description, merchant] of [
+      ['BS Tryg indboforsikring', 'Tryg Forsikring'],
+      ['BS Topdanmark bilforsikring', 'Topdanmark'],
+      ['Alka Forsikring maaned', 'Alka'],
+      ['Sygeforsikring Danmark', null],
+    ] as Array<[string, string | null]>) {
+      const result = classify({ merchant, description, amountMinor: -31_800, paymentChannel: 'direct_debit' }, []);
+      expect(result.category, description).toBe('insurance');
+    }
+  });
+
+  it('names an ATM withdrawal instead of guessing what the cash bought', () => {
+    // What the cash was spent on is unknowable from a bank feed. Saying so
+    // beats filing it under Shopping, and stops fourteen withdrawals sitting
+    // in the review queue waiting for an answer nobody has.
+    const result = classify(
+      {
+        merchant: null,
+        description: 'Haeveautomat kontant udbetaling',
+        amountMinor: -200_000,
+        paymentChannel: 'cash',
+      },
+      [],
+    );
+    expect(result.category).toBe('cash_withdrawal');
+    expect(result.confidence).toBeGreaterThanOrEqual(0.5);
+    expect(result.taxRelevant).toBe('non_deductible');
+  });
+
+  it('does not call a cash deposit a withdrawal', () => {
+    const result = classify(
+      { merchant: null, description: 'Kontant indbetaling', amountMinor: 200_000, paymentChannel: 'cash' },
+      [],
+    );
+    expect(result.category).not.toBe('cash_withdrawal');
+  });
+
+  it('lets a known merchant outrank the cash rail', () => {
+    const result = classify(
+      { merchant: 'Netto', description: 'NETTO 5412 kontant', amountMinor: -12_000, paymentChannel: 'cash' },
+      [],
+    );
+    expect(result.category).toBe('groceries');
+  });
+
   it('pulls the person out of a MobilePay description', async () => {
     const { extractMobilePayCounterparty } = await import('@/lib/normalize');
     expect(extractMobilePayCounterparty('MobilePay til Anders Kjeldsen', null)).toBe('Anders Kjeldsen');
