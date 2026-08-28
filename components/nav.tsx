@@ -136,6 +136,12 @@ const ICONS = {
       <path d="M4 12.5 12 16l8-3.5M4 16.5 12 20l8-3.5" />
     </svg>
   ),
+  inbox: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M3.5 13.5h4l1.5 3h6l1.5-3h4" />
+      <path d="M5 5.5h14l1.5 8v5H3.5v-5L5 5.5Z" />
+    </svg>
+  ),
   collection: (
     <svg viewBox="0 0 24 24" {...stroke}>
       <path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z" />
@@ -185,6 +191,7 @@ const SECONDARY_GROUPS: NavGroup[] = [
       { href: '/routines', label: 'Routines', icon: 'body', description: 'Training, skincare, anything repeated' },
       { href: '/supplies', label: 'Supplies', icon: 'supplies', description: 'What is about to run out' },
       { href: '/collection', label: 'Collection', icon: 'collection', description: 'Everyone you have met' },
+      { href: '/inbox', label: 'Inbox', icon: 'inbox', description: 'Mail in one place, read-only' },
     ],
   },
   {

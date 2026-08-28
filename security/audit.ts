@@ -19,6 +19,8 @@ export const AUDIT_ACTIONS = {
   BANK_DISCONNECTED: 'integration.bank_disconnected',
   STRIPE_CONNECTED: 'integration.stripe_connected',
   STRIPE_DISCONNECTED: 'integration.stripe_disconnected',
+  MAILBOX_CONNECTED: 'integration.mailbox_connected',
+  MAILBOX_DISCONNECTED: 'integration.mailbox_disconnected',
   INTEGRATION_REFRESHED: 'integration.refreshed',
   SYNC_STARTED: 'sync.started',
   SYNC_COMPLETED: 'sync.completed',

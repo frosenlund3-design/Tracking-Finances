@@ -16,13 +16,18 @@ interface Turn {
   failed?: boolean;
 }
 
+/*
+ * Deliberately mixed. The first thing on the screen decides what people think
+ * the assistant is for, and a list of six money questions teaches them it
+ * cannot answer anything else.
+ */
 const SUGGESTIONS = [
+  'What should I cook tonight?',
+  'What needs eating before it goes off?',
   'Where did most of my money go this month?',
-  'How much did I spend on software?',
+  'Which bin does a receipt go in?',
+  'What am I about to run out of?',
   'What subscriptions am I paying for?',
-  'How much can I safely spend this month?',
-  'Compare this month to last month.',
-  'How much profit has my business made?',
 ];
 
 const TOOL_LABELS: Record<string, string> = {
@@ -184,10 +189,11 @@ export function AssistantChat({
   return (
     <div className="rise flex min-h-[calc(100dvh-9rem)] flex-col">
       <header className="pb-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Ask about your money</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Ask</h1>
         <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">
-          Every number comes from a query against your own transactions. The assistant reads and
-          explains — it cannot move money, make payments, or change anything.
+          Your money, your kitchen, your home. Every number comes from a query against your own
+          data — the assistant reads and explains, and cannot move money, change anything, or
+          decide anything on your behalf.
         </p>
       </header>
 
@@ -195,7 +201,8 @@ export function AssistantChat({
         <Card className="p-5">
           <p className="text-[14px] font-medium">No data to ask about yet</p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
-            Load demo data or connect an account, then come back and ask anything.
+            Load demo data, connect an account, or scan something into the kitchen — then come back
+            and ask anything.
           </p>
           <Link href="/connect" className="mt-4 block">
             <Button size="sm">Add some data</Button>

@@ -62,6 +62,13 @@ export function resolvePeriod(period: Period, now: Date = new Date()) {
   }
 }
 
+import { pantrySummary, expiringSoon } from '@/services/pantry';
+import { suggestDinners } from '@/services/meals';
+import { listRoutines } from '@/services/routines';
+import { listSupplies } from '@/services/home';
+import { getPlayer } from '@/services/player';
+import { findItem as findWasteItem, fraction as wasteFraction } from '@/lib/waste';
+
 export interface ToolContext {
   userId: string;
   currency: string;
@@ -574,6 +581,154 @@ export const TOOLS = [
       categories: ALL_CATEGORIES.map((c) => ({ key: c.key, label: c.label, scope: c.scope })),
     }),
   }),
+
+  /* ------------------------------------------------------------- the life */
+  //
+  // Money is one drawer of four. These give the assistant read access to the
+  // other three, under exactly the same rule: every name begins with get_ or
+  // list_, nothing writes, and nothing here can settle an item, plan a meal
+  // or tick a routine. The assistant reads, analyses and explains.
+
+  tool({
+    name: 'get_kitchen_summary',
+    description:
+      'What is in the kitchen right now: how many things, how many are past their date or close to it, and how many were used before their date this month. Use for "what is in my fridge", "am I wasting food".',
+    schema: z.object({}),
+    run: async (_input, ctx) => {
+      const summary = await pantrySummary(ctx.userId, today(ctx.now));
+      return {
+        totalItems: summary.total,
+        pastTheirDate: summary.expired,
+        dueWithinThreeDays: summary.urgent,
+        dueThisWeek: summary.thisWeek,
+        usedOrFrozenInTimeLast30Days: summary.rescuedLast30,
+        binnedLast30Days: summary.binnedLast30,
+      };
+    },
+  }),
+
+  tool({
+    name: 'list_expiring_items',
+    description:
+      'Items in the kitchen closest to their date, soonest first. Use for "what needs eating", "what is about to go off".',
+    schema: z.object({
+      limit: z.number().int().min(1).max(30).default(12),
+    }),
+    run: async (input, ctx) => {
+      const items = await expiringSoon(ctx.userId, input.limit, today(ctx.now));
+      return {
+        items: items.map((item) => ({
+          name: item.name,
+          kind: item.group,
+          where: item.location,
+          expiresOn: item.expiresOn,
+          urgency: item.freshness,
+        })),
+      };
+    },
+  }),
+
+  tool({
+    name: 'get_dinner_suggestions',
+    description:
+      'Recipes ranked by what is already in the kitchen, weighted towards using up whatever is closest to its date. Use for "what should I cook", "what can I make tonight".',
+    schema: z.object({
+      limit: z.number().int().min(1).max(8).default(4),
+    }),
+    run: async (input, ctx) => {
+      const suggestions = await suggestDinners(ctx.userId, input.limit, today(ctx.now));
+      return {
+        suggestions: suggestions.map((s) => ({
+          name: s.recipe.name,
+          minutes: s.recipe.minutes,
+          serves: s.recipe.serves,
+          haveIngredients: s.have.map((i) => i.name),
+          missingIngredients: s.missing.map((i) => i.name),
+          wouldUseUp: s.rescues.map((i) => i.name),
+        })),
+      };
+    },
+  }),
+
+  tool({
+    name: 'list_routines',
+    description:
+      'Routines and how they are going against their weekly target. Use for "how is my training going", "what have I not done this week". Targets are weekly, so a missed day is not a failure.',
+    schema: z.object({}),
+    run: async (_input, ctx) => {
+      const routines = await listRoutines(ctx.userId, today(ctx.now));
+      return {
+        routines: routines.map((r) => ({
+          name: r.name,
+          doneThisWeek: r.doneThisWeek,
+          weeklyTarget: r.targetPerWeek,
+          hitTargetThisWeek: r.hitTarget,
+          doneAllTime: r.doneEver,
+        })),
+      };
+    },
+  }),
+
+  tool({
+    name: 'list_supplies_running_low',
+    description:
+      'Household supplies estimated to be out or nearly out. The estimate is one purchase divided by how long one usually lasts, so it is approximate. Use for "what do I need to buy".',
+    schema: z.object({}),
+    run: async (_input, ctx) => {
+      const supplies = await listSupplies(ctx.userId, today(ctx.now));
+      return {
+        note: 'Estimated from the last purchase and a typical cycle length. Approximate.',
+        low: supplies
+          .filter((s) => s.state === 'out' || s.state === 'soon')
+          .map((s) => ({ name: s.name, state: s.state, daysLeft: s.daysLeft })),
+      };
+    },
+  }),
+
+  tool({
+    name: 'get_sorting_answer',
+    description:
+      'Which of the ten Danish waste fractions an item belongs in, and why. Use for "which bin does X go in", "how do I sort X".',
+    schema: z.object({
+      item: z.string().min(2).max(60),
+    }),
+    run: async (input) => {
+      const matches = findWasteItem(input.item);
+      return {
+        matches: matches.map((m) => ({
+          item: m.name,
+          danish: m.danish,
+          fraction: wasteFraction(m.answer)?.label ?? m.answer,
+          why: m.why,
+        })),
+        fallback:
+          matches.length === 0
+            ? 'Not in the list. When in doubt it is Restaffald — a wrong item in the recycling costs more than a right one in the residual bin.'
+            : null,
+      };
+    },
+  }),
+
+  tool({
+    name: 'get_progress_summary',
+    description:
+      'Level, points, momentum and how many creatures are collected. Use for "how am I doing", "what level am I". Momentum decays slowly and never falls below an earned floor; there is no streak to break.',
+    schema: z.object({}),
+    run: async (_input, ctx) => {
+      const player = await getPlayer(ctx.userId);
+      return {
+        level: player.progress.level,
+        levelTitle: player.progress.title,
+        totalXp: player.xp,
+        xpToNextLevel: player.progress.toNext,
+        momentum: player.momentum,
+        momentumTier: player.tier.label,
+        momentumFloor: player.floor,
+        collected: player.collection.length,
+      };
+    },
+  }),
+
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number]['name'];

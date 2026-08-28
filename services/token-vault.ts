@@ -104,12 +104,16 @@ export async function hasToken(
   userId: string,
   provider: ProviderId,
   connectionId: string | null = null,
+  // Tokens are stored per purpose, so asking "is there a token" without one
+  // would answer yes for an access token when the question was about refresh.
+  purpose = 'access',
 ): Promise<boolean> {
   return withUser(userId, async (db) => {
     const { rows } = await db.query(
       `SELECT 1 FROM integration_tokens
-        WHERE user_id = $1 AND provider = $2 AND connection_id IS NOT DISTINCT FROM $3 LIMIT 1`,
-      [userId, provider, connectionId],
+        WHERE user_id = $1 AND provider = $2 AND connection_id IS NOT DISTINCT FROM $3
+          AND purpose = $4 LIMIT 1`,
+      [userId, provider, connectionId, purpose],
     );
     return rows.length > 0;
   });

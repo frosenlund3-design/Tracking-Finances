@@ -185,3 +185,68 @@ describe('period wording in fallback answers', () => {
     expect(periodPhrase('This week')).toBe('this week');
   });
 });
+
+describe('the life tools', () => {
+  it('every tool is read-only by name, including the new ones', async () => {
+    const { TOOLS } = await import('@/ai/tools');
+    // Checked segment by segment rather than as a substring, or
+    // "get_payment_channels" fails on the "pay" inside "payment".
+    const WRITE_VERBS = new Set([
+      'add', 'set', 'create', 'update', 'delete', 'remove', 'settle',
+      'plan', 'tick', 'send', 'pay', 'move', 'buy', 'write', 'run',
+    ]);
+    for (const tool of TOOLS) {
+      expect(tool.name, tool.name).toMatch(/^(get_|list_|compare_)/);
+      for (const segment of tool.name.split('_')) {
+        expect(WRITE_VERBS.has(segment), `${tool.name} contains "${segment}"`).toBe(false);
+      }
+    }
+  });
+
+  it('reads the kitchen without being able to change it', async () => {
+    const { runTool, ALLOWED_TOOL_NAMES } = await import('@/ai/tools');
+    const { addPantryItem } = await import('@/services/pantry');
+    await addPantryItem(userId, { name: 'Laksefilet', expiresOn: '2026-06-16' }, '2026-06-15');
+
+    const summary = (await runTool('get_kitchen_summary', {}, ctx)) as { totalItems: number };
+    expect(summary.totalItems).toBe(1);
+
+    const expiring = (await runTool('list_expiring_items', {}, ctx)) as {
+      items: Array<{ name: string }>;
+    };
+    expect(expiring.items.map((i) => i.name)).toContain('Laksefilet');
+
+    // And there is no way to act on any of it.
+    for (const name of ['settle_pantry_item', 'add_pantry_item', 'plan_meal', 'tick_routine']) {
+      expect(ALLOWED_TOOL_NAMES.has(name), name).toBe(false);
+      await expect(runTool(name, {}, ctx)).rejects.toThrow();
+    }
+  });
+
+  it('answers a sorting question from the data, not from memory', async () => {
+    const { runTool } = await import('@/ai/tools');
+    const result = (await runTool('get_sorting_answer', { item: 'kvittering' }, ctx)) as {
+      matches: Array<{ fraction: string; why: string }>;
+    };
+    expect(result.matches[0]!.fraction).toBe('Restaffald');
+    expect(result.matches[0]!.why).toMatch(/thermal/i);
+  });
+
+  it('says it does not know rather than guessing a bin', async () => {
+    const { runTool } = await import('@/ai/tools');
+    const result = (await runTool('get_sorting_answer', { item: 'zxqv' }, ctx)) as {
+      matches: unknown[];
+      fallback: string | null;
+    };
+    expect(result.matches).toEqual([]);
+    expect(result.fallback).toMatch(/Restaffald/);
+  });
+
+  it('reports progress without inventing a streak', async () => {
+    const { runTool } = await import('@/ai/tools');
+    const result = (await runTool('get_progress_summary', {}, ctx)) as Record<string, unknown>;
+    expect(result).toHaveProperty('momentum');
+    expect(result).toHaveProperty('momentumFloor');
+    expect(Object.keys(result).join(' ')).not.toMatch(/streak/i);
+  });
+});

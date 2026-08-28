@@ -252,6 +252,8 @@ See `.env.example`. Nothing is required to run in demo mode. For production:
 | `ANTHROPIC_API_KEY` | Natural-language questions. Optional. |
 | `GOCARDLESS_SECRET_ID` / `_KEY` | Open Banking for Danish banks. Optional. |
 | `STRIPE_API_KEY` | Fallback Stripe key; per-user keys are added in the UI. |
+| `GOOGLE_CLIENT_ID` / `_SECRET` | Gmail in the unified inbox, `gmail.readonly` scope only. Optional. |
+| `OFF_USER_AGENT` | Contact address sent with barcode lookups to Open Food Facts. No key needed. |
 
 Password reset links are written to the server log — wire an email provider in
 `app/auth-actions.ts` before production.

@@ -14,7 +14,13 @@ export type ProviderId =
   | 'paypal'
   | 'mobilepay'
   | 'manual'
-  | 'demo';
+  | 'demo'
+  // Message sources. They share the token vault and the OAuth machinery with
+  // the financial providers because the security requirements are identical:
+  // read-only scopes, tokens encrypted at rest, never handed to the browser.
+  | 'gmail'
+  | 'outlook'
+  | 'slack';
 
 export type TransactionType =
   | 'income'

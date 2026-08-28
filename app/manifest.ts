@@ -6,18 +6,20 @@ import type { MetadataRoute } from 'next';
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Kroner — personal & business finance',
+    name: 'Kroner — your life, sorted',
     short_name: 'Kroner',
     description:
-      'Every krone in and out of your accounts. Read-only bank and Stripe access, with an assistant that answers from your own data.',
-    id: '/dashboard',
-    start_url: '/dashboard',
+      'Money, kitchen, home and body in one place, with a game over the top and no streak to break. Read-only bank, Stripe and mailbox access.',
+    // The board, not the dashboard: opening the app and doing something
+    // useful should be the same action.
+    id: '/play',
+    start_url: '/play',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#fbfbfc',
     theme_color: '#fbfbfc',
-    categories: ['finance', 'productivity'],
+    categories: ['finance', 'productivity', 'lifestyle'],
     lang: 'en',
     dir: 'ltr',
     icons: [
@@ -29,7 +31,19 @@ export default function manifest(): MetadataRoute.Manifest {
     // Long-press the home screen icon to jump straight in.
     shortcuts: [
       {
-        name: 'Ask about my money',
+        name: 'Scan into the kitchen',
+        short_name: 'Scan',
+        url: '/kitchen/scan',
+        icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }],
+      },
+      {
+        name: 'What is for dinner',
+        short_name: 'Dinner',
+        url: '/dinner',
+        icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }],
+      },
+      {
+        name: 'Ask anything',
         short_name: 'Ask',
         url: '/assistant',
         icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }],
@@ -38,12 +52,6 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'Every krone',
         short_name: 'Activity',
         url: '/transactions',
-        icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }],
-      },
-      {
-        name: 'Add a transaction',
-        short_name: 'Add',
-        url: '/transactions/new',
         icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }],
       },
     ],
