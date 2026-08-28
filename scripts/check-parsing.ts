@@ -110,6 +110,18 @@ for (const text of ['Ryd op i garagen', 'Find ud af hvad jeg skal med den gamle 
   check(`"${text}" 1 < 20`, few === 1 && many > few, `${few} → ${many}`)
 }
 
+console.log('\ndem der kommer igen')
+for (const [text, every, title] of [
+  ['Betal husleje hver måned', 'month', 'Betal husleje'],
+  ['Tag medicin hver dag', 'day', 'Tag medicin'],
+  ['Tøm skraldespanden hver mandag', 'week', 'Tøm skraldespanden'],
+  ['Ring til mor', undefined, 'Ring til mor'],
+] as Array<[string, string | undefined, string]>) {
+  const item = one(text)
+  check(`"${text}" -> ${every ?? 'engang'} / "${title}"`, item?.repeat === every && item?.title === title,
+    `${item?.repeat ?? 'engang'} / ${item?.title}`)
+}
+
 console.log('\nrigtige datoer')
 const bday = one('Mors fødselsdag er 14. marts')
 check('14. marts stays one loop', bday?.title === 'Mors fødselsdag', bday?.title)

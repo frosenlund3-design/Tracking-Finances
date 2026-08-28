@@ -233,6 +233,9 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
       case 'cue':
         await updateNode(e.nodeId, { cue: e.cue })
         break
+      case 'repeat':
+        await updateNode(e.nodeId, { repeat: e.repeat })
+        break
       case 'delete':
         await deleteNode(e.nodeId)
         break

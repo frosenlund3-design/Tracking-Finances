@@ -39,6 +39,20 @@ export interface LoopNode {
   startedAt?: number
   parkedUntil?: number
   /**
+   * A loop that comes back.
+   *
+   * Rent, medicine, laundry, the bins. Without this she has to type them in
+   * again every time, and the ones that come back are exactly the ones that
+   * get forgotten.
+   *
+   * It never accumulates, and that is the whole design. Closing it creates the
+   * next one and nothing else; missing it does not create a backlog, a broken
+   * streak or a red number. A recurring task that keeps score is a machine for
+   * generating guilt, and guilt is the thing that stops her opening the app.
+   */
+  repeat?: 'day' | 'week' | 'month'
+
+  /**
    * Something she already does, that this loop hangs on.
    *
    * "Når jeg har sat kaffe over." Not a time: a moment she will meet anyway.

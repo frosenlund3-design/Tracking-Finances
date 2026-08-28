@@ -521,6 +521,21 @@ over, åbn e-Boks."* Sætningen står på forsiden i stedet for pointteksten, fo
 den er hele planen. Skriver hun et klokkeslæt, siger appen fra: et klokkeslæt er
 én beslutning mere, hun selv skal huske at møde. En kedel sætter sig selv over.
 
+### Dem der kommer igen
+
+Husleje, medicin, vasketøj, skraldespanden. Uden gentagelse skal de skrives ind
+igen hver gang, og det er præcis dem, der bliver glemt.
+
+Én regel gør hele forskellen: **den hober sig aldrig op.** At lukke den laver
+den næste, og ikke andet. Springer man en over, findes der ingen restance,
+ingen brudt streak og intet rødt tal. Kun den næste findes. En gentagen opgave,
+der fører regnskab, er en maskine til at lave dårlig samvittighed, og dårlig
+samvittighed er dét, der får hende til at holde op med at åbne appen.
+
+Brain dumpen læser det direkte: *"Betal husleje hver måned"* bliver til
+**Betal husleje**, der kommer igen den første. Den 31. i en måned med 30 dage
+lander på den sidste i måneden i stedet for at glide ind i den næste.
+
 ### Den kan skaffe det, man mangler
 
 *"Jeg har ikke deres nummer."* Det er dér, en opgave i virkeligheden stopper,

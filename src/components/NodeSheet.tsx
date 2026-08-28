@@ -1,9 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  AlarmClock, ArrowDownToLine, Banknote, CalendarClock, CalendarPlus, Check, ChevronRight, CircleDashed, Clock, Link2,
+  AlarmClock, ArrowDownToLine, Banknote, CalendarClock, CalendarPlus, Check, ChevronRight, CircleDashed, Clock, Link2, Repeat,
   Play, Plus, Split, Trash2, UserPlus, X,
 } from 'lucide-react'
 import { useState } from 'react'
+import type { LoopNode } from '@/db/types'
 import { useStore } from '@/store/useStore'
 import { humanMinutes, parkPresets, PART_LABELS, PARTS, relativeDay, isoDate } from '@/lib/time'
 import { whenLabel } from '@/lib/deadlines'
@@ -22,6 +23,19 @@ import { DEFAULT_GRANULARITY, GRANULARITIES, GRANULARITY_LABELS, type Granularit
  * loop. Parking, dropping and delegating are first-class, equally sized
  * choices, deciding "this isn't important" also gives you your head back.
  */
+const REPEATS: Array<{ id: LoopNode['repeat']; label: string }> = [
+  { id: undefined, label: 'Kun én gang' },
+  { id: 'day', label: 'Hver dag' },
+  { id: 'week', label: 'Hver uge' },
+  { id: 'month', label: 'Hver måned' },
+]
+
+export const REPEAT_LABEL: Record<'day' | 'week' | 'month', string> = {
+  day: 'hver dag',
+  week: 'hver uge',
+  month: 'hver måned',
+}
+
 export function NodeSheet({ nodeId }: { nodeId: string }) {
   const node = useStore((s) => s.map[nodeId])
   const map = useStore((s) => s.map)
@@ -47,6 +61,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
   const [showPark, setShowPark] = useState(false)
   const [showSplit, setShowSplit] = useState(false)
   const [showCue, setShowCue] = useState(false)
+  const [showRepeat, setShowRepeat] = useState(false)
   const [cueDraft, setCueDraft] = useState('')
   const [granularity, setGranularity] = useState<Granularity>(DEFAULT_GRANULARITY)
   const [splitFailed, setSplitFailed] = useState(false)
@@ -150,6 +165,13 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
             Læg i min kalender
           </button>
         </div>
+      )}
+
+      {node.repeat && (
+        <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-canvas px-3 py-1.5 text-[13px] text-muted">
+          <Repeat size={13} />
+          Kommer igen {REPEAT_LABEL[node.repeat]}
+        </p>
       )}
 
       {node.cue && (
@@ -294,6 +316,13 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
         )}
         {!isRoot && !node.isArea && (
           <SmallAction
+            icon={<Repeat size={16} />}
+            label={node.repeat ? REPEAT_LABEL[node.repeat] : 'Kommer den igen?'}
+            onClick={() => setShowRepeat((v) => !v)}
+          />
+        )}
+        {!isRoot && !node.isArea && (
+          <SmallAction
             icon={<Link2 size={16} />}
             label={node.cue ? 'Ret hvad den hænger på' : 'Hæng den på en vane'}
             onClick={() => {
@@ -349,6 +378,42 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
       </div>
 
       <AnimatePresence>
+        {showRepeat && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 rounded-xl2 border border-line bg-surface p-4">
+              <p className="text-[14px] leading-relaxed text-muted">
+                Husleje, medicin, vasketøj, skraldespanden. Den kommer tilbage af sig selv, når du
+                har lukket den.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {REPEATS.map((r) => (
+                  <button
+                    key={r.label}
+                    onClick={async () => {
+                      haptic('tap')
+                      await updateNode(node.id, { repeat: r.id })
+                    }}
+                    className={`focus-ring min-h-[44px] rounded-full border px-4 text-[14px] active:scale-95 ${
+                      node.repeat === r.id ? 'border-ink/25 bg-accent-soft font-medium' : 'border-line bg-raised text-muted'
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-[12.5px] leading-relaxed text-faint">
+                Den hober sig aldrig op. Springer du en over, findes den bare næste gang. Der er
+                ingen streak at ødelægge.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
         {showCue && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}

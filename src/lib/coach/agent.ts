@@ -39,6 +39,7 @@ export type AgentEffect =
   | { kind: 'complete'; nodeId: string }
   | { kind: 'move'; nodeId: string; parentId: string }
   | { kind: 'cue'; nodeId: string; cue: string }
+  | { kind: 'repeat'; nodeId: string; repeat: LoopNode['repeat'] }
 
 export interface AgentResult {
   lines: string[]
@@ -330,6 +331,30 @@ export function handleAgentRequest({ text, task, circles = [], now = new Date() 
       effect: { kind: 'delete', nodeId: task.id },
       confirm: 'Ja, slet den',
       options: ['Nej, parkér den i stedet'],
+    }
+  }
+
+  /* --- it comes back ------------------------------------------------- */
+  const rep = lower.match(/\b(?:hver|hver eneste|en gang om|en gang hver|gentag(?:er)? (?:sig )?hver)\s+(dag|uge|m[åa]ned)\b|\b(dagligt|ugentligt|m[åa]nedligt)\b/i)
+  if (rep && task) {
+    const word = (rep[1] ?? rep[2] ?? '').toLowerCase()
+    const repeat: LoopNode['repeat'] =
+      /dag/.test(word) ? 'day' : /uge/.test(word) ? 'week' : 'month'
+    const label = repeat === 'day' ? 'hver dag' : repeat === 'week' ? 'hver uge' : 'hver måned'
+    return {
+      lines: [
+        `Så kommer "${task.title}" igen ${label}, når du har lukket den.`,
+        'Den hober sig aldrig op. Springer du en over, findes den bare næste gang.',
+      ],
+      effect: { kind: 'repeat', nodeId: task.id, repeat },
+      options: ['Start den nu', 'Kun én gang alligevel'],
+    }
+  }
+  if (/\b(kun [ée]n gang|ikke gentag|den kommer ikke igen|stop gentagelsen)\b/i.test(lower) && task?.repeat) {
+    return {
+      lines: ['Fint. Så er den en engangs-ting igen.'],
+      effect: { kind: 'repeat', nodeId: task.id, repeat: undefined },
+      options: ['Start den nu'],
     }
   }
 
