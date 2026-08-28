@@ -232,6 +232,31 @@ Brain dump'en fanger dem selv: *"Lægetid på fredag kl. 9"* bliver til **Læget
 fast tid, fredag 09.00. *"Aflever ansøgning senest på torsdag"* bliver til
 **Aflever ansøgning**, frist, torsdag.
 
+### Smart fordeling på ugen
+
+`planner.ts` kan foreslå, hvornår hver ting faktisk passer. Pointen er ikke at
+fylde en kalender — en fyldt kalender er præcis den, hun ikke gider. Pointen er,
+at når noget *har* et fornuftigt tidspunkt, skal appen vide det, i stedet for at
+lade hende regne det ud i det øjeblik hun har mindst overskud til det.
+
+Fire regler gør det meste, og de er alle sammen noget et menneske ville sige højt:
+
+1. **Man kan ikke ringe til tandlægen klokken ni om aftenen, eller om
+   søndagen.** Alt der kræver at nogen andre har åbent, lander kun på en
+   hverdag i åbningstiden.
+2. **Tunge ting hvor brændstoffet er.** Hun fortalte i onboarding, hvornår hun
+   har energi; en krævende opgave lægges der, og de små fylder de flade dele af
+   dagen ud.
+3. **Intet lander efter sin frist**, og en frist får et døgns luft foran sig —
+   at planlægge noget til den eftermiddag det skal afleveres, er at planlægge
+   at misse det.
+4. **En slot rummer langt mindre end den teknisk kunne.** Tre kvarter, og tid
+   der allerede er optaget af en rigtig aftale trækkes fra først.
+
+Alt er et forslag. Forslaget viser sin egen begrundelse ("der har de åbent",
+"du har mest energi der"), hun kan fjerne enkelte linjer, og intet flytter sig
+før hun siger ja. Resten af hendes loops får med vilje ikke et tidspunkt.
+
 ### Kan man stole på tiderne?
 
 "Hvis der står 2 min, skal det faktisk tage 2 min." Det er ikke en kosmetisk

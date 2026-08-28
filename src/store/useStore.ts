@@ -43,6 +43,7 @@ export type Overlay =
   | { kind: 'node'; nodeId: string }
   | { kind: 'energy' }
   | { kind: 'notes' }
+  | { kind: 'plan' }
   | { kind: 'quickadd'; parentId: string }
 
 export interface Celebration {

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronLeft } from 'lucide-react'
+import { CalendarRange, ChevronLeft } from 'lucide-react'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@/store/useStore'
 import {
@@ -248,9 +248,18 @@ export function TimeRings() {
         )}
       </div>
 
-      <p className="pointer-events-none absolute inset-x-0 bottom-24 px-8 text-center text-[12.5px] leading-relaxed text-faint">
-        Tid er valgfrit her. Ting behøver ikke ligge på en dag for at blive lavet.
-      </p>
+      <div className="absolute inset-x-0 bottom-24 flex flex-col items-center gap-3 px-6">
+        <button
+          onClick={() => useStore.getState().openOverlay({ kind: 'plan' })}
+          className="focus-ring flex min-h-[52px] items-center gap-2 rounded-full bg-ink px-6 text-[15px] font-medium text-canvas shadow-lift active:scale-[0.98]"
+        >
+          <CalendarRange size={17} />
+          Fordel dem for mig
+        </button>
+        <p className="pointer-events-none max-w-[20rem] text-center text-[12.5px] leading-relaxed text-faint">
+          Tid er valgfrit her. Ting behøver ikke ligge på en dag for at blive lavet.
+        </p>
+      </div>
 
       <Sheet
         open={!!openPart}
