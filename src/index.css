@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   Loops design tokens.
+   Warm, quiet, adult. Colours live as space-separated RGB triples so Tailwind
+   can apply opacity modifiers (see tailwind.config.js).
+   Themes are opt-in via data-theme on <html>, chosen during onboarding.
+--------------------------------------------------------------------------- */
+:root {
+  --c-canvas: 246 241 233;
+  --c-surface: 252 249 244;
+  --c-raised: 255 253 250;
+  --c-ink: 46 39 33;
+  --c-muted: 122 109 97;
+  --c-faint: 168 155 141;
+  --c-line: 227 217 203;
+  --c-accent: 140 122 165;
+  --c-accent-soft: 226 218 236;
+  --c-warm: 214 167 128;
+  --c-calm: 138 168 158;
+  --ease-spatial: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:root[data-theme='dawn'] {
+  --c-canvas: 250 242 240;
+  --c-surface: 255 248 246;
+  --c-raised: 255 252 251;
+  --c-ink: 53 38 39;
+  --c-muted: 132 105 105;
+  --c-faint: 181 155 155;
+  --c-line: 235 216 213;
+  --c-accent: 190 128 130;
+  --c-accent-soft: 245 221 220;
+  --c-warm: 220 160 132;
+  --c-calm: 150 165 168;
+}
+
+:root[data-theme='fog'] {
+  --c-canvas: 240 241 243;
+  --c-surface: 249 250 251;
+  --c-raised: 255 255 255;
+  --c-ink: 38 42 48;
+  --c-muted: 104 112 122;
+  --c-faint: 154 162 172;
+  --c-line: 219 223 228;
+  --c-accent: 116 138 160;
+  --c-accent-soft: 219 228 236;
+  --c-warm: 196 176 152;
+  --c-calm: 140 166 160;
+}
+
+:root[data-theme='dusk'] {
+  --c-canvas: 26 24 26;
+  --c-surface: 36 33 36;
+  --c-raised: 46 42 46;
+  --c-ink: 240 234 228;
+  --c-muted: 176 166 158;
+  --c-faint: 128 119 113;
+  --c-line: 62 57 60;
+  --c-accent: 172 154 198;
+  --c-accent-soft: 71 62 84;
+  --c-warm: 205 160 122;
+  --c-calm: 132 165 155;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink));
+  font-family: theme('fontFamily.sans');
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+  /* The circle universe is a pan/zoom surface; page-level bounce fights it. */
+  touch-action: manipulation;
+}
+
+/* iPhone safe areas — the app runs fullscreen from the home screen. */
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top), 0.5rem);
+}
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+.h-safe-screen {
+  height: 100vh;
+  height: 100dvh;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+  /* 16px minimum stops iOS Safari from zooming the viewport on focus. */
+  font-size: max(1rem, 16px);
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Respect the OS setting as well as the in-app "reduceret stimulation" switch. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:root[data-calm='on'] * {
+  animation-duration: 0.001ms !important;
+  transition-duration: 120ms !important;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid rgb(var(--c-accent));
+  outline-offset: 3px;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.035);
+    opacity: 1;
+  }
+}
+
+.breathe {
+  animation: breathe 5.5s ease-in-out infinite;
+}

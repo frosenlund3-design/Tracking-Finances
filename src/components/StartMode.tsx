@@ -1,0 +1,250 @@
+import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { Check, HandHelping, Pause, Timer } from 'lucide-react'
+import { useStore } from '@/store/useStore'
+import { haptic } from '@/lib/haptics'
+import { humanMinutes } from '@/lib/time'
+import { Button } from './ui/Button'
+
+/**
+ * Start Mode — the anti-procrastination screen.
+ *
+ * The gap this closes is "I know what to do but my body won't start". So the
+ * screen strips everything away and shows exactly one physical action. Not
+ * "gør rent" but "rejs dig op".
+ */
+export function StartMode({ nodeId }: { nodeId: string }) {
+  const node = useStore((s) => s.map[nodeId])
+  const toggleStep = useStore((s) => s.toggleStep)
+  const complete = useStore((s) => s.completeNode)
+  const award = useStore((s) => s.award)
+  const startNode = useStore((s) => s.startNode)
+  const breakDown = useStore((s) => s.breakDown)
+  const postpone = useStore((s) => s.postponeNode)
+  const close = useStore((s) => s.closeOverlay)
+  const openOverlay = useStore((s) => s.openOverlay)
+  const goodEnoughMode = useStore((s) => s.prefs.goodEnoughMode)
+  const tone = useStore((s) => s.profile.tone)
+
+  const [countdown, setCountdown] = useState<number | null>(null)
+  const [stuck, setStuck] = useState(false)
+  const [timerEnd, setTimerEnd] = useState<number | null>(null)
+  const [now, setNow] = useState(Date.now())
+
+  useEffect(() => {
+    if (node && node.status !== 'active') void startNode(node.id)
+    // Only when entering the mode for this task.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodeId])
+
+  useEffect(() => {
+    if (countdown === null) return
+    if (countdown === 0) {
+      haptic('success')
+      const t = window.setTimeout(() => setCountdown(null), 900)
+      return () => window.clearTimeout(t)
+    }
+    haptic('tap')
+    const t = window.setTimeout(() => setCountdown((c) => (c === null ? null : c - 1)), 1000)
+    return () => window.clearTimeout(t)
+  }, [countdown])
+
+  useEffect(() => {
+    if (!timerEnd) return
+    const i = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(i)
+  }, [timerEnd])
+
+  if (!node) return null
+
+  const steps = node.steps
+  const currentStep = steps.find((s) => !s.done)
+  const doneCount = steps.filter((s) => s.done).length
+  const remaining = timerEnd ? Math.max(0, Math.round((timerEnd - now) / 1000)) : null
+
+  const finishStep = async () => {
+    if (currentStep) {
+      await toggleStep(node.id, currentStep.id)
+      const willBeLast = steps.filter((s) => !s.done).length === 1
+      if (willBeLast) {
+        await complete(node.id, 'start-mode')
+        close()
+      }
+    } else {
+      await complete(node.id, 'start-mode')
+      close()
+    }
+  }
+
+  const stuckOptions = [
+    { label: 'Kan du bare rejse dig?', action: () => setCountdown(5) },
+    { label: 'Gør den mindre', action: () => void breakDown(node.id) },
+    { label: 'Bliv hos mig imens', action: () => openOverlay({ kind: 'bodydouble', nodeId: node.id }) },
+    { label: 'Sæt 10 minutter på', action: () => setTimerEnd(Date.now() + 10 * 60 * 1000) },
+    { label: 'Snak med coachen', action: () => openOverlay({ kind: 'coach', nodeId: node.id }) },
+  ]
+
+  return (
+    <div className="flex h-full flex-col px-6 pb-6 pt-2">
+      {/* Countdown takes over completely when running. */}
+      <AnimatePresence>
+        {countdown !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-30 grid place-items-center bg-surface"
+          >
+            <div className="text-center">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={countdown}
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 1.5, opacity: 0 }}
+                  transition={{ duration: 0.35 }}
+                  className="text-[92px] font-semibold leading-none tracking-[-0.04em]"
+                >
+                  {countdown === 0 ? '↑' : countdown}
+                </motion.p>
+              </AnimatePresence>
+              <p className="mt-6 text-[18px] text-muted">
+                {countdown === 0 ? 'Bare rejs dig.' : 'Når vi rammer 1, rejser du dig.'}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex items-center justify-between text-[12.5px] text-faint">
+        <span className="truncate pr-3">{node.title}</span>
+        {steps.length > 0 && (
+          <span className="shrink-0">
+            {doneCount}/{steps.length}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <motion.div
+          key={currentStep?.id ?? 'single'}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 24 }}
+          className="w-full"
+        >
+          <div className="mx-auto mb-8 grid h-24 w-24 place-items-center rounded-full border border-line bg-raised shadow-node">
+            <span className="text-[13px] text-faint">{humanMinutes(node.estimatedMinutes)}</span>
+          </div>
+
+          <p className="text-[11px] uppercase tracking-[0.16em] text-faint">
+            {currentStep ? 'Kun det her' : 'Din opgave'}
+          </p>
+          <h2 className="mx-auto mt-3 max-w-[18rem] text-[28px] font-semibold leading-tight tracking-[-0.03em]">
+            {currentStep ? currentStep.title : node.title}
+          </h2>
+
+          {goodEnoughMode && node.goodEnoughNote && (
+            <p className="mx-auto mt-4 max-w-[17rem] rounded-xl2 bg-accent-soft/60 px-4 py-3 text-[14px] leading-relaxed text-ink/80">
+              {node.goodEnoughNote}
+            </p>
+          )}
+
+          {remaining !== null && (
+            <p className="mt-5 text-[15px] text-muted">
+              <Timer size={15} className="mr-1.5 -mt-0.5 inline" />
+              {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')} tilbage
+            </p>
+          )}
+
+          {steps.length === 0 && (
+            <button
+              onClick={() => void breakDown(node.id)}
+              className="focus-ring mt-6 rounded-full border border-line bg-raised px-5 py-2.5 text-[14px] text-muted active:scale-95"
+            >
+              Del den op i småting
+            </button>
+          )}
+        </motion.div>
+      </div>
+
+      <AnimatePresence>
+        {stuck && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mb-4 rounded-xl2 border border-line bg-surface p-4">
+              <p className="text-[15px] font-medium">
+                {tone === 'blunt' ? 'Fint. Vi gør den mindre.' : 'Okay. Vi gør den latterligt nem.'}
+              </p>
+              <div className="mt-3 flex flex-col gap-2">
+                {stuckOptions.map((o) => (
+                  <button
+                    key={o.label}
+                    onClick={() => {
+                      haptic('tap')
+                      o.action()
+                      setStuck(false)
+                    }}
+                    className="focus-ring min-h-[48px] rounded-xl2 border border-line bg-raised px-4 text-left text-[15px] active:scale-[0.99]"
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="space-y-2.5">
+        <Button full onClick={finishStep}>
+          <Check size={18} className="mr-2 -mt-0.5 inline" />
+          {currentStep ? 'Gjort — næste' : 'Færdig'}
+        </Button>
+
+        {goodEnoughMode && (
+          <button
+            onClick={async () => {
+              await award('good-enough', { nodeId: node.id })
+              await complete(node.id, 'start-mode')
+              close()
+            }}
+            className="focus-ring min-h-[48px] w-full rounded-xl2 bg-accent-soft text-[15px] font-medium active:scale-[0.99]"
+          >
+            Godt nok — den tæller som færdig
+          </button>
+        )}
+
+        <div className="flex gap-2.5">
+          <button
+            onClick={() => {
+              haptic('soft')
+              setStuck((s) => !s)
+            }}
+            className="focus-ring min-h-[48px] flex-1 rounded-xl2 border border-line bg-surface text-[14.5px] text-muted active:scale-[0.99]"
+          >
+            <HandHelping size={16} className="mr-1.5 -mt-0.5 inline" />
+            Jeg sidder fast
+          </button>
+          <button
+            onClick={async () => {
+              await postpone(node.id)
+              close()
+            }}
+            className="focus-ring min-h-[48px] flex-1 rounded-xl2 border border-line bg-surface text-[14.5px] text-muted active:scale-[0.99]"
+          >
+            <Pause size={16} className="mr-1.5 -mt-0.5 inline" />
+            Stop for nu
+          </button>
+        </div>
+        <p className="pt-1 text-center text-[12.5px] text-faint">
+          At stoppe er ikke at fejle. Det du nåede, tæller.
+        </p>
+      </div>
+    </div>
+  )
+}
