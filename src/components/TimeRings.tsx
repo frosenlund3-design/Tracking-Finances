@@ -180,7 +180,7 @@ export function TimeRings() {
               <button
                 key={l}
                 onClick={() => setLevel(l)}
-                className={`focus-ring rounded-full px-3 py-2 text-[12.5px] ${
+                className={`focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full px-3.5 text-[12.5px] ${
                   level === l ? 'bg-accent-soft font-medium' : 'text-faint'
                 }`}
               >

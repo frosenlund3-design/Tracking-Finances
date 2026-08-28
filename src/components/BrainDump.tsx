@@ -120,7 +120,7 @@ export function BrainDumpPanel({ onCommitted, footer, autoFinish }: Props) {
               <p className="text-[17px] font-semibold tracking-[-0.02em]">Ser det rigtigt ud?</p>
               <button
                 onClick={() => setEditing((e) => !e)}
-                className="focus-ring rounded-full px-2 py-1 text-[13.5px] text-muted"
+                className="focus-ring -my-2 -mr-2 flex min-h-[44px] min-w-[44px] items-center justify-end rounded-full px-3 text-[13.5px] text-muted"
               >
                 <Pencil size={13} className="mr-1 -mt-0.5 inline" />
                 {editing ? 'Færdig' : 'Ret'}
@@ -195,7 +195,10 @@ function ParsedRow({
             {item.steps.length > 0 && (
               <>
                 <span className="opacity-40">·</span>
-                <button onClick={() => setOpen((o) => !o)} className="focus-ring rounded px-1 text-muted">
+                <button
+                  onClick={() => setOpen((o) => !o)}
+                  className="focus-ring -my-3 flex min-h-[44px] items-center rounded px-1 text-muted"
+                >
                   {item.steps.length} steps
                   <ChevronDown size={12} className={`ml-0.5 inline transition ${open ? 'rotate-180' : ''}`} />
                 </button>

@@ -169,7 +169,10 @@ export function Rewards() {
                   </div>
                 </div>
               ) : (
-                <button onClick={() => void clearGoal()} className="focus-ring mt-4 text-[13px] text-faint">
+                <button
+                  onClick={() => void clearGoal()}
+                  className="focus-ring mt-2 flex min-h-[44px] items-center text-[13px] text-faint"
+                >
                   Vælg noget andet
                 </button>
               )}

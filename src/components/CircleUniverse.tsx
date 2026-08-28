@@ -166,7 +166,7 @@ export function CircleUniverse() {
                 {i > 0 && <span className="opacity-50">›</span>}
                 <button
                   onClick={() => setFocus(n.id)}
-                  className={`focus-ring rounded-full px-1.5 py-1 ${
+                  className={`focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full px-2 ${
                     i === trail.length - 1 ? 'text-muted font-medium' : 'hover:text-muted'
                   }`}
                 >

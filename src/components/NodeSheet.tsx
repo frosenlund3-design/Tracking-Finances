@@ -72,7 +72,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
             setTitle(node.title)
             setEditing(true)
           }}
-          className="focus-ring block w-full text-left"
+          className="focus-ring flex min-h-[44px] w-full items-center text-left"
         >
           <h2 className="text-[23px] font-semibold leading-tight tracking-[-0.025em]">{node.title}</h2>
         </button>
@@ -248,7 +248,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
                       await park(node.id, p.until)
                       close()
                     }}
-                    className="focus-ring min-h-[42px] rounded-full border border-line bg-raised px-4 text-[14px] active:scale-95"
+                    className="focus-ring min-h-[44px] rounded-full border border-line bg-raised px-4 text-[14px] active:scale-95"
                   >
                     {p.label}
                   </button>
@@ -277,7 +277,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
                     <button
                       key={d}
                       onClick={() => void schedule(node.id, date, node.scheduledPart)}
-                      className={`focus-ring min-h-[42px] rounded-full border px-4 text-[14px] active:scale-95 ${
+                      className={`focus-ring min-h-[44px] rounded-full border px-4 text-[14px] active:scale-95 ${
                         node.scheduledDate === date ? 'border-ink/25 bg-accent-soft' : 'border-line bg-raised'
                       }`}
                     >
@@ -291,7 +291,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
                   <button
                     key={p}
                     onClick={() => void schedule(node.id, node.scheduledDate ?? isoDate(new Date()), p)}
-                    className={`focus-ring min-h-[42px] rounded-full border px-4 text-[14px] active:scale-95 ${
+                    className={`focus-ring min-h-[44px] rounded-full border px-4 text-[14px] active:scale-95 ${
                       node.scheduledPart === p ? 'border-ink/25 bg-accent-soft' : 'border-line bg-raised'
                     }`}
                   >
@@ -332,7 +332,10 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
               </div>
             </div>
           ) : (
-            <button onClick={() => setConfirmDelete(true)} className="focus-ring flex items-center gap-2 text-[13.5px] text-faint">
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="focus-ring -my-2 flex min-h-[44px] items-center gap-2 text-[13.5px] text-faint"
+            >
               <Trash2 size={14} />
               Slet
             </button>
@@ -351,19 +354,19 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
               onClick={async () => {
                 await breakDown(node.id)
               }}
-              className="focus-ring min-h-[42px] rounded-full border border-line bg-raised px-4 text-[13.5px] active:scale-95"
+              className="focus-ring min-h-[44px] rounded-full border border-line bg-raised px-4 text-[13.5px] active:scale-95"
             >
               Gør første skridt mindre
             </button>
             <button
               onClick={() => openOverlay({ kind: 'bodydouble', nodeId: node.id })}
-              className="focus-ring min-h-[42px] rounded-full border border-line bg-raised px-4 text-[13.5px] active:scale-95"
+              className="focus-ring min-h-[44px] rounded-full border border-line bg-raised px-4 text-[13.5px] active:scale-95"
             >
               Bliv hos mig imens
             </button>
             <button
               onClick={() => openOverlay({ kind: 'coach', nodeId: node.id })}
-              className="focus-ring min-h-[42px] rounded-full border border-line bg-raised px-4 text-[13.5px] active:scale-95"
+              className="focus-ring min-h-[44px] rounded-full border border-line bg-raised px-4 text-[13.5px] active:scale-95"
             >
               Snak om den
             </button>

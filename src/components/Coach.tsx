@@ -221,7 +221,7 @@ export function Coach({ nodeId }: { nodeId?: string }) {
             <button
               key={o}
               onClick={() => void send(o)}
-              className="focus-ring min-h-[42px] rounded-full border border-line bg-surface px-4 text-[14px] active:scale-95"
+              className="focus-ring min-h-[44px] rounded-full border border-line bg-surface px-4 text-[14px] active:scale-95"
             >
               {o}
             </button>
