@@ -7,6 +7,7 @@ import { useStore } from '@/store/useStore'
 import { Button } from './ui/Button'
 import { humanMinutes } from '@/lib/time'
 import { haptic } from '@/lib/haptics'
+import { MicButton } from './ui/MicButton'
 
 /**
  * "Få det ud af hovedet".
@@ -90,14 +91,19 @@ export function BrainDumpPanel({ onCommitted, footer, autoFinish }: Props) {
       <AnimatePresence mode="wait">
         {!parsed ? (
           <motion.div key="write" className="flex min-h-0 flex-1 flex-col" exit={{ opacity: 0 }}>
-            <textarea
-              ref={areaRef}
-              autoFocus
-              value={raw}
-              onChange={(e) => setRaw(e.target.value)}
-              placeholder={PLACEHOLDER}
-              className="min-h-[190px] flex-1 resize-none rounded-xl2 border border-line bg-surface p-5 text-[17px] leading-relaxed outline-none placeholder:text-faint/80 focus:border-ink/20"
-            />
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <textarea
+                ref={areaRef}
+                autoFocus
+                value={raw}
+                onChange={(e) => setRaw(e.target.value)}
+                placeholder={PLACEHOLDER}
+                className="min-h-[190px] flex-1 resize-none rounded-xl2 border border-line bg-surface p-5 pb-[72px] text-[17px] leading-relaxed outline-none placeholder:text-faint/80 focus:border-ink/20"
+              />
+              <div className="absolute bottom-3.5 right-3.5">
+                <MicButton onText={setRaw} existing={raw} size="lg" label="Sig det i stedet for at skrive" />
+              </div>
+            </div>
             <div className="pt-4">
               <Button full onClick={analyse} disabled={raw.trim().length < 2} className={raw.trim().length < 2 ? 'opacity-35' : ''}>
                 <Sparkles size={17} className="mr-2 -mt-0.5 inline" />

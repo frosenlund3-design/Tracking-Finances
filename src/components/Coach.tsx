@@ -8,6 +8,7 @@ import type { CoachAction, CoachState, Strategy } from '@/lib/coach/types'
 import { GREETINGS } from '@/lib/coach/responses'
 import { haptic } from '@/lib/haptics'
 import { parkPresets } from '@/lib/time'
+import { MicButton } from './ui/MicButton'
 import { actionableLeaves } from '@/lib/nodes'
 import { BLOCK_ANSWERS, BLOCK_NAMED, scanAttention } from '@/lib/attention'
 import type { ProcrastinationReason } from '@/db/types'
@@ -281,9 +282,10 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Skriv hvad der sker…"
-          className="min-h-[50px] flex-1 rounded-xl2 border border-line bg-surface px-4 text-[16px] outline-none placeholder:text-faint focus:border-ink/20"
+          placeholder="Skriv eller tal…"
+          className="min-h-[50px] min-w-0 flex-1 rounded-xl2 border border-line bg-surface px-4 text-[16px] outline-none placeholder:text-faint focus:border-ink/20"
         />
+        <MicButton onText={setInput} existing={input} label="Fortæl coachen hvad der sker" />
         <button
           type="submit"
           aria-label="Send"

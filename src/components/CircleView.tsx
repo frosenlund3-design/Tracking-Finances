@@ -124,7 +124,7 @@ export function CircleView({
       }}
       aria-label={
         node
-          ? `${node.title}${openCount ? `, ${openCount} åbne loops` : ''}${depth ? `, ${depth} niveauer indeni` : ''}`
+          ? `${node.title}${openCount ? `, ${openCount} åbne loops` : ''}${depth ? `, ${depth} ${depth === 1 ? 'niveau' : 'niveauer'} indeni` : ''}`
           : `Vis ${overflowCount} flere`
       }
     >

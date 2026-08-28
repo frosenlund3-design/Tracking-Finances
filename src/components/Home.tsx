@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
-import { Battery, Check, ChevronRight, Gift, MessageCircleHeart, Moon, Plus, Settings as SettingsIcon, Waves } from 'lucide-react'
-import { useMemo } from 'react'
+import { AlarmClock, Battery, CalendarClock, Check, ChevronRight, Gift, MessageCircleHeart, Moon, Plus, Settings as SettingsIcon, Waves } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useStore, useClosedToday, useMentalLoad, useNextTask, useParked, useAvailableXP } from '@/store/useStore'
 import { greeting, relativeDay, isoDate } from '@/lib/time'
 import { streakLine, REWARD_XP, levelFor } from '@/lib/rewards'
@@ -9,7 +9,11 @@ import { ROOT_ID } from '@/db/db'
 import { firstActionFor } from '@/lib/firstAction'
 import { scanAttention } from '@/lib/attention'
 import { toneFor } from '@/lib/colors'
-import { enoughBody, enoughHeadline, enoughState } from '@/lib/enough'
+import { blockedHeadline, enoughBody, enoughHeadline, enoughState } from '@/lib/enough'
+import { appointmentsToday, shortWhen, whenLabel } from '@/lib/deadlines'
+import { humanMinutes } from '@/lib/time'
+import { calibratedMinutes } from '@/lib/calibration'
+import { useCalibration } from '@/store/useStore'
 
 /**
  * Dagens view.
@@ -39,7 +43,10 @@ export function Home() {
   const declareDayDone = useStore((s) => s.declareDayDone)
   const wantMoreToday = useStore((s) => s.wantMoreToday)
 
-  const enough = enoughState(prefs, closedToday, load.percent)
+  const [confirmDone, setConfirmDone] = useState(false)
+  const cal = useCalibration()
+  const enough = enoughState(prefs, closedToday, load.percent, map)
+  const appointments = useMemo(() => appointmentsToday(map), [map])
 
   const worlds = visibleChildren(map, ROOT_ID)
   const streak = streakLine(prefs.streak, daysAway)
@@ -72,6 +79,25 @@ export function Home() {
             <SettingsIcon size={19} />
           </button>
         </div>
+
+        {/* ── Fixed times today. Facts, not suggestions. ──────────────── */}
+        {appointments.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {appointments.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => openOverlay({ kind: 'node', nodeId: a.id })}
+                className="focus-ring flex w-full items-center gap-3.5 rounded-3xl border border-warm/40 bg-warm/10 px-5 py-4 text-left active:scale-[0.99]"
+              >
+                <CalendarClock size={18} className="shrink-0 text-warm" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-medium leading-snug">{a.title}</span>
+                  <span className="mt-0.5 block text-[12.5px] text-muted">{whenLabel(a)}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* ── Enough for today ────────────────────────────────────────── */}
         {enough.done ? (
@@ -114,6 +140,42 @@ export function Home() {
               </button>
             </div>
           </motion.div>
+        ) : enough.blocked ? (
+          <motion.div
+            layout
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            className="mt-4 rounded-[30px] border border-line bg-surface p-6"
+          >
+            <div className="flex items-start gap-3">
+              <AlarmClock size={20} className="mt-0.5 shrink-0 text-warm" />
+              <div className="min-w-0">
+                <h2 className="text-[20px] font-semibold leading-tight tracking-[-0.025em]">
+                  {blockedHeadline(enough)}
+                </h2>
+                <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
+                  Resten kan sagtens vente til i morgen. De her har en rigtig tid.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {enough.necessary.slice(0, 3).map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => openOverlay({ kind: 'start', nodeId: n.id })}
+                  className="focus-ring flex w-full items-center gap-3 rounded-2xl border border-line bg-raised px-4 py-3.5 text-left active:scale-[0.99]"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-medium">{n.title}</span>
+                    <span className="mt-0.5 block text-[12px] text-warm">{whenLabel(n)}</span>
+                  </span>
+                  <ChevronRight size={15} className="shrink-0 text-faint" />
+                </button>
+              ))}
+            </div>
+          </motion.div>
         ) : next && action && tone ? (
           <motion.div
             layout
@@ -137,6 +199,10 @@ export function Home() {
 
             <p className="mt-2.5 text-[15px] opacity-70">{action.humanTime}. Så er du i gang.</p>
 
+            {next.node.dueAt && (
+              <p className="mt-1.5 text-[13.5px] font-medium opacity-80">{whenLabel(next.node)}</p>
+            )}
+
             <button
               onClick={() => openOverlay({ kind: 'start', nodeId: next.node.id })}
               className="focus-ring mt-6 flex min-h-[62px] w-full items-center justify-center gap-3 rounded-3xl text-[17px] font-semibold transition active:scale-[0.98]"
@@ -159,7 +225,9 @@ export function Home() {
 
             <div className="mt-4 flex items-center justify-between border-t pt-3 text-[12.5px]" style={{ borderColor: `${tone.text}22` }}>
               <span className="min-w-0 flex-1 truncate opacity-60">
-                {action.isWholeTask ? 'Hele opgaven' : `Hører til: ${next.node.title}`}
+                {action.isWholeTask
+                  ? `Hele opgaven · ${humanMinutes(calibratedMinutes(next.node.estimatedMinutes, cal))}`
+                  : `Hører til: ${next.node.title}`}
               </span>
               <button
                 onClick={() => openOverlay({ kind: 'whatnow' })}
@@ -188,11 +256,47 @@ export function Home() {
         {/* ── Permission to stop ──────────────────────────────────────── */}
         {!enough.done && (
           <button
-            onClick={() => void declareDayDone()}
+            onClick={() => {
+              if (enough.necessary.length > 0) setConfirmDone(true)
+              else void declareDayDone()
+            }}
             className="focus-ring mt-2.5 min-h-[44px] w-full text-[13px] text-faint"
           >
             Jeg er færdig for i dag
           </button>
+        )}
+
+        {confirmDone && (
+          <div className="mt-2 rounded-3xl border border-line bg-surface p-5">
+            <p className="text-[14.5px] leading-relaxed">
+              Der {enough.necessary.length === 1 ? 'er' : 'er'} stadig {enough.necessary.length}{' '}
+              {enough.necessary.length === 1 ? 'ting' : 'ting'} med en rigtig tid i dag.
+            </p>
+            <ul className="mt-2.5 space-y-1">
+              {enough.necessary.slice(0, 3).map((n) => (
+                <li key={n.id} className="text-[13px] text-muted">
+                  {n.title} — <span className="text-warm">{shortWhen(n)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setConfirmDone(false)}
+                className="focus-ring min-h-[46px] flex-1 rounded-2xl border border-line text-[14.5px]"
+              >
+                Vis mig dem
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmDone(false)
+                  void declareDayDone()
+                }}
+                className="focus-ring min-h-[46px] flex-1 rounded-2xl bg-ink text-[14.5px] text-canvas"
+              >
+                Jeg er færdig alligevel
+              </button>
+            </div>
+          </div>
         )}
 
         {/* ── Something has been sitting there ────────────────────────── */}

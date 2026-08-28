@@ -14,6 +14,12 @@
 import type { EnergyLevel, LifeArea, MentalWeight, TimePart, Urgency } from '@/db/types'
 import { decompose } from './decompose'
 
+export interface ParsedTime {
+  at: number
+  hasTime: boolean
+  kind: 'deadline' | 'appointment'
+}
+
 export interface ParsedLoop {
   key: string
   /** Cleaned, imperative title. */
@@ -29,6 +35,8 @@ export interface ParsedLoop {
   urgency: Urgency
   scheduledDate?: string
   scheduledPart?: TimePart
+  /** Only set when the text really named a time. */
+  due?: ParsedTime
   steps: string[]
   goodEnough?: string
   /** 0–1, how sure we are about the placement. Low confidence lands in Løst og fast. */
@@ -112,6 +120,20 @@ const MODALS =
   /^(?:skal(?:\s+lige)?(?:\s+ogs[åa])?|mangler(?:\s+ogs[åa])?|b[øo]r|vil\s+gerne|vil|har\s+brug\s+for|er\s+n[øo]dt\s+til|n[øo]dt\s+til|trænger\s+til|skulle|kunne|burde|husk(?:e)?\s+p[åa]?|husk(?:e)?)\s*(?:at\s+)?/i
 
 const URGENT_WORDS = /\b(haster|akut|i dag|idag|senest|deadline|inden|nu|hurtigst muligt|asap)\b/i
+
+/** "kl. 14", "klokken 9.30", "kl 14:15" */
+const CLOCK = /\bkl(?:\.|okken)?\s*(\d{1,2})(?:[.:](\d{2}))?\b/i
+
+/**
+ * Things that happen at a time whether or not you did anything: you show up.
+ * These become appointments rather than deadlines, and the what-now engine
+ * leaves them alone.
+ */
+const APPOINTMENT_WORDS =
+  /\b(tid hos|l[æa]getid|tandl[æa]getid|aftale|m[øo]de|eksamen|pr[øo]ve|samtale|konsultation|fris[øo]rtid|termin|vaccination|scanning|unders[øo]gelse|forældrem[øo]de|koncert|fly|tog|afgang)\b/i
+
+/** Wording that means "be finished before", not "be there at". */
+const DEADLINE_WORDS = /\b(senest|inden|deadline|frist|afleveres|skal v[æa]re klar|forfalder)\b/i
 const SOON_WORDS = /\b(i morgen|imorgen|denne uge|i n[æa]ste uge|snart|p[åa] fredag|i weekenden)\b/i
 
 const WEEKDAYS: Record<string, number> = {
@@ -125,9 +147,24 @@ const PART_WORDS: Array<[RegExp, TimePart]> = [
   [/\baften\w*/i, 'evening'],
 ]
 
+/**
+ * Danish abbreviations whose full stop is not a sentence ending. Without this,
+ * "Lægetid på fredag kl. 9" splits into "…kl" and "9", and the time — the one
+ * piece of information that actually mattered — is thrown away.
+ */
+function normaliseAbbreviations(text: string): string {
+  return text
+    .replace(/\bkl\.\s*/gi, 'kl ')
+    .replace(/\bca\.\s*/gi, 'ca ')
+    .replace(/\bfx\.\s*/gi, 'fx ')
+    .replace(/\bevt\.\s*/gi, 'evt ')
+    .replace(/\bdvs\.\s*/gi, 'dvs ')
+    .replace(/\bbl\.\s*a\.\s*/gi, 'bla ')
+}
+
 /** Splits a messy paragraph into separate loops. */
 export function splitSegments(raw: string): string[] {
-  const lines = raw
+  const lines = normaliseAbbreviations(raw)
     .split(/\r?\n|[•·]|(?:^|\s)[-–—*]\s+/g)
     .map((l) => l.trim())
     .filter(Boolean)
@@ -135,8 +172,9 @@ export function splitSegments(raw: string): string[] {
   const out: string[] = []
   for (const line of lines) {
     // Hard separators first — these are unambiguous.
+    // A full stop followed by a digit is a date or a time, not a sentence end.
     const hard = line
-      .split(/[.;!?]+\s+|,\s+|\s+samt\s+|\s+og\s+ogs[åa]\s+|\s+og\s+s[åa]\s+|\s+ogs[åa]\s+at\s+/i)
+      .split(/[.;!?]+\s+(?![0-9])|,\s+|\s+samt\s+|\s+og\s+ogs[åa]\s+|\s+og\s+s[åa]\s+|\s+ogs[åa]\s+at\s+/i)
       .map((s) => s.trim())
       .filter(Boolean)
 
@@ -208,6 +246,37 @@ function detectUrgency(text: string): Urgency {
   return 'none'
 }
 
+/**
+ * A real time, only when the text actually names one.
+ *
+ * Guessing deadlines is how a calm system turns back into the stressful
+ * calendar she already refuses to use, so this stays deliberately literal: a
+ * clock time, or wording that plainly means a deadline. Everything else just
+ * becomes a loose day.
+ */
+function detectDue(text: string, date: string | undefined, now: Date): ParsedTime | undefined {
+  const clock = CLOCK.exec(text)
+  const isAppointment = APPOINTMENT_WORDS.test(text)
+  const isDeadline = DEADLINE_WORDS.test(text)
+  if (!clock && !isDeadline && !isAppointment) return undefined
+  // Without a day we have nothing to hang the time on.
+  if (!date) return undefined
+
+  const [y, m, d] = date.split('-').map(Number)
+  const hours = clock ? Math.min(23, Number(clock[1])) : 23
+  const minutes = clock?.[2] ? Math.min(59, Number(clock[2])) : clock ? 0 : 59
+  const at = new Date(y, m - 1, d, hours, minutes, 0, 0)
+  if (at.getTime() < now.getTime() - 3_600_000) return undefined
+
+  return {
+    at: at.getTime(),
+    hasTime: !!clock,
+    // A named clock time on an appointment-ish thing is an appointment;
+    // deadline wording wins when it is explicitly present.
+    kind: isDeadline && !isAppointment ? 'deadline' : clock || isAppointment ? 'appointment' : 'deadline',
+  }
+}
+
 function detectSchedule(text: string, now = new Date()): { date?: string; part?: TimePart } {
   let date: string | undefined
   const lower = text.toLowerCase()
@@ -241,12 +310,13 @@ function detectSchedule(text: string, now = new Date()): { date?: string; part?:
  * makes the card noisy.
  */
 const TIME_PHRASES =
-  /\s*\b(?:p[åa]\s+)?(?:i\s*dag|i\s*morgen|i\s*overmorgen|i\s*aften|i\s*weekenden|denne\s+uge|n[æa]ste\s+uge|s[øo]ndag|mandag|tirsdag|onsdag|torsdag|fredag|l[øo]rdag|om\s+morgenen|om\s+eftermiddagen|om\s+aftenen|senest|hurtigst\s+muligt)\b\s*/gi
+  /\s*\b(?:p[åa]\s+)?(?:i\s*dag|i\s*morgen|i\s*overmorgen|i\s*aften|i\s*weekenden|denne\s+uge|n[æa]ste\s+uge|s[øo]ndag|mandag|tirsdag|onsdag|torsdag|fredag|l[øo]rdag|om\s+morgenen|om\s+eftermiddagen|om\s+aftenen|senest|hurtigst\s+muligt|kl(?:\.|okken)?\s*\d{1,2}(?:[.:]\d{2})?)\b\s*/gi
 
 export function stripTimePhrases(title: string): string {
   const stripped = title.replace(TIME_PHRASES, ' ').replace(/\s{2,}/g, ' ').trim()
-  // Never strip a title down to nothing (e.g. a task literally called "I dag").
-  return stripped.split(/\s+/).filter(Boolean).length >= 2 ? stripped : title
+  // Never strip a title down to nothing (e.g. a task literally called "I dag"),
+  // but one solid word is a fine title: "Lægetid" beats "Lægetid på fredag kl 9".
+  return stripped.length >= 3 ? stripped : title
 }
 
 export function isoDate(d: Date): string {
@@ -298,6 +368,7 @@ export function parseBrainDump(raw: string, now = new Date()): ParsedLoop[] {
     const minutes = breakdown?.minutes ?? rule?.minutes ?? guessMinutes(title)
     const vague = /\b(styr p[åa]|ordne|overblik|planl[æa]g|organiser)\b/i.test(title)
     const schedule = detectSchedule(segment, now)
+    const due = detectDue(segment, schedule.date, now)
     const finalTitle = schedule.date || schedule.part ? stripTimePhrases(title) : title
 
     result.push({
@@ -312,6 +383,7 @@ export function parseBrainDump(raw: string, now = new Date()): ParsedLoop[] {
       urgency: detectUrgency(segment),
       scheduledDate: schedule.date,
       scheduledPart: schedule.part,
+      due,
       steps: breakdown?.steps ?? [],
       goodEnough: breakdown?.goodEnough,
       confidence: rule ? (rule.confidence ?? 0.85) : 0.35,

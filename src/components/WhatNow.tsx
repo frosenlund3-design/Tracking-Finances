@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { useStore, useRanked } from '@/store/useStore'
 import { scoreLabel } from '@/lib/scoring'
 import { humanMinutes } from '@/lib/time'
+import { calibratedMinutes } from '@/lib/calibration'
+import { useCalibration } from '@/store/useStore'
+import { whenLabel } from '@/lib/deadlines'
 import { Button } from './ui/Button'
 import type { EnergyLevel } from '@/db/types'
 
@@ -24,6 +27,7 @@ export function WhatNow() {
   const energy = useStore((s) => s.prefs.currentEnergy)
   const setEnergy = useStore((s) => s.setEnergy)
   const [showList, setShowList] = useState(false)
+  const cal = useCalibration()
 
   const fresh = ranked.filter((t) => !skipped.includes(t.node.id))
   const pick = fresh[0] ?? ranked[0] ?? null
@@ -67,7 +71,9 @@ export function WhatNow() {
         className="mt-6 rounded-xl3 border border-line bg-surface p-6 text-center shadow-soft"
       >
         <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-line bg-raised shadow-node">
-          <span className="text-[12.5px] text-faint">{humanMinutes(pick.node.estimatedMinutes)}</span>
+          <span className="text-[12.5px] text-faint">
+            {humanMinutes(calibratedMinutes(pick.node.estimatedMinutes, cal))}
+          </span>
         </div>
 
         <h2 className="mx-auto mt-5 max-w-[17rem] text-[24px] font-semibold leading-tight tracking-[-0.025em]">
@@ -123,7 +129,10 @@ export function WhatNow() {
               <span className="w-11 shrink-0 text-[12.5px] font-medium text-faint">{t.score}p</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px]">{t.node.title}</span>
-                <span className="block text-[12px] text-faint">{humanMinutes(t.node.estimatedMinutes)}</span>
+                <span className="block text-[12px] text-faint">
+                  {humanMinutes(calibratedMinutes(t.node.estimatedMinutes, cal))}
+                  {t.node.dueAt ? ` · ${whenLabel(t.node)}` : ''}
+                </span>
               </span>
             </button>
           ))}

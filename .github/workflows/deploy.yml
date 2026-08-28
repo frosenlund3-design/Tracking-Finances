@@ -2,7 +2,7 @@ name: Deploy til GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/loops-adhd-app-b9rmhw]
   workflow_dispatch:
 
 permissions:

@@ -1,5 +1,7 @@
-import type { EnergyLevel, UserPreferences } from '@/db/types'
+import type { EnergyLevel, LoopNode, UserPreferences } from '@/db/types'
 import { isoDate } from './time'
+import { necessaryToday } from './deadlines'
+import type { NodeMap } from './nodes'
 
 /**
  * "Der er ikke noget, du skal lige nu."
@@ -16,14 +18,23 @@ import { isoDate } from './time'
  *     like parking something, and it takes one tap.
  *
  * It is never a lock. There is always a quiet way to ask for one more.
+ *
+ * But it is gated. Feeling finished while a deadline runs out tonight is worse
+ * than not feeling finished at all — that is the app helping her miss
+ * something. So the finished screen only appears when nothing that genuinely
+ * cannot wait is still open. Everything else — the eighteen someday loops — is
+ * exactly what she is allowed to feel finished in spite of.
  */
 
-/** Deliberately small. The point is that it is reachable before bedtime. */
+/**
+ * Small enough to reach before bedtime, big enough that it does not arrive the
+ * moment she closes one thing.
+ */
 export function dailyGoal(energy: EnergyLevel): number {
-  if (energy <= 10) return 1
-  if (energy <= 30) return 2
-  if (energy <= 60) return 3
-  return 4
+  if (energy <= 10) return 2
+  if (energy <= 30) return 3
+  if (energy <= 60) return 4
+  return 5
 }
 
 export interface EnoughState {
@@ -38,12 +49,17 @@ export interface EnoughState {
   declared: boolean
   /** How much the load has come down since this morning. */
   loadDrop: number
+  /** Things that genuinely cannot wait until tomorrow. */
+  necessary: LoopNode[]
+  /** The goal is met, but something real is still standing in the way. */
+  blocked: boolean
 }
 
 export function enoughState(
   prefs: UserPreferences,
   closedToday: number,
   loadPercent: number,
+  map: NodeMap,
   now = new Date(),
 ): EnoughState {
   const today = isoDate(now)
@@ -51,13 +67,20 @@ export function enoughState(
   const goal = dailyGoal(prefs.currentEnergy) + extra
   const declared = prefs.doneForDay === today
   const snapshot = prefs.loadSnapshotDate === today ? prefs.loadSnapshot : undefined
+  const necessary = necessaryToday(map, now.getTime())
+  const reached = closedToday >= goal
+
   return {
     goal,
     extra,
     closed: closedToday,
-    done: declared || closedToday >= goal,
+    // Declaring it done is hers to make even with things outstanding — she is
+    // asked to confirm first, and then it is a decision, not an accident.
+    done: declared || (reached && necessary.length === 0),
     declared,
     loadDrop: snapshot !== undefined ? Math.max(0, snapshot - loadPercent) : 0,
+    necessary,
+    blocked: reached && necessary.length > 0 && !declared,
   }
 }
 
@@ -76,4 +99,11 @@ export function enoughBody(state: EnoughState): string {
   const loops = `Du lukkede ${state.closed} ${state.closed === 1 ? 'loop' : 'loops'} i dag.`
   if (state.loadDrop >= 3) return `${loops} Mental load er faldet ${Math.round(state.loadDrop)}% siden i morges.`
   return `${loops} Resten venter, og det er helt fint.`
+}
+
+/** Shown when the goal is met but something real is still open. */
+export function blockedHeadline(state: EnoughState): string {
+  const n = state.necessary.length
+  if (n === 1) return 'Du har lavet nok — der er bare én ting med en tid'
+  return `Du har lavet nok — der er ${n} ting med en tid i dag`
 }

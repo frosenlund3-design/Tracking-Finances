@@ -4,6 +4,8 @@ import { Check, HandHelping, Pause, Timer } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { haptic } from '@/lib/haptics'
 import { humanMinutes } from '@/lib/time'
+import { calibratedMinutes } from '@/lib/calibration'
+import { useCalibration } from '@/store/useStore'
 import { Button } from './ui/Button'
 
 /**
@@ -26,10 +28,19 @@ export function StartMode({ nodeId }: { nodeId: string }) {
   const goodEnoughMode = useStore((s) => s.prefs.goodEnoughMode)
   const tone = useStore((s) => s.profile.tone)
 
+  const cal = useCalibration()
+  const [elapsed, setElapsed] = useState(0)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [stuck, setStuck] = useState(false)
   const [timerEnd, setTimerEnd] = useState<number | null>(null)
   const [now, setNow] = useState(Date.now())
+
+  useEffect(() => {
+    // The visible clock is the point: it is how she finds out for herself that
+    // "2 min" really was two minutes. Trust in the number has to be earned.
+    const tick = window.setInterval(() => setElapsed((e) => e + 1), 1000)
+    return () => window.clearInterval(tick)
+  }, [nodeId])
 
   useEffect(() => {
     if (node && node.status !== 'active') void startNode(node.id)
@@ -134,7 +145,14 @@ export function StartMode({ nodeId }: { nodeId: string }) {
           className="w-full"
         >
           <div className="mx-auto mb-8 grid h-24 w-24 place-items-center rounded-full border border-line bg-raised shadow-node">
-            <span className="text-[13px] text-faint">{humanMinutes(node.estimatedMinutes)}</span>
+            <span className="text-center leading-tight">
+              <span className="block text-[17px] font-semibold tabular-nums">
+                {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}
+              </span>
+              <span className="mt-0.5 block text-[11px] text-faint">
+                af {humanMinutes(calibratedMinutes(node.estimatedMinutes, cal))}
+              </span>
+            </span>
           </div>
 
           <p className="text-[11px] uppercase tracking-[0.16em] text-faint">

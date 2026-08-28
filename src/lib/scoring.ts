@@ -12,6 +12,7 @@
 
 import type { EnergyLevel, LoopNode, TimePart, UserProfile } from '@/db/types'
 import { isLeaf, isOpen, isParkedNow, type NodeMap } from './nodes'
+import { hoursUntil, isAppointment, whenLabel } from './deadlines'
 
 export interface ScoreBreakdown {
   urgency: number
@@ -67,18 +68,34 @@ export function scoreTask(node: LoopNode, map: NodeMap, ctx: ScoreContext): Scor
   }
   const reasons: string[] = []
 
-  // --- urgency (max 20) ------------------------------------------------
-  if (node.urgency === 'overdue') b.urgency = 20
-  else if (node.urgency === 'today') b.urgency = 17
-  else if (node.urgency === 'soon') b.urgency = 9
+  // --- urgency (max 45) ------------------------------------------------
+  // A real deadline outranks everything else in the model. Nothing about
+  // energy, novelty or quick wins should be able to push a bill due tonight
+  // below a nice little five-minute job — that is the whole point of letting
+  // her put a real time on something.
   if (node.dueAt) {
-    const days = (node.dueAt - ctx.now.getTime()) / 86_400_000
-    if (days < 0) b.urgency = 20
-    else if (days < 1) b.urgency = Math.max(b.urgency, 18)
-    else if (days < 3) b.urgency = Math.max(b.urgency, 12)
+    const hours = hoursUntil(node, ctx.now.getTime())
+    if (hours < 0) {
+      b.urgency = 45
+      reasons.push(whenLabel(node, ctx.now.getTime()))
+    } else if (hours <= 24) {
+      b.urgency = 40
+      reasons.push(whenLabel(node, ctx.now.getTime()))
+    } else if (hours <= 72) {
+      b.urgency = 26
+      reasons.push(whenLabel(node, ctx.now.getTime()))
+    } else if (hours <= 24 * 7) {
+      b.urgency = 14
+    } else {
+      b.urgency = 6
+    }
+  } else if (node.urgency === 'today') b.urgency = 17
+  else if (node.urgency === 'soon') b.urgency = 9
+
+  if (!node.dueAt && node.scheduledDate === isoOf(ctx.now)) {
+    b.urgency = Math.max(b.urgency, 14)
+    reasons.push('Du har lagt den på i dag')
   }
-  if (node.scheduledDate === isoOf(ctx.now)) b.urgency = Math.max(b.urgency, 14)
-  if (b.urgency >= 14) reasons.push('Den er aktuel i dag')
 
   // --- quick win (max 16) ----------------------------------------------
   const m = node.estimatedMinutes
@@ -143,7 +160,7 @@ export function scoreTask(node: LoopNode, map: NodeMap, ctx: ScoreContext): Scor
 
   // Good Enough Mode softens anything big so the engine stops pointing at
   // mountains when the user has already said "I just need something done".
-  const geAdjust = ctx.goodEnoughMode && m > 30 ? -8 : 0
+  const geAdjust = ctx.goodEnoughMode && m > 30 && !node.dueAt ? -8 : 0
 
   const raw =
     b.urgency + b.quickWin + b.unblocks + b.energyMatch + b.timeOfDay + b.longAvoided + b.relief + b.alreadyStarted + geAdjust
@@ -179,6 +196,8 @@ export function rankTasks(map: NodeMap, candidates: LoopNode[], ctx: ScoreContex
   const now = ctx.now.getTime()
   return candidates
     .filter((n) => isOpen(n) && !isParkedNow(n, now) && !n.isArea && isLeaf(map, n))
+    // "Start din lægetid nu" is nonsense. Appointments are shown on their own.
+    .filter((n) => !isAppointment(n))
     .map((n) => scoreTask(n, map, ctx))
     .sort((a, b) => b.score - a.score || a.node.estimatedMinutes - b.node.estimatedMinutes)
 }
@@ -202,6 +221,7 @@ function isoOf(d: Date): string {
 
 /** Label for the points badge — plain, no hype. */
 export function scoreLabel(score: number): string {
+  if (score >= 85) return 'Den her først'
   if (score >= 70) return 'Rigtig god idé nu'
   if (score >= 55) return 'God idé nu'
   if (score >= 38) return 'Fin nok nu'

@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { useStore } from '@/store/useStore'
 import { downloadBackup, importBackup, BackupError, wipeEverything } from '@/lib/backup'
 import { hapticsSupported } from '@/lib/haptics'
+import { speechSupported } from '@/lib/speech'
 import { BRAIN_PROFILES } from '@/lib/brainProfiles'
 import type { UserProfile } from '@/db/types'
 import { CreateProfile } from './Lock'
@@ -199,6 +200,17 @@ export function Settings() {
             hint="Slå fra hvis tal stresser dig."
             on={prefs.showXP}
             onChange={(v) => void savePrefs({ showXP: v })}
+          />
+          <Toggle
+            label="Diktering"
+            hint={
+              speechSupported()
+                ? 'Tal i stedet for at skrive. Lyden sendes til telefonens egen stemmegenkendelse (Apple eller Google) for at blive til tekst — det er det ene sted, noget forlader telefonen.'
+                : 'Din browser har ikke stemmegenkendelse. På iPhone kan du bruge mikrofon-tasten på tastaturet i stedet.'
+            }
+            on={prefs.voiceEnabled !== false}
+            disabled={!speechSupported()}
+            onChange={(v) => void savePrefs({ voiceEnabled: v })}
           />
         </Section>
 

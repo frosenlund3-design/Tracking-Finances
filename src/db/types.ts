@@ -38,8 +38,21 @@ export interface LoopNode {
   completedAt?: number
   startedAt?: number
   parkedUntil?: number
-  /** Optional. Loops never demands a deadline. */
+  /**
+   * A real time, when one genuinely exists. Loops never demands one — most
+   * loops have no deadline, and inventing deadlines is how a calm system turns
+   * into the stressful calendar she already refuses to use.
+   */
   dueAt?: number
+  /**
+   * 'deadline'    — must be finished by dueAt (an application, a bill).
+   * 'appointment' — happens at dueAt whether or not you did anything (a
+   *                 doctor's appointment, an exam). These are never suggested
+   *                 as "do this now"; you show up.
+   */
+  dueKind?: 'deadline' | 'appointment'
+  /** Set when dueAt carries a clock time, not just a date. */
+  dueHasTime?: boolean
   estimatedMinutes: number
   mentalWeight: MentalWeight
   energyRequired: EnergyLevel
@@ -132,6 +145,11 @@ export interface Completion {
   /** How the loop got closed, for the friction model. */
   via: 'manual' | 'start-mode' | 'body-double' | 'what-now' | 'coach'
   minutes?: number
+  /**
+   * How long it actually took, when we can know (start mode to completion,
+   * same sitting). This is what teaches the app to stop lying about time.
+   */
+  actualMinutes?: number
   /** Copied at completion time so statistics survive the task being deleted. */
   area?: LifeArea
   wasAvoided?: boolean
@@ -208,6 +226,9 @@ export interface UserPreferences {
   spentXP: number
   currentEnergy: EnergyLevel
   energySetAt: number
+  /** Dictation is opt-out; it is the one feature that leaves the phone. */
+  voiceEnabled?: boolean
+  voiceNoticeSeen?: boolean
   /**
    * The day she has declared finished — either by reaching a small daily
    * goal, or by simply saying so. Stored as 'YYYY-MM-DD'.
@@ -223,11 +244,6 @@ export interface UserPreferences {
   /** Mental load at the first opening of the day, for "det faldt X%". */
   loadSnapshot?: number
   loadSnapshotDate?: string
-  /**
-   * Optional. Used only to estimate what her closed work loops were worth,
-   * and every number derived from it is labelled as an estimate.
-   */
-  hourlyRateDKK?: number
 }
 
 export interface RewardGoal {

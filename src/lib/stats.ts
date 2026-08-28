@@ -28,11 +28,11 @@ export interface Stats {
   brainDumps: number
   totalXP: number
   claimedDKK: number
-  /** Exact: the sum of values she put on tasks herself. */
+  /** Only ever the sum of values she put on tasks herself. */
   earnedExact: number
-  /** Estimated from her own hourly rate, work and admin loops only. */
-  earnedEstimated: number
-  hasRate: boolean
+  /** How her time estimates compare to reality, once there is enough to tell. */
+  timeFactor: number | null
+  timeSamples: number
   /** When she actually closes things. */
   bestPart: TimePart | null
   byPart: Record<TimePart, number>
@@ -56,9 +56,6 @@ export function areaLabel(area: LifeArea): string {
   return AREA_LABELS[area] ?? AREA_LABELS.other
 }
 
-/** Areas where an hourly rate is a fair thing to apply. */
-const PAID_AREAS: LifeArea[] = ['work', 'admin']
-
 export async function loadStats(prefs: UserPreferences): Promise<Stats> {
   const [completions, rewards, claimed, dumpCount] = await Promise.all([
     db.completions.toArray(),
@@ -77,7 +74,7 @@ export async function loadStats(prefs: UserPreferences): Promise<Stats> {
   let minutesClosed = 0
   let avoidedClosed = 0
   let earnedExact = 0
-  let paidMinutes = 0
+  const ratios: number[] = []
 
   for (const c of completions as Completion[]) {
     days.add(new Date(c.completedAt).toDateString())
@@ -89,14 +86,13 @@ export async function loadStats(prefs: UserPreferences): Promise<Stats> {
       minutesClosed += c.minutes ?? 0
       if (c.wasAvoided) avoidedClosed++
       if (c.valueDKK) earnedExact += c.valueDKK
-      else if (c.area && PAID_AREAS.includes(c.area)) paidMinutes += c.minutes ?? 0
+      if (c.actualMinutes && c.minutes) ratios.push(c.actualMinutes / c.minutes)
       byPart[partOfDay(new Date(c.completedAt))]++
       const area = c.area ?? 'other'
       areaCounts.set(area, (areaCounts.get(area) ?? 0) + 1)
     }
   }
 
-  const rate = prefs.hourlyRateDKK ?? 0
   const bestPart =
     (Object.entries(byPart) as Array<[TimePart, number]>).reduce<[TimePart, number] | null>(
       (best, entry) => (!best || entry[1] > best[1] ? entry : best),
@@ -114,8 +110,8 @@ export async function loadStats(prefs: UserPreferences): Promise<Stats> {
     totalXP: prefs.totalXP,
     claimedDKK: claimed.reduce((sum, c) => sum + c.amountDKK, 0),
     earnedExact,
-    earnedEstimated: rate > 0 ? Math.round((paidMinutes / 60) * rate) : 0,
-    hasRate: rate > 0,
+    timeFactor: ratios.length >= MIN_SAMPLES ? median(ratios) : null,
+    timeSamples: ratios.length,
     bestPart: closed >= 5 ? bestPart : null,
     byPart,
     byArea: [...areaCounts.entries()]
@@ -126,6 +122,15 @@ export async function loadStats(prefs: UserPreferences): Promise<Stats> {
       : null,
     activeDays: days.size,
   }
+}
+
+/** Enough completions that the ratio means something rather than noise. */
+const MIN_SAMPLES = 5
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
 }
 
 export function partLabel(part: TimePart): string {

@@ -20,6 +20,7 @@ import { QuickAdd } from '@/components/QuickAdd'
 import { EnergySheet } from '@/components/EnergySheet'
 import { Celebration } from '@/components/Celebration'
 import { LockScreen } from '@/components/Lock'
+import { InstallHint } from '@/components/InstallHint'
 
 export default function App() {
   const ready = useStore((s) => s.ready)
@@ -59,6 +60,7 @@ export default function App() {
 
       <TabBar />
       <Celebration />
+      <InstallHint />
 
       <Sheet open={overlay.kind === 'braindump'} onClose={closeOverlay} title="Få det ud af hovedet" full>
         <BrainDumpPanel onCommitted={() => undefined} />

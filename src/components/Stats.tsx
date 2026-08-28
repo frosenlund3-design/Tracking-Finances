@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { ChevronLeft, Info } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { areaLabel, humanHours, kr, loadStats, partLabel, type Stats as StatsData } from '@/lib/stats'
+import { calibrationSentence } from '@/lib/calibration'
 
 /**
  * "Det du har flyttet".
@@ -18,16 +19,14 @@ import { areaLabel, humanHours, kr, loadStats, partLabel, type Stats as StatsDat
  */
 export function Stats() {
   const prefs = useStore((s) => s.prefs)
-  const savePrefs = useStore((s) => s.savePrefs)
   const setScreen = useStore((s) => s.setScreen)
   const [stats, setStats] = useState<StatsData | null>(null)
-  const [rate, setRate] = useState(String(prefs.hourlyRateDKK ?? ''))
 
   useEffect(() => {
     void loadStats(prefs).then(setStats)
   }, [prefs])
 
-  const money = stats ? stats.earnedExact + stats.earnedEstimated : 0
+  const money = stats?.earnedExact ?? 0
 
   return (
     <div className="h-full overflow-y-auto no-scrollbar pb-32">
@@ -65,15 +64,8 @@ export function Stats() {
                   {kr(money)}
                 </p>
                 <p className="mt-3 text-[13.5px] leading-relaxed text-muted">
-                  {stats.earnedExact > 0 && (
-                    <>
-                      {kr(stats.earnedExact)} fra opgaver, du selv har sat en værdi på.
-                      {stats.earnedEstimated > 0 && ' '}
-                    </>
-                  )}
-                  {stats.earnedEstimated > 0 && (
-                    <>Resten er et skøn ud fra din timepris på lukket arbejde.</>
-                  )}
+                  Fra de opgaver, du selv har sat et beløb på — fx kundearbejde. Du sætter beløbet
+                  på opgaven, når du opretter eller åbner den.
                 </p>
               </motion.div>
             )}
@@ -136,38 +128,32 @@ export function Stats() {
           </>
         )}
 
-        {/* The rate, and the honest note about what it can and cannot mean. */}
-        <div className="mt-5 rounded-[26px] border border-line bg-surface p-5">
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-faint">
-            Hvad er din time værd?
-          </p>
-          <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
-            Sætter du et tal her, kan Loops anslå hvad dine lukkede arbejdsopgaver har været værd.
-            Helt frivilligt — og du kan sætte et præcist beløb på den enkelte opgave i stedet.
-          </p>
-          <div className="mt-3.5 flex gap-2">
-            <input
-              value={rate}
-              onChange={(e) => setRate(e.target.value.replace(/[^0-9]/g, ''))}
-              inputMode="numeric"
-              placeholder="fx 450"
-              className="min-h-[50px] flex-1 rounded-xl2 border border-line bg-raised px-4 text-[16px] outline-none placeholder:text-faint focus:border-ink/20"
-            />
-            <button
-              onClick={() => void savePrefs({ hourlyRateDKK: rate ? Number(rate) : undefined })}
-              className="focus-ring min-h-[50px] rounded-xl2 bg-ink px-5 text-[15px] font-medium text-canvas active:scale-[0.98]"
-            >
-              Gem
-            </button>
+        {/* Whether the app's own numbers can be trusted. */}
+        {stats && (
+          <div className="mt-5 rounded-[26px] border border-line bg-surface p-5">
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-faint">
+              Passer tiderne?
+            </p>
+            <p className="mt-2.5 text-[14.5px] leading-relaxed">
+              {calibrationSentence({
+                factor: stats.timeFactor ?? 1,
+                samples: stats.timeSamples,
+                active: stats.timeFactor !== null,
+              })}
+            </p>
+            {stats.timeFactor !== null && (
+              <p className="mt-2 text-[12.5px] leading-relaxed text-faint">
+                Målt på {stats.timeSamples} opgaver, du har startet og gjort færdig i én omgang.
+              </p>
+            )}
           </div>
-          <p className="mt-2.5 text-[12px] text-faint">kr. i timen</p>
-        </div>
+        )}
 
         <div className="mt-4 flex items-start gap-2.5 rounded-xl2 bg-canvas p-4">
           <Info size={14} className="mt-0.5 shrink-0 text-faint" />
           <p className="text-[12px] leading-relaxed text-faint">
-            Beløb er kun det, du selv har fortalt appen — enten en værdi på en opgave eller din egen
-            timepris. Loops ved ikke hvad dit arbejde koster, og gætter ikke.
+            Beløb er kun det, du selv har skrevet på en opgave. Loops ved ikke hvad dit arbejde
+            koster, og gætter ikke.
           </p>
         </div>
 

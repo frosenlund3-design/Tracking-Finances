@@ -1,11 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  ArrowDownToLine, Banknote, Check, ChevronRight, CircleDashed, Clock, Play, Plus, Split, Trash2,
-  UserPlus, X,
+  AlarmClock, ArrowDownToLine, Banknote, CalendarClock, Check, ChevronRight, CircleDashed, Clock,
+  Play, Plus, Split, Trash2, UserPlus, X,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useStore } from '@/store/useStore'
 import { humanMinutes, parkPresets, PART_LABELS, PARTS, relativeDay, isoDate } from '@/lib/time'
+import { whenLabel } from '@/lib/deadlines'
+import { calibratedMinutes } from '@/lib/calibration'
+import { useCalibration } from '@/store/useStore'
 import { canFocus, visibleChildren } from '@/lib/nodes'
 import { haptic } from '@/lib/haptics'
 
@@ -29,6 +32,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
   const rename = useStore((s) => s.renameNode)
   const remove = useStore((s) => s.deleteNode)
   const schedule = useStore((s) => s.schedule)
+  const setDue = useStore((s) => s.setDue)
   const openOverlay = useStore((s) => s.openOverlay)
   const setFocus = useStore((s) => s.setFocus)
   const focusId = useStore((s) => s.focusId)
@@ -39,6 +43,9 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
   const [showTime, setShowTime] = useState(false)
   const [showValue, setShowValue] = useState(false)
   const [value, setValue] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [dueTime, setDueTime] = useState('')
+  const cal = useCalibration()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [title, setTitle] = useState(node?.title ?? '')
   const [editing, setEditing] = useState(false)
@@ -83,7 +90,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-faint">
-        {!node.isArea && <span>{humanMinutes(node.estimatedMinutes)}</span>}
+        {!node.isArea && <span>{humanMinutes(calibratedMinutes(node.estimatedMinutes, cal))}</span>}
         {kids.length > 0 && (
           <>
             {!node.isArea && <span className="opacity-40">·</span>}
@@ -106,6 +113,17 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
           </>
         )}
       </div>
+
+      {node.dueAt && (
+        <p
+          className={`mt-2.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium ${
+            node.dueKind === 'appointment' ? 'bg-warm/15 text-warm' : 'bg-accent-soft text-ink/75'
+          }`}
+        >
+          {node.dueKind === 'appointment' ? <CalendarClock size={13} /> : <AlarmClock size={13} />}
+          {whenLabel(node)}
+        </p>
+      )}
 
       {goodEnoughMode && node.goodEnoughNote && (
         <p className="mt-4 rounded-xl2 bg-accent-soft/60 px-4 py-3 text-[14px] leading-relaxed text-ink/80">
@@ -213,7 +231,18 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
           />
         )}
         {!isRoot && (
-          <SmallAction icon={<Clock size={16} />} label="Læg på en dag" onClick={() => setShowTime((v) => !v)} />
+          <SmallAction
+            icon={<Clock size={16} />}
+            label={node.dueAt ? 'Ret tidspunkt' : 'Har den en rigtig tid?'}
+            onClick={() => {
+              if (node.dueAt) {
+                const d = new Date(node.dueAt)
+                setDueDate(isoDate(d))
+                setDueTime(node.dueHasTime ? `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : '')
+              }
+              setShowTime((v) => !v)
+            }}
+          />
         )}
         {!isRoot && !node.isArea && (
           <SmallAction
@@ -324,47 +353,114 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
             className="overflow-hidden"
           >
             <div className="mt-4 rounded-xl2 border border-line bg-surface p-4">
-              <p className="text-[14px] text-muted">Helt frivilligt. Deadlines er ikke påkrævet her.</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {[0, 1, 2, 3, 7].map((d) => {
-                  const date = isoDate(new Date(Date.now() + d * 86_400_000))
-                  return (
-                    <button
-                      key={d}
-                      onClick={() => void schedule(node.id, date, node.scheduledPart)}
-                      className={`focus-ring min-h-[44px] rounded-full border px-4 text-[14px] active:scale-95 ${
-                        node.scheduledDate === date ? 'border-ink/25 bg-accent-soft' : 'border-line bg-raised'
-                      }`}
-                    >
-                      {relativeDay(date)}
-                    </button>
-                  )
-                })}
+              <p className="text-[14px] leading-relaxed text-muted">
+                Kun hvis den har en <strong className="font-medium text-ink">rigtig</strong> tid — en
+                lægetid, en eksamen, en frist. De fleste ting har ikke en, og så er det bedre at lade
+                være.
+              </p>
+
+              <div className="mt-3.5 flex gap-2">
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="min-h-[50px] flex-1 rounded-xl2 border border-line bg-raised px-3.5 text-[15px] outline-none focus:border-ink/20"
+                  aria-label="Dato"
+                />
+                <input
+                  type="time"
+                  value={dueTime}
+                  onChange={(e) => setDueTime(e.target.value)}
+                  className="min-h-[50px] w-[112px] rounded-xl2 border border-line bg-raised px-3.5 text-[15px] outline-none focus:border-ink/20"
+                  aria-label="Klokkeslæt"
+                />
               </div>
-              <div className="mt-2.5 flex flex-wrap gap-2">
-                {PARTS.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => void schedule(node.id, node.scheduledDate ?? isoDate(new Date()), p)}
-                    className={`focus-ring min-h-[44px] rounded-full border px-4 text-[14px] active:scale-95 ${
-                      node.scheduledPart === p ? 'border-ink/25 bg-accent-soft' : 'border-line bg-raised'
-                    }`}
-                  >
-                    {PART_LABELS[p]}
-                  </button>
-                ))}
-              </div>
-              {node.scheduledDate && (
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => void schedule(node.id, undefined, undefined)}
-                  className="focus-ring mt-3 text-[13px] text-faint"
+                  onClick={async () => {
+                    await setDue(node.id, dueDate, dueTime, 'appointment')
+                    setShowTime(false)
+                  }}
+                  disabled={!dueDate}
+                  className={`focus-ring min-h-[52px] rounded-xl2 border px-3 text-[14px] leading-tight active:scale-[0.98] ${
+                    dueDate ? 'border-line bg-raised' : 'border-line/60 opacity-40'
+                  } ${node.dueKind === 'appointment' ? 'border-ink/25 bg-accent-soft' : ''}`}
+                >
+                  Fast tid
+                  <span className="mt-0.5 block text-[11.5px] text-faint">Lægetid, eksamen</span>
+                </button>
+                <button
+                  onClick={async () => {
+                    await setDue(node.id, dueDate, dueTime, 'deadline')
+                    setShowTime(false)
+                  }}
+                  disabled={!dueDate}
+                  className={`focus-ring min-h-[52px] rounded-xl2 border px-3 text-[14px] leading-tight active:scale-[0.98] ${
+                    dueDate ? 'border-line bg-raised' : 'border-line/60 opacity-40'
+                  } ${node.dueKind === 'deadline' ? 'border-ink/25 bg-accent-soft' : ''}`}
+                >
+                  Frist
+                  <span className="mt-0.5 block text-[11.5px] text-faint">Skal være klar inden</span>
+                </button>
+              </div>
+
+              <p className="mt-3 text-[12px] leading-relaxed text-faint">
+                En fast tid bliver aldrig foreslået som "start nu" — den vises bare, når dagen kommer.
+                En frist rykker op i rækkefølgen, jo tættere den kommer.
+              </p>
+
+              {node.dueAt && (
+                <button
+                  onClick={() => void useStore.getState().updateNode(node.id, { dueAt: undefined, dueKind: undefined, dueHasTime: undefined, urgency: 'none' })}
+                  className="focus-ring mt-2 flex min-h-[44px] items-center text-[13px] text-faint"
                 >
                   Fjern tidspunktet igen
                 </button>
               )}
+
+              <div className="mt-4 border-t border-line pt-3">
+                <p className="text-[12.5px] text-faint">Eller læg den løst på en dag, uden krav:</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[0, 1, 2, 7].map((d) => {
+                    const date = isoDate(new Date(Date.now() + d * 86_400_000))
+                    return (
+                      <button
+                        key={d}
+                        onClick={() => void schedule(node.id, date, node.scheduledPart)}
+                        className={`focus-ring min-h-[44px] rounded-full border px-4 text-[13.5px] active:scale-95 ${
+                          node.scheduledDate === date ? 'border-ink/25 bg-accent-soft' : 'border-line bg-raised'
+                        }`}
+                      >
+                        {relativeDay(date)}
+                      </button>
+                    )
+                  })}
+                  {PARTS.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => void schedule(node.id, node.scheduledDate ?? isoDate(new Date()), p)}
+                      className={`focus-ring min-h-[44px] rounded-full border px-4 text-[13.5px] active:scale-95 ${
+                        node.scheduledPart === p ? 'border-ink/25 bg-accent-soft' : 'border-line bg-raised'
+                      }`}
+                    >
+                      {PART_LABELS[p]}
+                    </button>
+                  ))}
+                </div>
+                {node.scheduledDate && (
+                  <button
+                    onClick={() => void schedule(node.id, undefined, undefined)}
+                    className="focus-ring mt-2 flex min-h-[44px] items-center text-[13px] text-faint"
+                  >
+                    Fjern dagen igen
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
+
       </AnimatePresence>
 
       {!isRoot && (

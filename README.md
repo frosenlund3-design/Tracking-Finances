@@ -6,6 +6,28 @@ En organiseringsapp bygget til ADHD-hjerner. Ingen kalender, ingen lang to-do-li
 Alt kører lokalt i browseren. Ingen konto, ingen server, ingen betalte API'er,
 ingen sporing. Appen kan installeres på hjemmeskærmen og virker uden internet.
 
+---
+
+## Sådan sender du den videre
+
+**Én gang, af dig:**
+
+1. Gå til repoets **Settings → Pages** og sæt *Source* til **GitHub Actions**.
+2. Det er det. Hvert push bygger og lægger appen op.
+
+Du får et link i stil med
+`https://frosenlund3-design.github.io/Tracking-Finances/`. Det link er alt, der
+skal sendes.
+
+**Hos hende:** hun åbner linket i Safari. Efter et par sekunder dukker der en
+lille boks op, der viser præcis hvad hun skal trykke på — del-ikonet og "Føj til
+hjemmeskærm". Så ligger Loops som en app på hjemmeskærmen, åbner i fuld skærm og
+virker uden internet.
+
+Der er ingen konto, ingen mail og ingen kode at oprette først. Hun trykker "Kom i
+gang", svarer på syv hurtige spørgsmål og skriver sin første tanke ind. Alt hun
+skriver bliver på hendes telefon.
+
 ```bash
 npm install
 npm run dev        # udvikling (inkl. demo-data)
@@ -160,6 +182,55 @@ pointen med succeskriteriet — appen skal have hende ud af appen.
 Det er aldrig en lås. "Jeg vil gerne én mere" hæver dagens mål med én i stedet
 for bare at rydde flaget, så "nok" bliver ved med at være et rigtigt tal.
 
+**Men den er spærret.** At føle sig færdig, mens en frist løber ud i aften, er
+værre end ikke at føle sig færdig — det er appen, der hjælper hende med at
+misse noget. Så afslutningsskærmen kommer kun frem, når der ikke er noget
+tilbage, som *virkelig* ikke kan vente: fristerne i dag, de faste tider i dag,
+det overskredne. Er målet nået, men der stadig ligger noget rigtigt, siger den
+det i stedet:
+
+> **Du har lavet nok — der er bare én ting med en tid**
+> Resten kan sagtens vente til i morgen. De her har en rigtig tid.
+
+Alt det andet — de atten "engang"-loops — er præcis det, hun har lov til at
+føle sig færdig på trods af.
+
+### Rigtige tidspunkter
+
+De fleste loops har ingen deadline, og opfundne deadlines er præcis den vej,
+et roligt system bliver til den stressende kalender hun i forvejen ikke gider.
+Så en tid er valgfri alle steder — men når der er en rigtig én, bliver den
+behandlet som rigtig. `deadlines.ts` skelner mellem to ting, fordi de opfører
+sig forskelligt:
+
+- **Frist** — skal være færdig inden. Den kan laves i forvejen, og den rykker
+  op i rækkefølgen, jo tættere den kommer. En frist i dag slår alt andet.
+- **Fast tid** — sker på det tidspunkt, uanset hvad du gjorde. En lægetid eller
+  en eksamen er aldrig "start nu", den er "vær der 14.30". Derfor holdes faste
+  tider helt ude af "hvad skal jeg nu"-motoren og vises for sig selv øverst på
+  forsiden.
+
+Brain dump'en fanger dem selv: *"Lægetid på fredag kl. 9"* bliver til **Lægetid**,
+fast tid, fredag 09.00. *"Aflever ansøgning senest på torsdag"* bliver til
+**Aflever ansøgning**, frist, torsdag.
+
+### Kan man stole på tiderne?
+
+"Hvis der står 2 min, skal det faktisk tage 2 min." Det er ikke en kosmetisk
+detalje: med tidsblindhed er der ingen uafhængig måde at tjekke det på, så
+tallet skal kunne bæres. Ét estimat, der viser sig at være en fyrre minutters
+sump, og så betyder tallet ingenting nogensinde igen.
+
+Så `calibration.ts` måler. Når en opgave startes i start-tilstand og gøres
+færdig i samme omgang, ved appen hvor lang tid den faktisk tog. Forholdet mellem
+virkelig og anslået tid bliver til en personlig faktor, og hver eneste tid, der
+vises, går igennem den. Tager hendes ti-minutters-opgaver i virkeligheden
+fjorten, så står der fjorten.
+
+Det er en median, ikke et gennemsnit — én afbrudt eftermiddag skal ikke forgifte
+alle fremtidige estimater. Og i start-tilstand kører uret synligt, så hun selv
+kan se, at de to minutter var to minutter.
+
 ### Det der har ligget for længe
 
 `attention.ts` scanner efter loops der er blevet skubbet flere gange, ligger
@@ -190,6 +261,23 @@ tilpasse sig. En app der lister tolv forsinkede ting har fortalt brugeren noget
 hun allerede vidste og havde det skidt med; en app der spørger kan finde ud af
 hvorfor.
 
+### Stemme
+
+Der er en mikrofonknap i både brain dump'en og coachen. Den bruger browserens
+egen stemmegenkendelse sat til `da-DK` — på iPhone er det den samme motor som
+mikrofon-tasten på tastaturet, og den er god til dansk.
+
+To ting siges ligeud, fordi de er sande:
+
+- Diktering er det ene sted i Loops, der ikke er rent lokalt. Lyden sendes til
+  Apple eller Google for at blive lavet om til tekst. Det står på skærmen før
+  første optagelse, og det kan slås fra i indstillinger.
+- Ingen diktering er 100% præcis. Derfor lander teksten altid i et felt, hun kan
+  rette i, før den sendes — appen handler aldrig på ord, hun ikke har set.
+
+Har browseren ingen stemmegenkendelse, vises knappen slet ikke frem for at vises
+i stykker.
+
 ### Coach
 
 En regelmotor, ikke en sprogmodel: intent-genkendelse, tilstand (energi, mental
@@ -218,6 +306,8 @@ Ingen knap i Loops lover noget browseren ikke kan:
   hvad appen gør.
 - **Koden kan ikke nulstilles.** Der er ingen konto at sende en mail til. Det
   står både før hun vælger en kode og på låseskærmen.
+- **Diktering er ikke 100% præcis, og ikke rent lokal.** Begge dele står på
+  skærmen, og teksten skal godkendes af hende, før den bruges.
 
 ---
 
