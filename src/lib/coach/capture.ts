@@ -16,6 +16,7 @@
 
 import { CERTAIN, parseBrainDump, type ParsedLoop } from '@/lib/brainDump'
 import type { NodeMap } from '@/lib/nodes'
+import { understand } from './understand'
 
 /** Above this many, we work through them together rather than just filing them. */
 export const MANY = 3
@@ -72,6 +73,11 @@ const NEGATED =
 export function detectCaptures(text: string, map: NodeMap, now = new Date()): CaptureResult | null {
   const t = text.trim()
   if (t.length < 6) return null
+  // Asking for help is not a task to be filed. The dispatcher checks this too;
+  // it is repeated here because this is the module that must never get it
+  // wrong, and "jeg har brug for hjælp til at sortere mine taks" becoming a
+  // to-do called "Hjælp til at sortere mine taks" is the exact failure.
+  if (understand(t).isRequest) return null
   if (NOT_A_CAPTURE.test(t)) return null
   if (ALREADY_DONE.test(t)) return null
   if (NEGATED.test(t)) return null

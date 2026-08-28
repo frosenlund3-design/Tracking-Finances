@@ -20,6 +20,7 @@
 import type { LoopNode, TimePart } from '@/db/types'
 import { GRANULARITIES, decompose, type Granularity } from '@/lib/decompose'
 import { analyse, toImperativeSentence } from '@/lib/language'
+import { understand } from './understand'
 import { cleanFragment } from '@/lib/brainDump'
 import { knowHowFor } from '@/lib/knowhow'
 import { CUE_SUGGESTIONS, cueSentence, looksLikeATime } from '@/lib/cues'
@@ -55,6 +56,15 @@ export interface AgentInput {
   task: LoopNode | null
   /** The circles she could move something into, so the coach can name them. */
   circles?: Array<{ id: string; title: string }>
+  /**
+   * Whether she actually referred to this task, rather than it being whatever
+   * the app would have suggested next.
+   *
+   * Only the catch-all cares. Commands like "del den op" are about the task in
+   * front of her either way, but answering an unrecognised question with facts
+   * about a loop she never mentioned reads as not listening.
+   */
+  namedTask?: boolean
   now?: Date
 }
 
@@ -219,7 +229,7 @@ function capitalise(s: string): string {
 
 const NEEDS_TASK = 'Sig hvilken opgave, så gør jeg det. Skriv bare et par ord fra titlen.'
 
-export function handleAgentRequest({ text, task, circles = [], now = new Date() }: AgentInput): AgentResult | null {
+export function handleAgentRequest({ text, task, circles = [], namedTask = false, now = new Date() }: AgentInput): AgentResult | null {
   const t = text.trim()
   if (!t) return null
   const lower = t.toLowerCase()
@@ -525,6 +535,13 @@ export function handleAgentRequest({ text, task, circles = [], now = new Date() 
   }
 
   /* --- questions --------------------------------------------------- */
+  //
+  // But never a question about the coach itself. "Skulle du ikke være
+  // terapeut?" is not a question about whatever loop was on screen, and
+  // answering it as one is how somebody stops believing there is anything
+  // there. Those are handled before this is ever called; this is the guard.
+  if (understand(t).meta) return null
+
   const q = detectQuestion(t)
   if (q && task) return answerQuestion(q, task, now)
 
@@ -535,7 +552,7 @@ export function handleAgentRequest({ text, task, circles = [], now = new Date() 
   // "det ved jeg ikke, men her er hvad jeg ved" is a real answer. Being handed
   // a motivational line instead of an answer is how an assistant stops being
   // asked anything.
-  if (/\?\s*$/.test(t) && task) {
+  if (/\?\s*$/.test(t) && task && namedTask) {
     const know = knowHowFor(task.title)
     const next = task.steps.find((s) => !s.done)
     const facts = [

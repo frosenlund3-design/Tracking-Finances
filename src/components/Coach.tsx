@@ -16,6 +16,10 @@ import { ROOT_ID } from '@/db/db'
 import { observe } from '@/lib/coach/memory'
 import { handleAgentRequest, type AgentEffect } from '@/lib/coach/agent'
 import { matchTriggers } from '@/lib/coach/triggers'
+import { TOPIC_NAMES, namedTopic, understand, type AskTopic } from '@/lib/coach/understand'
+import { answerMeta } from '@/lib/coach/meta'
+import { FIRST_MOVE, prioritise, rightNow, summarise, triage } from '@/lib/coach/help'
+import { landlordRefused, landlordTemplate, moneyAnswer, rentAnswer } from '@/lib/coach/crisis'
 import { alreadyLine, captureOffer, detectCaptures, manyOffer } from '@/lib/coach/capture'
 import type { ParsedLoop } from '@/lib/brainDump'
 import type { ProcrastinationReason } from '@/db/types'
@@ -76,6 +80,12 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const [queue, setQueue] = useState<ParsedLoop[]>([])
   /** Whether the batch being worked through was a single thing. */
   const handledOne = useRef(false)
+  /** The rest of a multi-part request, so "og hvad så med økonomien" works. */
+  const [pendingAsks, setPendingAsks] = useState<AskTopic[]>([])
+  /** The current message, readable from the ask handler. */
+  const trimmedRef = useRef('')
+  /** What the conversation is about, so "hjælp mig nu" knows what "det" is. */
+  const lastSubject = useRef<AskTopic | null>(null)
   const used = useRef<Strategy[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -280,6 +290,84 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     haptic('soft')
   }
 
+  /**
+   * Answer what she asked for, in the order she asked.
+   *
+   * Several things in one message is the normal case, not the exception. She
+   * writes one message and means three, and answering one of them chosen at
+   * random is worse than answering none: it looks like it understood.
+   *
+   * So the whole list is acknowledged, the first one is answered properly, and
+   * the rest are named as the next thing. Money jumps the queue: whatever else
+   * is in the message, that is the sentence that matters.
+   */
+  const answerAsks = async (
+    topics: AskTopic[],
+    urgent: boolean,
+    resuming = false,
+  ): Promise<boolean> => {
+    const ctx = {
+      energy: prefs.currentEnergy,
+      now: new Date(),
+      profile,
+      goodEnoughMode: prefs.goodEnoughMode,
+    }
+    const ordered = [...topics].sort((a, b) => (a === 'money' ? -1 : b === 'money' ? 1 : 0))
+    const first = ordered[0]
+    const rest = ordered.slice(1)
+
+    const answerFor = (): { lines: string[]; options: string[]; focusId?: string } | null => {
+      switch (first) {
+        case 'money':
+          return /husleje|leje\b|bolig|udsat/i.test(trimmedRef.current) ? rentAnswer() : moneyAnswer()
+        case 'prioritise':
+          return prioritise(map, ctx)
+        case 'sort':
+          return summarise(map)
+        case 'overwhelm':
+          return triage(map, ctx)
+        case 'start':
+          // "Bare hjælp mig nu" means one thing to do about what we are
+          // actually talking about, not a task picked out of the ranking that
+          // has nothing to do with the last five minutes.
+          return rightNow(map, ctx, lastSubject.current ? FIRST_MOVE[lastSubject.current] : undefined)
+        case 'plan-time':
+          return {
+            lines: [
+              'Det kan jeg. Ikke en fyldt kalender, kun de ting hvor tidspunktet faktisk gør en forskel.',
+              'Jeg kigger på åbningstider, hvornår du har energi, og hvad der har en frist.',
+            ],
+            options: ['Ja, fordel dem', 'Ikke nu'],
+          }
+        default:
+          return null
+      }
+    }
+
+    const answer = answerFor()
+    if (!answer) return false
+
+    if (answer.focusId) setNamedTaskId(answer.focusId)
+    await new Promise((r) => setTimeout(r, prefs.reducedStimulation ? 100 : 380))
+
+    const lead =
+      first === 'money' || urgent || resuming || !rest.length
+        ? []
+        : [`Du spurgte om ${ordered.length} ting. Vi tager dem én ad gangen.`]
+    const tail = rest.length
+      ? [rest.length === 1 ? `Bagefter tager vi ${TOPIC_NAMES[rest[0]]}.` : `Bagefter: ${rest.map((t) => TOPIC_NAMES[t]).join(', ')}.`]
+      : []
+
+    // An urgent "hjælp mig nu" is an interjection inside the conversation, not
+    // a new agenda, so it leaves the rest of what she asked for standing.
+    if (first !== 'start') {
+      setPendingAsks(rest)
+      lastSubject.current = first
+    }
+    await say([...lead, ...answer.lines, ...tail], answer.options)
+    return true
+  }
+
   /** Work through things she emptied out of her head, one at a time. */
   const advanceQueue = async (rest: ParsedLoop[]) => {
     setQueue(rest)
@@ -315,8 +403,12 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
       return
     }
 
-    const yes = /^\s*(ja|jep|jeps|yes|okay|ok|gerne|k[øo]r|please|g[øo]r det)\b/i.test(trimmed)
-    const no = /^\s*(nej|n[åa]h|nope|ellers tak|ikke|drop det)\b/i.test(trimmed)
+    // Read the whole message before anything is allowed to act on a piece of
+    // it. Everything below is downstream of this.
+    trimmedRef.current = trimmed
+    const said = understand(trimmed)
+    const yes = said.affirmation
+    const no = said.refusal
 
     // 0. She is answering the coach's own question about what blocks a task.
     //
@@ -328,6 +420,57 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     const blockAnswer = diagnosing
       ? BLOCK_ANSWERS.find((a) => a.label.toLowerCase() === trimmed.toLowerCase())
       : undefined
+
+    // 0.5. A question about the coach is answered by the coach about itself.
+    //
+    // Never by looking at whatever task happened to be in focus. "Skulle du
+    // ikke være terapeut?" was answered as a question about a loop called
+    // "Eller bruge håndklæde faktisk)", which is the reply that ends it.
+    if (said.meta && !blockAnswer) {
+      const answer = answerMeta(said.meta)
+      setQueue([])
+      setPending(null)
+      await new Promise((r) => setTimeout(r, prefs.reducedStimulation ? 100 : 320))
+      await say(answer.lines, answer.options)
+      return
+    }
+
+    // 0.52. Follow-ups on the rent answer, which is the one place where the
+    // next question is entirely predictable.
+    if (/\b(hj[æa]lp mig med at skrive til udlejer|skriv (?:den )?(?:til udlejer|beskeden))\b/i.test(trimmed)) {
+      const a = landlordTemplate()
+      await say(a.lines, a.options)
+      return
+    }
+    if (/\b(hvad hvis de siger nej|de sagde nej|udlejer sagde nej|de vil ikke)\b/i.test(trimmed)) {
+      const a = landlordRefused()
+      await say(a.lines, a.options)
+      return
+    }
+
+    // 0.55. Picking up the rest of a multi-part request.
+    //
+    // "Ja" after "bagefter tager vi økonomien" has to mean the economy, not a
+    // yes to something three messages ago.
+    if (pendingAsks.length && (said.affirmation || /\b(og |hvad (?:s[åa] )?med|videre|n[æa]ste)\b/i.test(trimmed))) {
+      // If she named one of them, that is the one. Order in the queue does not
+      // beat what she just said.
+      const wanted = namedTopic(trimmed, pendingAsks) ?? pendingAsks[0]
+      const later = pendingAsks.filter((t) => t !== wanted)
+      setPendingAsks(later)
+      if (await answerAsks([wanted, ...later], said.urgent, true)) return
+    }
+
+    // 0.6. She is asking for something. Answer it, all of it, in her order.
+    if (said.asks.length && !blockAnswer) {
+      // A request cancels any bookkeeping that was waiting on a yes. She has
+      // moved on, and finishing the queue first is how "hjælp mig nu" got
+      // answered with "fint, den ryger ikke ind".
+      setQueue([])
+      setPending(null)
+      const handled = await answerAsks(said.asks.map((a) => a.topic), said.urgent)
+      if (handled) return
+    }
 
     // 1. Something destructive is waiting on her word.
     if (pending && !blockAnswer) {
@@ -376,7 +519,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     const liveTrigger = matchTriggers(trimmed, profile.self?.triggers).some(
       (h) => !usedTriggers.current.includes(h.trigger),
     )
-    const agent = blockAnswer ? null : handleAgentRequest({ text: trimmed, task: focus, circles })
+    const agent = blockAnswer ? null : handleAgentRequest({ text: trimmed, task: focus, circles, namedTask: !!named || !!nodeId })
     if (agent && !(liveTrigger && !agent.effect)) {
       if (agent.effect && agent.confirm) setPending(agent.effect)
       else if (agent.effect) await applyEffect(agent.effect)
@@ -386,7 +529,9 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     }
 
     // 4. Something she has to do, said out loud in passing.
-    const captured = blockAnswer ? null : detectCaptures(trimmed, map)
+    // Asking for help is not a task to be filed. This is the flag that stops
+    // "jeg har brug for hjælp til at sortere mine taks" becoming a to-do.
+    const captured = blockAnswer || said.isRequest ? null : detectCaptures(trimmed, map)
     if (captured) {
       await new Promise((r) => setTimeout(r, prefs.reducedStimulation ? 100 : 320))
       const known = alreadyLine(captured.already)

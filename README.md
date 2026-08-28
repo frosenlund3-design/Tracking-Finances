@@ -457,6 +457,63 @@ to sekunder, er en samtale der starter. En hilsen er ikke.
 De sidste seks gemmes i indstillingerne, så det holder også efter en
 genstart.
 
+### Den læser hele beskeden, før noget som helst reagerer på en stump af den
+
+Det her lag findes på grund af én samtale, der gik galt. Hun skrev:
+
+> Jeg har brug for hjælp til at sortere mine taks, og derefter prioritere de top
+> 3-5 vigtigste, og også brug for hjælp til økonomi og hvordan jeg skal skaffe
+> penge til husleje..
+
+og coachen svarede: *"Jeg hørte en opgave i det: 'Hjælp til at sortere mine
+taks'. Skal jeg lægge den ind?"*
+
+Tre ting var galt, og alle tre kom fra det samme sted: dele af appen
+mønstergenkendte brudstykker af beskeden i stedet for at læse den.
+
+1. **Hun bad om hjælp.** At bede om hjælp er ikke en opgave, der skal
+   arkiveres. Der må intet gemmes fra en besked, der indeholder en anmodning.
+2. **Hun bad om tre ting.** At svare på én af dem, valgt vilkårligt, er værre
+   end at svare på ingen, for det ser ud som om den forstod.
+3. *"Skulle du ikke være terapeut?"* er et spørgsmål om coachen. Det blev
+   besvaret som et spørgsmål om en opgave, der hed "Eller bruge håndklæde
+   faktisk)". Det er den slags svar, der afslutter forholdet.
+
+`lib/coach/understand.ts` læser først. Alt andet i coachen ligger nedenstrøms
+for det, og ingen af delene ser den rå tekst mere.
+
+### Husleje man ikke kan betale
+
+Det var den sætning, der lå midt i beskeden, og den, appen trådte hen over.
+Når den er der, er det den, der betyder noget, og resten kan vente.
+
+Indholdet er skrevet efter to regler. Det skal være sandt og brugbart i Danmark
+i dag for en, der ikke kan betale huslejen. Ikke "lav et budget", men det en
+gældsrådgiver rent faktisk ville sige først, i den rækkefølge de ville sige det.
+Og det skal have en størrelse, en ADHD-hjerne i panik kan bære: ét opkald i dag
+og en kort liste til ugen. Eksekutiv funktion er det første, der ryger under
+akut stress.
+
+Det vigtigste er også det, færrest ved: **sig det til udlejer, før fristen løber
+ud.** En aftale om at betale i to rater er noget helt andet end en restance.
+Derefter kommunens enkeltydelse, boligstøtten der måske ikke er rettet efter en
+ændret indkomst, og den gratis gældsrådgivning. Og at man ikke kan sættes ud
+uden et skriftligt påkrav med en frist først.
+
+Den kan også skrive beskeden til udlejer, og den ved hvad man gør, hvis de
+siger nej.
+
+Den siger tydeligt, at den ikke er rådgiver, og at det ikke er juridisk
+rådgivning. Pointen er at få hende til dem, hvis job det er, før fristen frem
+for efter.
+
+### Spørgsmål om coachen selv
+
+*"Skulle du ikke være terapeut?"* fortjener et rigtigt svar, og svaret er nej.
+Hun har en ph.d.; hun regner ud hvad det her er inden for en uge, og hvis det
+har ladet som om, bliver alt andet det har sagt også mistænkeligt. At sige lige
+ud hvad det er køber mere tillid end en god efterligning af et menneske ville.
+
 ### Coachen kan gøre ting, ikke bare sige ting
 
 En assistent, der kun kan snakke, er endnu en ting man skal styre. Og det at

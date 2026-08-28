@@ -17,6 +17,7 @@ import { detectCaptures } from '../src/lib/coach/capture'
 import { matchTriggers } from '../src/lib/coach/triggers'
 import { observe } from '../src/lib/coach/memory'
 import { chooseOpening, type OpeningContext } from '../src/lib/coach/opening'
+import { understand, namedTopic } from '../src/lib/coach/understand'
 import type { Completion } from '../src/db/types'
 import type { LoopNode } from '../src/db/types'
 
@@ -290,6 +291,43 @@ console.log('\ncoachen åbner med noget nyt hver gang')
     chooseOpening({ ...base, daysSinceLastChat: 9 }).id === 'been-a-while')
   check('men ikke den samme to gange i træk',
     chooseOpening({ ...base, energy: 10, recent: ['low-energy'] }).id !== 'low-energy')
+}
+
+/* ------------------------------------------------------------------ *
+ * Reading the message before acting on a piece of it.
+ *
+ * Every case here comes from one conversation that went badly.
+ * ------------------------------------------------------------------ */
+
+console.log('\ncoachen læser hele beskeden')
+{
+  const HELP =
+    'Jeg har brug for hjælp til at sortere mine taks, og derefter prioritere de top 3-5 vigtigste, ' +
+    'og også brug for hjælp til økonomi og hvordan jeg skal skaffe penge til husleje..'
+  const u = understand(HELP)
+  check('den hører alle tre ting, ikke kun den første',
+    u.asks.map((a) => a.topic).join(',') === 'sort,prioritise,money', u.asks.map((a) => a.topic).join(','))
+  check('og den ved at det er en anmodning', u.isRequest)
+  check('så den bliver ALDRIG til en opgave', !detectCaptures(HELP, {})?.items.length,
+    detectCaptures(HELP, {})?.items.map((i) => i.title).join(', '))
+
+  check('"skulle du ikke være terapeut?" er et spørgsmål om coachen',
+    understand('Skulle du ikke være terapeut?').meta === 'are-you-a-therapist')
+  check('og agenten holder fingrene fra det',
+    handleAgentRequest({ text: 'Skulle du ikke være terapeut?', task: TASK }) === null)
+  check('"er du et menneske?" ligeså', understand('Er du et menneske?').meta === 'are-you-real')
+  check('"hvad kan du?" ligeså', understand('Hvad kan du?').meta === 'what-can-you-do')
+
+  check('"nej bare hjælp mig nuu" er et råb om hjælp, ikke et nej til noget',
+    understand('Nej bare hjælp mig nuu').asks[0]?.topic === 'start' &&
+      understand('Nej bare hjælp mig nuu').urgent)
+
+  check('"og hvad så med rækkefølgen" peger på rækkefølgen',
+    namedTopic('Okay. Og hvad så med rækkefølgen?', ['sort', 'prioritise']) === 'prioritise')
+
+  check('almindelige opgaver er stadig opgaver',
+    !understand('Jeg skal huske at ringe til tandlægen').isRequest &&
+      !!detectCaptures('Jeg skal huske at ringe til tandlægen', {})?.items.length)
 }
 
 console.log(failures ? `\n${failures} FAILED\n` : '\nalt passerer\n')

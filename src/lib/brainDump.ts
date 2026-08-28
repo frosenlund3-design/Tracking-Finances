@@ -291,7 +291,7 @@ const LEAD_ADVERBS =
 
 /** Filler that carries no task information. */
 const LEAD_FILLER =
-  /^(?:og\s+|s[åa]\s+|men\s+|ogs[åa]\s+|jeg\s+|man\s+|der\s+|vi\s+|det\s+|lige\s+|desuden\s+|derudover\s+|plus\s+at\s+|dertil\s+|(?:hvorn[åa]r|hvordan|hvorfor|hvad|hvem|hvor)\s+(?=skal|kan|b[øo]r|skulle|m[åa]))/i
+  /^(?:og\s+|s[åa]\s+|men\s+|ogs[åa]\s+|eller\s+|jeg\s+|man\s+|der\s+|vi\s+|det\s+|lige\s+|desuden\s+|derudover\s+|plus\s+at\s+|dertil\s+|(?:hvorn[åa]r|hvordan|hvorfor|hvad|hvem|hvor)\s+(?=skal|kan|b[øo]r|skulle|m[åa]))/i
 
 const MODALS =
   /^(?:skal(?:\s+lige)?(?:\s+ogs[åa])?|mangler(?:\s+ogs[åa])?|b[øo]r|vil\s+gerne|vil|har\s+brug\s+for|er\s+n[øo]dt\s+til|n[øo]dt\s+til|trænger\s+til|skulle|kunne|burde|husk(?:e)?\s+p[åa]?|husk(?:e)?)\s*(?:at\s+)?/i
@@ -424,7 +424,17 @@ export function cleanFragment(fragment: string): string {
   // "Hun sagde at jeg skulle sende papirerne", who said it is context; what
   // she has to do is the task. Left in, the title read as reported speech and
   // the step generator had no verb to work with.
-  let s = fragment.trim().replace(/^\s*[-–,*+]\s*/, '').replace(REPORTED_PREFIX, '')
+  //
+  // The stray bracket matters too. A parenthesis whose partner was lost when
+  // the line was split turned "(eller bruge håndklæde faktisk)" into a loop
+  // called "Eller bruge håndklæde faktisk)".
+  const trimmed = fragment.trim()
+  const unbalanced = (trimmed.match(/\)/g) ?? []).length > (trimmed.match(/\(/g) ?? []).length
+  let s = trimmed
+    .replace(/^\s*[-–,*+]\s*/, '')
+    .replace(/^\s*[)\]}]+\s*/, '')
+  if (unbalanced) s = s.replace(/\s*[)\]}]+\s*$/, '')
+  s = s.replace(REPORTED_PREFIX, '')
   for (let i = 0; i < 5; i++) {
     const before = s
     s = s.replace(LEAD_FILLER, '').replace(MODALS, '').replace(LEAD_ADVERBS, '').trim()
