@@ -14,6 +14,8 @@ import { totalBalanceMinor, listAccounts } from '@/services/accounts';
 import { listTransactions } from '@/services/transactions';
 import { upcomingCharges, listSubscriptions } from '@/services/subscriptions';
 import { listInsights } from '@/services/insights';
+import { mergeObservations } from '@/services/observations';
+import { ObservationList } from '@/components/observation-list';
 import { detectFindings } from '@/services/anomalies';
 import { reviewCount } from '@/services/review';
 import { StatTile } from '@/components/money';
@@ -70,13 +72,16 @@ export default async function DashboardPage() {
     listTransactions(user.id, {}, { limit: 6 }),
     upcomingCharges(user.id, 14),
     listSubscriptions(user.id, { status: 'active' }),
-    listInsights(user.id, 3),
+    listInsights(user.id, 8),
     showBusiness ? businessSummary(user.id, month.start, month.end, currency) : null,
     detectFindings(user.id, currency),
     reviewCount(user.id),
   ]);
 
   const hasData = accounts.length > 0 && totals.transactionCount + recent.total > 0;
+  // Status figures are already the stat tiles at the top of this screen, so
+  // only the signals are worth repeating here.
+  const { signals } = mergeObservations(findings, insights);
   const monthlySubscriptionCost = subscriptions.reduce((s, x) => s + x.monthlyEquivalentMinor, 0);
 
   if (!hasData) {
@@ -194,7 +199,7 @@ export default async function DashboardPage() {
         </Link>
       ) : null}
 
-      {findings.length > 0 ? (
+      {signals.length > 0 ? (
         <section>
           <SectionHeading
             title="Worth a look"
@@ -204,39 +209,10 @@ export default async function DashboardPage() {
               </Link>
             }
           />
-          <div className="mt-2 space-y-2">
-            {findings.slice(0, 2).map((finding) => (
-              <Link key={`${finding.kind}-${finding.title}`} href={finding.href} className="pressable block">
-                <Card className="p-4">
-                  <p className="text-[14px] font-medium leading-snug">{finding.title}</p>
-                  <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">{finding.body}</p>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {insights.length > 0 ? (
-        <section>
-          <SectionHeading
-            title="Insights"
-            action={
-              <Link href="/insights" className="text-[13px] font-medium text-accent">
-                All
-              </Link>
-            }
-          />
-          <div className="mt-2 space-y-2">
-            {insights.map((insight) => (
-              <Card key={insight.id} className="p-4">
-                <div className="flex items-start gap-2">
-                  <p className="flex-1 text-[14px] font-medium leading-snug">{insight.title}</p>
-                  {insight.severity === 'notable' ? <Badge tone="notice">Notable</Badge> : null}
-                </div>
-                <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">{insight.body}</p>
-              </Card>
-            ))}
+          <div className="mt-2">
+            {/* Three on the home screen. The rest live on Insights, which is
+                where someone goes when they want to read rather than glance. */}
+            <ObservationList observations={signals.slice(0, 3)} limit={3} />
           </div>
         </section>
       ) : null}

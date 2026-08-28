@@ -3,8 +3,10 @@ import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
 import { monthRange } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
-import { generateInsights, listInsights } from '@/services/insights';
+import { generateInsights } from '@/services/insights';
 import { detectFindings } from '@/services/anomalies';
+import { mergeObservations } from '@/services/observations';
+import { ObservationList, StatusSummary } from '@/components/observation-list';
 import { reviewCount } from '@/services/review';
 import {
   categoryBreakdown,
@@ -62,6 +64,8 @@ export default async function InsightsPage() {
     );
   }
 
+  const { signals, status } = mergeObservations(findings, insights);
+
   const notableMoves = movements
     .filter((m) => m.changePct !== null && Math.abs(m.changePct) >= 20 && m.previousMinor > 0)
     .slice(0, 6);
@@ -105,35 +109,25 @@ export default async function InsightsPage() {
         </Link>
       ) : null}
 
-      {findings.length > 0 ? (
+      {signals.length > 0 ? (
         <section>
           <h2 className="px-1 text-[13px] font-medium uppercase tracking-wide text-ink-subtle">
             Worth a look
           </h2>
-          <div className="mt-2 space-y-2">
-            {findings.slice(0, 6).map((finding) => (
-              <Link key={`${finding.kind}-${finding.title}`} href={finding.href} className="pressable block">
-                <Card className="p-4">
-                  <p className="text-[15px] font-medium leading-snug">{finding.title}</p>
-                  <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">{finding.body}</p>
-                </Card>
-              </Link>
-            ))}
+          <div className="mt-2">
+            <ObservationList observations={signals} limit={5} />
           </div>
         </section>
       ) : null}
 
-      {insights.length > 0 ? (
-        <section className="space-y-2">
-          {insights.map((insight) => (
-            <Card key={insight.id} className="p-4">
-              <div className="flex items-start gap-2">
-                <p className="flex-1 text-[15px] font-medium leading-snug">{insight.title}</p>
-                {insight.severity === 'notable' ? <Badge tone="notice">Notable</Badge> : null}
-              </div>
-              <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">{insight.body}</p>
-            </Card>
-          ))}
+      {status.length > 0 ? (
+        <section>
+          <h2 className="px-1 text-[13px] font-medium uppercase tracking-wide text-ink-subtle">
+            Where things stand
+          </h2>
+          <div className="mt-2">
+            <StatusSummary observations={status} />
+          </div>
         </section>
       ) : null}
 
