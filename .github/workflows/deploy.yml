@@ -1,8 +1,12 @@
 name: Deploy til GitHub Pages
 
+# Only main. Pages deploys from the default branch anyway, and a push to the
+# working branch used to cancel the main deploy that was already running,
+# because both landed in the same concurrency group. The result was a green
+# merge and an old app still live.
 on:
   push:
-    branches: [main, claude/loops-adhd-app-b9rmhw]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -10,9 +14,12 @@ permissions:
   pages: write
   id-token: write
 
+# Queue, never cancel. Cancelling a Pages deploy halfway leaves whatever was
+# there before, so a cancelled run means the newest commit silently did not
+# ship.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
