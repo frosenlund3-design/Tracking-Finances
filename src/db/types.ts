@@ -99,9 +99,30 @@ export interface MicroStep {
   done: boolean
   /** The very first physical action — used by Start Mode's "just do this" screen. */
   physical?: boolean
+  /**
+   * Steps that ask her to write something down need somewhere to write it.
+   * "Skriv de 3 vigtigste ting på listen" with only a checkbox is a step you
+   * cannot actually do inside the app — she has to go find another surface,
+   * which is exactly the friction this app exists to remove.
+   */
+  captureLabel?: string
+  captured?: string
 }
 
 export type TimePart = 'morning' | 'midday' | 'afternoon' | 'evening'
+
+/**
+ * Something she wrote down that is not a task — context, a worry, a fact worth
+ * keeping. Notes never enter the loop tree, so they never add mental load and
+ * never show up as something to start.
+ */
+export interface Note {
+  id: string
+  text: string
+  createdAt: number
+  /** The loop this was written alongside, when there was one. */
+  nodeId?: string
+}
 
 export interface BrainDumpEntry {
   id: string

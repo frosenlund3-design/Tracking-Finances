@@ -20,7 +20,22 @@ export interface ParsedTime {
   kind: 'deadline' | 'appointment'
 }
 
+/**
+ * Not everything in a brain dump is a task.
+ *
+ * "Ved ikke hvor det bliver af… ved heller ikke hvordan jeg skal kontakte dem"
+ * is context, not an action. Turning it into a loop is actively harmful: it
+ * adds to the mental load number, it shows up as something to start, and it
+ * cannot be finished — you cannot "do" a worry. So the parser classifies each
+ * fragment, and anything that is information gets kept as a note attached to
+ * the task it belongs with.
+ */
+export type ParsedKind = 'task' | 'note'
+
 export interface ParsedLoop {
+  kind: ParsedKind
+  /** For a note: the index of the task it belongs to, if any. */
+  attachTo?: number
   key: string
   /** Cleaned, imperative title. */
   title: string
@@ -39,6 +54,8 @@ export interface ParsedLoop {
   due?: ParsedTime
   steps: string[]
   goodEnough?: string
+  /** A remark that came in brackets after the action; kept as the description. */
+  aside?: string
   /** 0–1, how sure we are about the placement. Low confidence lands in Løst og fast. */
   confidence: number
 }
@@ -79,12 +96,12 @@ const RULES: Rule[] = [
   { match: /\bfris[øo]r\w*|\bnegle\w*|\bmassage\b|\bwellness\b|\bmig selv\b|\bpause\b|\bhvile\b/i, path: ['Mig', 'Aftaler'], area: 'personal', minutes: 15, energy: 30 },
   { match: /\bferie\w*|\brejse\w*|\bfly\b|\bhotel\b|\bsommerhus\w*/i, path: ['Mig', 'Ferie'], area: 'personal', minutes: 45, energy: 60 },
 
-  { match: /\bindk[øo]b\w*|\bnetto\b|\bf[øo]tex\b|\bbilka\b|\brema\b|\blidl\b|\bsuper\w*|vaskemid\w*|\bshampoo\b|\btandpasta\b|\bm[æa]lk\b|\bbr[øo]d\b|\btoiletpapir\b/i, path: ['Hjem', 'Indkøb'], area: 'home', minutes: 25, energy: 30 },
+  { match: /\bindk[øo]b\w*|\bk[øo]b\w*\s+ind\b|\bhandle\s+ind\b|\bnetto\b|\bf[øo]tex\b|\bbilka\b|\brema\b|\blidl\b|\bsuper\w*|vaskemid\w*|\bshampoo\b|\btandpasta\b|\bm[æa]lk\b|\bbr[øo]d\b|\btoiletpapir\b/i, path: ['Hjem', 'Indkøb'], area: 'home', minutes: 25, energy: 30 },
   { match: /\bopvask\w*|\bk[øo]kken\w*|\btallerken\w*|\bmadpakke\w*|\bmadplan\w*|\baftensmad\b/i, path: ['Hjem', 'Køkken'], area: 'home', minutes: 15, energy: 30 },
   { match: /\bvasket[øo]j\b|\bvask\w*|\bt[øo]rretumbler\b|\bstrygning\b|\bt[øo]j\b/i, path: ['Hjem', 'Vasketøj'], area: 'home', minutes: 10, energy: 30 },
   { match: /\breng[øo]r\w*|\bst[øo]vsug\w*|\bg[øo]re rent\b|\bryd op\b|\boprydning\b|\bgulv\w*|\bbadev[æa]rels\w*|\bst[øo]v\b|\bskrald\b|\baffald\b/i, path: ['Hjem', 'Rengøring'], area: 'home', minutes: 20, energy: 30 },
   { match: /\bbil\b|\bv[æa]rksted\w*|\bd[æa]k\b|\bsyn\b|\bbenzin\b|\bcykel\w*/i, path: ['Hjem', 'Praktisk'], area: 'home', minutes: 20, energy: 60 },
-  { match: /\bhave\w*|\bplante\w*|\bmal\w*|\breparer\w*|\bh[åa]ndv[æa]rker\w*|\bskur\b|\bloft\b|\bkælder\b/i, path: ['Hjem', 'Praktisk'], area: 'home', minutes: 45, energy: 60 },
+  { match: /\bhaven\b|\bhavearbejde\b|\bplante\w*|\bmale\b|\bmaling\b|\breparer\w*|\bh[åa]ndv[æa]rker\w*|\bskur\b|\bloftet\b|\bk[æa]lderen\b/i, path: ['Hjem', 'Praktisk'], area: 'home', minutes: 45, energy: 60 },
   { match: /\bhjem\w*|\bboligen\b|\blejlighed\w*|\bhus(?:et)?\b/i, path: ['Hjem'], area: 'home', minutes: 25, energy: 30 },
 
   { match: /\bmor\b|\bfar\b|\bs[øo]ster\b|\bbror\b|\bsvigermor\b|\bsvigerfar\b|\bfamilie\w*|\bmormor\b|\bfarmor\b/i, path: ['Familie'], area: 'family', minutes: 15, energy: 30 },
@@ -94,6 +111,43 @@ const RULES: Rule[] = [
   { match: /\bmail\w*|\be-?mail\w*|\bindbakke\w*|\bsvar p[åa]\b/i, path: ['Løst og fast'], area: 'admin', minutes: 10, energy: 60, confidence: 0.5 },
   { match: /\bpapir\w*|\bdokument\w*|\bblanket\w*|\bkontrakt\w*|\bans[øo]g\w*|\bborger\.dk\b|\bmitid\b|\be-?boks\b/i, path: ['Løst og fast'], area: 'admin', minutes: 25, energy: 60, confidence: 0.5 },
 ]
+
+/**
+ * Wording that means "here is something I know", not "here is something to do".
+ * Uncertainty, feelings, states, questions and running commentary.
+ */
+const NOTE_OPENERS =
+  /^(?:ved\s+(?:heller\s+)?ikke|jeg\s+ved\s+(?:heller\s+)?ikke|jeg\s+tror|jeg\s+f[øo]ler|jeg\s+er\s|jeg\s+har\s+det|det\s+f[øo]les|det\s+er\s|problemet\s+er|jeg\s+kan\s+ikke\s+finde\s+ud|jeg\s+orker|jeg\s+hader|jeg\s+elsker|jeg\s+savner|jeg\s+bliver|allerede|husk\s+at\s+jeg|i\s+[øo]vrigt|bare\s+s[åa]|synes)/i
+
+/** Feeling and state words with no action anywhere near them. */
+const STATE_WORDS =
+  /\b(tr[æa]t|stresset|irriteret|overv[æa]ldet|ked\s+af|bange|nerv[øo]s|flov|skyldig|forvirret|umulig\w*|un[øo]dvendig\w*|sv[æa]rt|nemt|god\s+til|d[åa]rlig\s+til|glad|lettet)\b/i
+
+/**
+ * Decides whether a fragment is something to do or something to remember.
+ *
+ * The bias is deliberate: when in doubt it is a task, because a note that
+ * should have been a task is easy to promote in the review screen, while a
+ * worry that became a task quietly inflates the mental load number and can
+ * never be closed.
+ */
+export function classifySegment(fragment: string): ParsedKind {
+  const cleaned = cleanFragment(fragment)
+  if (!cleaned) return 'note'
+
+  if (NOTE_OPENERS.test(cleaned)) return 'note'
+  // A question is information-seeking, not an action.
+  if (/\?\s*$/.test(fragment.trim())) return 'note'
+  if (/^(?:hvordan|hvorn[åa]r|hvorfor|hvad|hvem|hvor)\b/i.test(cleaned)) return 'note'
+
+  const firstThree = cleaned.split(/\s+/).slice(0, 3).join(' ')
+  const hasVerb = ACTION_VERBS.test(firstThree) || ACTION_VERBS.test(cleaned)
+
+  // Long, verbless, feeling-laden text is commentary.
+  if (!hasVerb && (STATE_WORDS.test(cleaned) || cleaned.split(/\s+/).length > 5)) return 'note'
+
+  return 'task'
+}
 
 /** Verbs that make a fragment stand on its own when splitting on "og". */
 const ACTION_VERBS =
@@ -111,6 +165,10 @@ const INFINITIVE_TO_IMPERATIVE: Record<string, string> = {
   støvsuge: 'Støvsug', arrangere: 'Arranger', male: 'Mal', kigge: 'Kig', tjekke: 'Tjek',
   snakke: 'Snak', tale: 'Tal', hjælpe: 'Hjælp',
 }
+
+/** Adverbs that survive the modal strip and turn "skal snart købe ind" into nonsense. */
+const LEAD_ADVERBS =
+  /^(?:snart|lige|ogs[åa]|vist|nok|m[åa]ske|altid|tit|ofte|stadig|endelig|virkelig|bare|godt|vel)\s+/i
 
 /** Filler that carries no task information. */
 const LEAD_FILLER =
@@ -165,7 +223,12 @@ function normaliseAbbreviations(text: string): string {
 /** Splits a messy paragraph into separate loops. */
 export function splitSegments(raw: string): string[] {
   const lines = normaliseAbbreviations(raw)
-    .split(/\r?\n|[•·]|(?:^|\s)[-–—*]\s+/g)
+    .split(/\r?\n|[•·]/g)
+    // A list marker only starts a line. Stripping it per line matters: a
+    // regex anchored with ^ across the whole blob only ever matches the very
+    // first bullet, which is how "- hold hjem rent" became a task title.
+    .map((l) => l.replace(/^\s*[-–—*+]\s*/, '').trim())
+    .flatMap((l) => l.split(/\s+[-–—]\s+/))
     .map((l) => l.trim())
     .filter(Boolean)
 
@@ -215,19 +278,52 @@ function standsAlone(fragment: string): boolean {
 
 /** Removes "jeg skal huske at ..." style scaffolding. */
 export function cleanFragment(fragment: string): string {
-  let s = fragment.trim()
-  for (let i = 0; i < 4; i++) {
+  let s = fragment.trim().replace(/^\s*[-–—*+]\s*/, '')
+  for (let i = 0; i < 5; i++) {
     const before = s
-    s = s.replace(LEAD_FILLER, '').replace(MODALS, '').trim()
+    s = s.replace(LEAD_FILLER, '').replace(MODALS, '').replace(LEAD_ADVERBS, '').trim()
     if (s === before) break
   }
   return s
 }
 
+/**
+ * Splits off a trailing aside. "hold hjem rent (allerede ret god til det)" is
+ * one action plus one remark; keeping the remark in the title makes the circle
+ * unreadable, and throwing it away loses something she chose to write down.
+ */
+export function splitAside(text: string): { main: string; aside?: string } {
+  const match = text.match(/^(.*?)\s*\(([^)]{3,})\)\s*(.*)$/)
+  if (!match) return { main: text }
+  const main = `${match[1]} ${match[3]}`.replace(/\s{2,}/g, ' ').trim()
+  if (main.length < 3) return { main: text }
+  return { main, aside: match[2].trim() }
+}
+
+/**
+ * Danish perfect forms that survive the modal strip: "skal have købt ind" comes
+ * out of cleanFragment as "have købt ind", which is not something you can do.
+ */
+const PARTICIPLE_TO_IMPERATIVE: Record<string, string> = {
+  købt: 'Køb', ringet: 'Ring', skrevet: 'Skriv', sendt: 'Send', betalt: 'Betal',
+  booket: 'Book', bestilt: 'Bestil', vasket: 'Vask', ryddet: 'Ryd', ordnet: 'Ordn',
+  fundet: 'Find', lavet: 'Lav', taget: 'Tag', hentet: 'Hent', afleveret: 'Aflever',
+  tømt: 'Tøm', fyldt: 'Fyld', støvsuget: 'Støvsug', planlagt: 'Planlæg', gjort: 'Gør',
+  svaret: 'Svar', spurgt: 'Spørg', læst: 'Læs', skiftet: 'Skift', flyttet: 'Flyt',
+}
+
 /** "ringe til tandlægen" -> "Ring til tandlægen". */
 export function toImperative(text: string): string {
-  const s = text.trim()
+  let s = text.trim()
   if (!s) return s
+
+  // "have købt ind" -> "Køb ind";  "have styr på X" -> "Få styr på X"
+  const perfect = s.match(/^have\s+([a-zæøå]+)\b\s*(.*)$/i)
+  if (perfect) {
+    const imperative = PARTICIPLE_TO_IMPERATIVE[perfect[1].toLowerCase()]
+    if (imperative) return `${imperative} ${perfect[2]}`.trim()
+    s = `få ${perfect[1]} ${perfect[2]}`.trim()
+  }
   const [first, ...rest] = s.split(/\s+/)
   const key = first.toLowerCase().replace(/[^a-zæøå]/gi, '')
   const imperative = INFINITIVE_TO_IMPERATIVE[key]
@@ -356,9 +452,34 @@ export function parseBrainDump(raw: string, now = new Date()): ParsedLoop[] {
   const result: ParsedLoop[] = []
 
   for (const segment of segments) {
+    const kind = classifySegment(segment)
+
+    if (kind === 'note') {
+      // Attach to the task just above it — that is nearly always what the note
+      // is about — or keep it standalone for the "Hovedet" list.
+      const lastTask = lastTaskIndex(result)
+      result.push({
+        kind: 'note',
+        attachTo: lastTask >= 0 ? lastTask : undefined,
+        key: `note-${result.length}`,
+        title: sentenceCase(segment.trim()),
+        raw: segment,
+        path: lastTask >= 0 ? result[lastTask].path : [WORLD_LOOSE],
+        area: lastTask >= 0 ? result[lastTask].area : 'other',
+        estimatedMinutes: 0,
+        mentalWeight: 1,
+        energyRequired: 30,
+        urgency: 'none',
+        steps: [],
+        confidence: 0.6,
+      })
+      continue
+    }
+
     const cleaned = cleanFragment(segment)
     if (cleaned.length < 2) continue
-    const title = toImperative(cleaned)
+    const { main, aside } = splitAside(cleaned)
+    const title = toImperative(main)
     const dedupeKey = title.toLowerCase()
     if (seen.has(dedupeKey)) continue
     seen.add(dedupeKey)
@@ -372,8 +493,10 @@ export function parseBrainDump(raw: string, now = new Date()): ParsedLoop[] {
     const finalTitle = schedule.date || schedule.part ? stripTimePhrases(title) : title
 
     result.push({
+      kind: 'task',
       key: `${dedupeKey}-${result.length}`,
       title: finalTitle,
+      aside,
       raw: segment,
       path: rule?.path ?? [WORLD_LOOSE],
       area: rule?.area ?? 'other',
@@ -391,6 +514,16 @@ export function parseBrainDump(raw: string, now = new Date()): ParsedLoop[] {
   }
 
   return result
+}
+
+function lastTaskIndex(items: ParsedLoop[]): number {
+  for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'task') return i
+  return -1
+}
+
+function sentenceCase(text: string): string {
+  const t = text.replace(/^\s*[-–—*+]\s*/, '').trim()
+  return t.charAt(0).toUpperCase() + t.slice(1)
 }
 
 function guessMinutes(title: string): number {

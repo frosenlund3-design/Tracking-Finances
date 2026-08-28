@@ -1,6 +1,6 @@
 import { db, openNode, sealNode } from '@/db/db'
 import { openText, sealText } from '@/lib/vault'
-import type { BrainDumpEntry, CoachMessage, Completion, LoopNode } from '@/db/types'
+import type { BrainDumpEntry, CoachMessage, Completion, LoopNode, Note } from '@/db/types'
 
 export interface BackupFile {
   app: 'loops'
@@ -16,6 +16,7 @@ export interface BackupFile {
     claimed: unknown[]
     profile: unknown[]
     prefs: unknown[]
+    notes: unknown[]
   }
 }
 
@@ -29,7 +30,7 @@ export interface BackupFile {
  * wants one.
  */
 export async function exportBackup(): Promise<BackupFile> {
-  const [nodes, dumps, coachMessages, coachSessions, completions, rewards, claimed, profile, prefs] =
+  const [nodes, dumps, coachMessages, coachSessions, completions, rewards, claimed, profile, prefs, notes] =
     await Promise.all([
       db.nodes.toArray(),
       db.dumps.toArray(),
@@ -40,6 +41,7 @@ export async function exportBackup(): Promise<BackupFile> {
       db.claimed.toArray(),
       db.profile.toArray(),
       db.prefs.toArray(),
+      db.notes.toArray(),
     ])
 
   return {
@@ -56,6 +58,7 @@ export async function exportBackup(): Promise<BackupFile> {
       claimed,
       profile,
       prefs,
+      notes: await Promise.all(notes.map(async (n) => ({ ...n, text: await openText(n.text) }))),
     },
   }
 }
@@ -93,14 +96,16 @@ export async function importBackup(json: string): Promise<{ nodes: number }> {
   const dumps = await Promise.all(((d.dumps ?? []) as BrainDumpEntry[]).map(async (x) => ({ ...x, raw: await sealText(x.raw) })))
   const messages = await Promise.all(((d.coachMessages ?? []) as CoachMessage[]).map(async (x) => ({ ...x, text: await sealText(x.text) })))
   const completions = await Promise.all(((d.completions ?? []) as Completion[]).map(async (x) => ({ ...x, title: await sealText(x.title) })))
+  const notes = await Promise.all(((d.notes ?? []) as Note[]).map(async (x) => ({ ...x, text: await sealText(x.text) })))
 
   await db.transaction(
     'rw',
-    [db.nodes, db.dumps, db.coachMessages, db.coachSessions, db.completions, db.rewards, db.claimed, db.profile, db.prefs],
+    [db.nodes, db.dumps, db.coachMessages, db.coachSessions, db.completions, db.rewards, db.claimed, db.profile, db.prefs, db.notes],
     async () => {
       await Promise.all([
         db.nodes.clear(), db.dumps.clear(), db.coachMessages.clear(), db.coachSessions.clear(),
         db.completions.clear(), db.rewards.clear(), db.claimed.clear(), db.profile.clear(), db.prefs.clear(),
+        db.notes.clear(),
       ])
       await Promise.all([
         db.nodes.bulkAdd(nodes),
@@ -112,6 +117,7 @@ export async function importBackup(json: string): Promise<{ nodes: number }> {
         db.claimed.bulkAdd((d.claimed ?? []) as never[]),
         db.profile.bulkAdd((d.profile ?? []) as never[]),
         db.prefs.bulkAdd((d.prefs ?? []) as never[]),
+        db.notes.bulkAdd(notes),
       ])
     },
   )

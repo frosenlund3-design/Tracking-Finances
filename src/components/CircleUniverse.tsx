@@ -217,6 +217,7 @@ export function CircleUniverse() {
                   x={p.x}
                   y={p.y}
                   r={p.r}
+                  angle={p.angle}
                   overflowCount={p.overflow?.length}
                   reduced={reduced}
                   dark={dark}

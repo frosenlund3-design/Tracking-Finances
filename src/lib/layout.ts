@@ -8,6 +8,8 @@ export interface Placed {
   y: number
   r: number
   ring: number
+  /** Direction from the centre, so decorations can walk outward. */
+  angle: number
   /** Overflow bucket: "+7 flere". */
   overflow?: LoopNode[]
 }
@@ -29,6 +31,12 @@ export interface LayoutOptions {
 }
 
 const GAP = 16
+/**
+ * Each child trails a chain of ever-smaller circles pointing away from centre.
+ * The ring has to sit far enough in that the chain still fits on screen, so the
+ * layout budgets for the whole comet, not just its head.
+ */
+export const CHAIN_REACH = 1.95
 const MIN_CHILD_R = 27
 const MAX_CHILD_R = 62
 
@@ -75,7 +83,7 @@ export function layoutRadial(
   }
 
   const slots = visible.length + (hidden.length ? 1 : 0)
-  const center: Placed = { id: centerId, node: centerNode, x: cx, y: cy, r: centerR, ring: 0 }
+  const center: Placed = { id: centerId, node: centerNode, x: cx, y: cy, r: centerR, ring: 0, angle: 0 }
   if (slots === 0) return { center, children: [], hidden: [] }
 
   // Desired radius per slot, from each child's own branch weight.
@@ -115,6 +123,7 @@ export function layoutRadial(
         y: cy + Math.sin(angle) * ringR,
         r,
         ring: ri,
+        angle,
         overflow: node ? undefined : hidden,
       })
       index++
@@ -142,12 +151,16 @@ interface Solution {
 function solve(rings: number[], desired: number[], centerR: number, availableR: number): Solution {
   const ringCount = rings.length
   const maxDesired = Math.max(...desired)
+  // The outer ring's chain eats into the same budget as the circles.
   const budget = availableR - centerR - GAP * ringCount
 
   // Note this can be > 1: with only a few children, the circles should grow to
   // fill the screen rather than float as small dots with clipped labels. The
   // MAX_CHILD_R cap keeps that from turning into balloons.
-  let scale = Math.min(budget / (2 * ringCount) / maxDesired, MAX_CHILD_R / maxDesired)
+  let scale = Math.min(
+    budget / (2 * ringCount + (CHAIN_REACH - 1)) / maxDesired,
+    MAX_CHILD_R / maxDesired,
+  )
 
   for (let pass = 0; pass < 2; pass++) {
     const radii = ringRadii(centerR, availableR, maxDesired * scale, ringCount === 2)
@@ -174,7 +187,7 @@ function solve(rings: number[], desired: number[], centerR: number, availableR: 
  * two rings clear each other by GAP.
  */
 function ringRadii(centerR: number, availableR: number, childR: number, twoRings: boolean): number[] {
-  const outer = Math.max(centerR + GAP + childR, availableR - childR)
+  const outer = Math.max(centerR + GAP + childR, availableR - childR * CHAIN_REACH)
   if (!twoRings) return [outer]
   const inner = Math.max(centerR + GAP + childR, outer - 2 * childR - GAP)
   return [inner, outer]

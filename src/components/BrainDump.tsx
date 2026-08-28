@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Check, ChevronDown, Pencil, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, NotebookPen, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { parseBrainDump, type ParsedLoop } from '@/lib/brainDump'
 import { WORLDS } from '@/db/seed'
@@ -133,6 +133,12 @@ export function BrainDumpPanel({ onCommitted, footer, autoFinish }: Props) {
               </button>
             </div>
 
+            <p className="mt-1 text-[12.5px] leading-relaxed text-faint">
+              {parsed.filter((p) => p.kind === 'task').length} opgaver
+              {parsed.some((p) => p.kind === 'note') &&
+                ` · ${parsed.filter((p) => p.kind === 'note').length} gemmes som noter, ikke som opgaver`}
+            </p>
+
             <div className="mt-3 min-h-0 flex-1 space-y-2.5 overflow-y-auto no-scrollbar pb-2">
               {parsed.map((item, i) => (
                 <ParsedRow
@@ -179,6 +185,32 @@ function ParsedRow({
 }) {
   const [open, setOpen] = useState(false)
 
+  if (item.kind === 'note') {
+    return (
+      <div className="rounded-xl2 border border-line bg-canvas p-4">
+        <div className="flex items-start gap-3">
+          <NotebookPen size={15} className="mt-1 shrink-0 text-faint" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[14.5px] leading-snug text-muted">{item.title}</p>
+            <p className="mt-1.5 text-[12px] text-faint">
+              Gemmes som note{item.attachTo !== undefined ? ' på opgaven ovenfor' : ''} — ikke som en
+              opgave, så den fylder ikke i din mental load.
+            </p>
+          </div>
+          {editing && (
+            <button
+              onClick={onRemove}
+              aria-label="Fjern"
+              className="focus-ring -mr-1 -mt-1 grid h-10 w-10 place-items-center rounded-full text-faint"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-xl2 border border-line bg-surface p-4">
       <div className="flex items-start gap-3">
@@ -193,6 +225,8 @@ function ParsedRow({
           ) : (
             <p className="text-[16px] font-medium leading-snug">{item.title}</p>
           )}
+
+          {item.aside && <p className="mt-1 text-[13px] leading-snug text-muted">{item.aside}</p>}
 
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-faint">
             <span>{item.path.join(' › ')}</span>

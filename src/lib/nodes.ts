@@ -42,8 +42,27 @@ export function makeNode(input: NewNodeInput): LoopNode {
   }
 }
 
+/**
+ * Steps that ask her to write, decide or find something get a field to do it
+ * in. A checkbox next to "Skriv de 3 vigtigste ting på listen" is a step you
+ * cannot complete inside the app.
+ */
+const CAPTURE_PROMPTS: Array<[RegExp, string]> = [
+  [/^skriv\b.*\b(ned|liste|listen|op)\b/i, 'Skriv det her'],
+  [/^skriv\b/i, 'Skriv det her'],
+  [/^not[ée]r\b/i, 'Skriv det her'],
+  [/^find\s+(nummeret|telefonnummer|tallene|beløbet)/i, 'Skriv det du fandt'],
+  [/^beslut\b/i, 'Hvad besluttede du?'],
+  [/^v[æa]lg\b/i, 'Hvad valgte du?'],
+]
+
+export function captureLabelFor(title: string): string | undefined {
+  for (const [re, label] of CAPTURE_PROMPTS) if (re.test(title.trim())) return label
+  return undefined
+}
+
 export function toStep(title: string, index = 0): MicroStep {
-  return { id: uid('s'), title, done: false, physical: index === 0 }
+  return { id: uid('s'), title, done: false, physical: index === 0, captureLabel: captureLabelFor(title) }
 }
 
 /** Loops that still take up space in the head. */

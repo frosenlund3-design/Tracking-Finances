@@ -4,9 +4,11 @@ import { Check, HandHelping, Pause, Timer } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { haptic } from '@/lib/haptics'
 import { humanMinutes } from '@/lib/time'
-import { calibratedMinutes } from '@/lib/calibration'
+import { calibratedMinutes, calibratedSeconds } from '@/lib/calibration'
+import { estimateStepSeconds, humanSeconds } from '@/lib/firstAction'
 import { useCalibration } from '@/store/useStore'
 import { Button } from './ui/Button'
+import { MicButton } from './ui/MicButton'
 
 /**
  * Start Mode — the anti-procrastination screen.
@@ -18,6 +20,7 @@ import { Button } from './ui/Button'
 export function StartMode({ nodeId }: { nodeId: string }) {
   const node = useStore((s) => s.map[nodeId])
   const toggleStep = useStore((s) => s.toggleStep)
+  const captureStep = useStore((s) => s.captureStep)
   const complete = useStore((s) => s.completeNode)
   const award = useStore((s) => s.award)
   const startNode = useStore((s) => s.startNode)
@@ -33,6 +36,7 @@ export function StartMode({ nodeId }: { nodeId: string }) {
   const [countdown, setCountdown] = useState<number | null>(null)
   const [stuck, setStuck] = useState(false)
   const [timerEnd, setTimerEnd] = useState<number | null>(null)
+  const [draft, setDraft] = useState('')
   const [now, setNow] = useState(Date.now())
 
   useEffect(() => {
@@ -66,15 +70,32 @@ export function StartMode({ nodeId }: { nodeId: string }) {
     return () => window.clearInterval(i)
   }, [timerEnd])
 
-  if (!node) return null
-
-  const steps = node.steps
+  const steps = node?.steps ?? []
   const currentStep = steps.find((s) => !s.done)
+  // The clock has to measure the thing on screen. Showing "0:12 af 25 min"
+  // next to a single small step made the number meaningless.
+  const stepBudget = currentStep
+    ? humanSeconds(calibratedSeconds(estimateStepSeconds(currentStep.title), cal))
+    : humanMinutes(calibratedMinutes(node?.estimatedMinutes ?? 10, cal))
+  const currentStepId = currentStep?.id
+  const currentCaptured = currentStep?.captured
   const doneCount = steps.filter((s) => s.done).length
   const remaining = timerEnd ? Math.max(0, Math.round((timerEnd - now) / 1000)) : null
 
+  // Load whatever was already written for this step, and clear between steps.
+  useEffect(() => {
+    setDraft(currentCaptured ?? '')
+  }, [currentStepId, currentCaptured])
+
+  // Every hook is above this line: an early return before one would change the
+  // hook order between renders and crash React.
+  if (!node) return null
+
   const finishStep = async () => {
     if (currentStep) {
+      if (currentStep.captureLabel && draft.trim()) {
+        await captureStep(node.id, currentStep.id, draft.trim())
+      }
       await toggleStep(node.id, currentStep.id)
       const willBeLast = steps.filter((s) => !s.done).length === 1
       if (willBeLast) {
@@ -150,7 +171,7 @@ export function StartMode({ nodeId }: { nodeId: string }) {
                 {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}
               </span>
               <span className="mt-0.5 block text-[11px] text-faint">
-                af {humanMinutes(calibratedMinutes(node.estimatedMinutes, cal))}
+                af {stepBudget}
               </span>
             </span>
           </div>
@@ -173,6 +194,33 @@ export function StartMode({ nodeId }: { nodeId: string }) {
               <Timer size={15} className="mr-1.5 -mt-0.5 inline" />
               {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')} tilbage
             </p>
+          )}
+
+          {currentStep?.captureLabel && (
+            <div className="mx-auto mt-6 w-full max-w-[20rem] text-left">
+              <label className="block text-[12px] text-faint" htmlFor="step-capture">
+                {currentStep.captureLabel}
+              </label>
+              <div className="mt-1.5 flex gap-2">
+                <textarea
+                  id="step-capture"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onBlur={() => void captureStep(node.id, currentStep.id, draft)}
+                  rows={3}
+                  placeholder="Skriv løs — det bliver gemt på opgaven"
+                  className="min-h-[84px] flex-1 resize-none rounded-xl2 border border-line bg-surface p-3.5 text-[15.5px] leading-relaxed outline-none placeholder:text-faint/80 focus:border-ink/20"
+                />
+                <MicButton
+                  onText={(t) => {
+                    setDraft(t)
+                    void captureStep(node.id, currentStep.id, t)
+                  }}
+                  existing={draft}
+                  label="Sig det i stedet for at skrive"
+                />
+              </div>
+            </div>
           )}
 
           {steps.length === 0 && (

@@ -38,6 +38,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
   const focusId = useStore((s) => s.focusId)
   const close = useStore((s) => s.closeOverlay)
   const goodEnoughMode = useStore((s) => s.prefs.goodEnoughMode)
+  const notes = useStore((s) => s.notes)
 
   const [showPark, setShowPark] = useState(false)
   const [showTime, setShowTime] = useState(false)
@@ -125,6 +126,25 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
         </p>
       )}
 
+      {node.description && (
+        <p className="mt-3 rounded-xl2 bg-canvas px-4 py-3 text-[14px] leading-relaxed text-muted">
+          {node.description}
+        </p>
+      )}
+
+      {notes.filter((n) => n.nodeId === node.id).length > 0 && (
+        <div className="mt-3 space-y-1.5">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-faint">Noter</p>
+          {notes
+            .filter((n) => n.nodeId === node.id)
+            .map((n) => (
+              <p key={n.id} className="rounded-xl2 bg-canvas px-4 py-3 text-[14px] leading-relaxed text-muted">
+                {n.text}
+              </p>
+            ))}
+        </div>
+      )}
+
       {goodEnoughMode && node.goodEnoughNote && (
         <p className="mt-4 rounded-xl2 bg-accent-soft/60 px-4 py-3 text-[14px] leading-relaxed text-ink/80">
           Godt nok: {node.goodEnoughNote}
@@ -165,16 +185,25 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
               <button
                 key={s.id}
                 onClick={() => void toggleStep(node.id, s.id)}
-                className="focus-ring flex w-full items-center gap-3 rounded-xl2 border border-line bg-surface px-4 py-3 text-left active:scale-[0.99]"
+                className="focus-ring flex w-full items-start gap-3 rounded-xl2 border border-line bg-surface px-4 py-3 text-left active:scale-[0.99]"
               >
                 <span
-                  className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
+                  className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
                     s.done ? 'border-calm bg-calm/20' : 'border-line'
                   }`}
                 >
                   {s.done && <Check size={12} className="text-calm" />}
                 </span>
-                <span className={`text-[15px] ${s.done ? 'text-faint line-through' : ''}`}>{s.title}</span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-[15px] ${s.done ? 'text-faint line-through' : ''}`}>
+                    {s.title}
+                  </span>
+                  {s.captured && (
+                    <span className="mt-0.5 block whitespace-pre-line text-[13px] leading-snug text-muted">
+                      {s.captured}
+                    </span>
+                  )}
+                </span>
               </button>
             ))}
           </div>

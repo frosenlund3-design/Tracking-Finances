@@ -12,6 +12,8 @@ interface Props {
   y: number
   r: number
   isCenter?: boolean
+  /** Direction from the centre, in radians — the chain walks along it. */
+  angle?: number
   overflowCount?: number
   onTap: () => void
   onLongPress?: () => void
@@ -39,6 +41,7 @@ export function CircleView({
   y,
   r,
   isCenter,
+  angle = 0,
   overflowCount,
   onTap,
   onLongPress,
@@ -80,12 +83,52 @@ export function CircleView({
     setPressed(false)
   }
 
-  // Nested rings: one per level below, shrinking and lightening inward. Kept
-  // faint on purpose — they are a hint about depth, and a hint must not
-  // compete with the label sitting on top of it.
-  const nestedScales = [0.7, 0.46, 0.28].slice(0, depth)
+  /**
+   * The chain outward: one bead per level beneath this circle, each smaller
+   * than the last. It says the thing she needs to believe before she can
+   * start — that this gets smaller and smaller, and the last one is tiny.
+   *
+   * The beads are deliberately inert. You still step inward one circle per
+   * tap; the chain shows how far down it goes, it is not a shortcut past the
+   * levels in between.
+   */
+  const chain = Array.from({ length: depth }, (_, i) => ({
+    r: r * [0.3, 0.18, 0.11][i],
+    // Each bead sits just outside the previous one, walking away from centre.
+    gap: [1.16, 1.56, 1.82][i],
+    tone: tone.nested[i],
+  }))
 
   return (
+    <>
+      {/* The trail of ever-smaller circles heading away from centre. */}
+      {!isCenter &&
+        chain.map((bead, i) => (
+          <motion.span
+            key={`bead-${i}`}
+            aria-hidden
+            initial={{ opacity: 0, scale: 0.4 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.4 }}
+            transition={
+              reduced
+                ? { duration: 0.12 }
+                : { type: 'spring', stiffness: 400, damping: 34, delay: 0.03 * (i + 1) }
+            }
+            className="pointer-events-none absolute rounded-full"
+            style={{
+              left: x + Math.cos(angle) * r * bead.gap,
+              top: y + Math.sin(angle) * r * bead.gap,
+              width: bead.r * 2,
+              height: bead.r * 2,
+              marginLeft: -bead.r,
+              marginTop: -bead.r,
+              background: bead.tone,
+              boxShadow: `0 1px 4px ${tone.shadow}`,
+            }}
+          />
+        ))}
+
     <motion.button
       layoutId={node ? `circle-${node.id}` : 'circle-overflow'}
       layout
@@ -128,21 +171,6 @@ export function CircleView({
           : `Vis ${overflowCount} flere`
       }
     >
-      {/* The levels below, shown but not reachable from here. */}
-      {nestedScales.map((scale, i) => (
-        <span
-          key={i}
-          aria-hidden
-          className="pointer-events-none absolute rounded-full"
-          style={{
-            width: r * 2 * scale,
-            height: r * 2 * scale,
-            background: tone.nested[i],
-            opacity: dark ? 0.4 : 0.34,
-          }}
-        />
-      ))}
-
       {/* Progress on a task that is partly done. */}
       {stepProgress > 0 && (
         <svg className="pointer-events-none absolute inset-0 -rotate-90" width={r * 2} height={r * 2}>
@@ -191,5 +219,6 @@ export function CircleView({
         />
       )}
     </motion.button>
+    </>
   )
 }

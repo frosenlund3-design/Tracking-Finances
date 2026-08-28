@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie'
 import type {
   AuthRecord,
   BrainDumpEntry,
+  Note,
   ClaimedReward,
   CoachMessage,
   CoachSession,
@@ -28,6 +29,7 @@ export class LoopsDB extends Dexie {
   profile!: Table<UserProfile, string>
   prefs!: Table<UserPreferences, string>
   auth!: Table<AuthRecord, string>
+  notes!: Table<Note, string>
 
   constructor() {
     super('loops')
@@ -55,6 +57,21 @@ export class LoopsDB extends Dexie {
       profile: 'id',
       prefs: 'id',
       auth: 'id',
+    })
+    // v3 adds notes: the parts of a brain dump that are information rather
+    // than actions, kept out of the loop tree entirely.
+    this.version(3).stores({
+      nodes: 'id, parentId, status, area, scheduledDate, updatedAt',
+      dumps: 'id, createdAt, processed',
+      coachMessages: 'id, sessionId, createdAt',
+      coachSessions: 'id, startedAt',
+      completions: 'id, nodeId, completedAt',
+      rewards: 'id, createdAt, kind',
+      claimed: 'id, claimedAt',
+      profile: 'id',
+      prefs: 'id',
+      auth: 'id',
+      notes: 'id, createdAt, nodeId',
     })
   }
 }
@@ -115,7 +132,13 @@ export async function sealNode(node: LoopNode): Promise<LoopNode> {
     title: await sealText(node.title),
     description: node.description ? await sealText(node.description) : node.description,
     goodEnoughNote: node.goodEnoughNote ? await sealText(node.goodEnoughNote) : node.goodEnoughNote,
-    steps: await Promise.all(node.steps.map(async (s) => ({ ...s, title: await sealText(s.title) }))),
+    steps: await Promise.all(
+      node.steps.map(async (s) => ({
+        ...s,
+        title: await sealText(s.title),
+        captured: s.captured ? await sealText(s.captured) : s.captured,
+      })),
+    ),
   }
 }
 
@@ -125,7 +148,13 @@ export async function openNode(node: LoopNode, key?: CryptoKey | null): Promise<
     title: await openText(node.title, key),
     description: node.description ? await openText(node.description, key) : node.description,
     goodEnoughNote: node.goodEnoughNote ? await openText(node.goodEnoughNote, key) : node.goodEnoughNote,
-    steps: await Promise.all(node.steps.map(async (s) => ({ ...s, title: await openText(s.title, key) }))),
+    steps: await Promise.all(
+      node.steps.map(async (s) => ({
+        ...s,
+        title: await openText(s.title, key),
+        captured: s.captured ? await openText(s.captured, key) : s.captured,
+      })),
+    ),
   }
 }
 
@@ -140,7 +169,7 @@ export async function putNode(node: LoopNode): Promise<void> {
 
 /** Reads the whole database into memory. It is small by design (personal scale). */
 export async function loadAll() {
-  const [nodes, profileRow, prefsRow, completions, rewards, dumps, claimed, coachMessages] =
+  const [nodes, profileRow, prefsRow, completions, rewards, dumps, claimed, coachMessages, notes] =
     await Promise.all([
       db.nodes.toArray(),
       db.profile.get('me'),
@@ -150,6 +179,7 @@ export async function loadAll() {
       db.dumps.orderBy('createdAt').reverse().limit(50).toArray(),
       db.claimed.toArray(),
       db.coachMessages.orderBy('createdAt').limit(200).toArray(),
+      db.notes.orderBy('createdAt').reverse().limit(200).toArray(),
     ])
 
   return {
@@ -161,5 +191,6 @@ export async function loadAll() {
     dumps: await Promise.all(dumps.map(async (d) => ({ ...d, raw: await openText(d.raw) }))),
     claimed,
     coachMessages: await Promise.all(coachMessages.map(async (m) => ({ ...m, text: await openText(m.text) }))),
+    notes: await Promise.all(notes.map(async (n) => ({ ...n, text: await openText(n.text) }))),
   }
 }

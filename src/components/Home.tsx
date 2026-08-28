@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { AlarmClock, Battery, CalendarClock, Check, ChevronRight, Gift, MessageCircleHeart, Moon, Plus, Settings as SettingsIcon, Waves } from 'lucide-react'
+import { AlarmClock, Battery, CalendarClock, Check, ChevronRight, Gift, MessageCircleHeart, Moon, NotebookPen, Plus, Settings as SettingsIcon, Waves } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useStore, useClosedToday, useMentalLoad, useNextTask, useParked, useAvailableXP } from '@/store/useStore'
 import { greeting, relativeDay, isoDate } from '@/lib/time'
@@ -40,6 +40,7 @@ export function Home() {
   const closedToday = useClosedToday()
   const parked = useParked()
   const availableXP = useAvailableXP()
+  const notes = useStore((s) => s.notes)
   const declareDayDone = useStore((s) => s.declareDayDone)
   const wantMoreToday = useStore((s) => s.wantMoreToday)
 
@@ -355,6 +356,11 @@ export function Home() {
           <Chip icon={<Plus size={16} />} label="Ud af hovedet" onClick={() => openOverlay({ kind: 'braindump' })} />
           <Chip icon={<MessageCircleHeart size={16} />} label="Coach" onClick={() => openOverlay({ kind: 'coach', nodeId: next?.node.id })} />
           <Chip icon={<Waves size={16} />} label="Scroll-stop" onClick={() => openOverlay({ kind: 'rescue' })} />
+          <Chip
+            icon={<NotebookPen size={16} />}
+            label={notes.length ? `Hovedet (${notes.length})` : 'Hovedet'}
+            onClick={() => openOverlay({ kind: 'notes' })}
+          />
           <Chip icon={<Battery size={16} />} label={`${prefs.currentEnergy}%`} onClick={() => openOverlay({ kind: 'energy' })} />
         </div>
 

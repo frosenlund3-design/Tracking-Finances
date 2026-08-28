@@ -117,6 +117,20 @@ heuristikker for tid, vægt og energi. `" og "` deles kun, når det der følger
 kan stå alene — så "salt og peber" ikke bliver til to opgaver. Tidsudtryk
 fjernes fra titlen, når de er fanget som en dato.
 
+### Ikke alt i en brain dump er en opgave
+
+*"Ved ikke hvor det bliver af… ved heller ikke hvordan jeg skal kontakte dem"*
+er kontekst, ikke en handling. Gør man den til et loop, gør det aktiv skade:
+den lægges til i mental load, den dukker op som noget der skal startes, og den
+kan aldrig blive færdig — man kan ikke *udføre* en bekymring.
+
+Derfor klassificerer parseren hvert stykke som **opgave** eller **note**.
+Noter havner i "Hovedet", hæftet på den opgave de stod ved siden af. De tæller
+ikke med nogen steder. Bias'en er med vilje: i tvivlstilfælde bliver det en
+opgave, for en note der burde have været en opgave er let at forfremme i
+bekræftelses-skærmen, mens en bekymring der blev til en opgave stille og roligt
+puster tallet op og aldrig kan lukkes.
+
 Appen må gerne gætte forkert. Bekræftelsesskærmen ("Ser det rigtigt ud?") er
 sikkerhedsnettet — men at gætte stille er langt bedre end at bede brugeren om
 at udfylde otte felter.
@@ -141,9 +155,13 @@ lys tone ned i grundfarven, med skyggen tonet i samme farve. Hver cirkel har sin
 egen farve, valgt deterministisk ud fra dens plads hos forælderen, så søskende
 aldrig deler farve og den samme cirkel har den samme farve hver gang.
 
-Inde i hver cirkel sidder de underliggende niveauer som mindre og mindre,
-lysere og lysere cirkler — så man kan se hvor dybt noget går, før man går ind i
-det. De inderste er med vilje ikke klikbare: **man går ét niveau ind ad gangen**.
+Fra hver cirkel løber en kæde af mindre og mindre cirkler udad — én perle per
+niveau nedenunder. Den siger det, man skal tro på for at kunne gå i gang: at
+det bliver mindre og mindre, og at den sidste er bitte lille. Layoutet
+budgetterer plads til hele kometen, ikke kun hovedet, så kæderne aldrig løber
+ud over kanten.
+
+Perlerne er med vilje ikke klikbare: **man går ét niveau ind ad gangen**.
 Man kan altid gå ud igen, og man kan skifte mellem verdenerne på øverste
 niveau, men man kan ikke springe fra "Mit liv" ned til en opgave tre niveauer
 nede. Reglen håndhæves i `canFocus()` i storet, ikke kun i UI'et, så alle

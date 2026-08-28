@@ -18,6 +18,7 @@ import { Coach } from '@/components/Coach'
 import { NodeSheet } from '@/components/NodeSheet'
 import { QuickAdd } from '@/components/QuickAdd'
 import { EnergySheet } from '@/components/EnergySheet'
+import { Notes } from '@/components/Notes'
 import { Celebration } from '@/components/Celebration'
 import { LockScreen } from '@/components/Lock'
 import { InstallHint } from '@/components/InstallHint'
@@ -96,6 +97,10 @@ export default function App() {
 
       <Sheet open={overlay.kind === 'energy'} onClose={closeOverlay} title="Hvor meget har du i tanken?">
         <EnergySheet />
+      </Sheet>
+
+      <Sheet open={overlay.kind === 'notes'} onClose={closeOverlay} title="Hovedet" full>
+        <Notes />
       </Sheet>
     </div>
   )
