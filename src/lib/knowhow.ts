@@ -45,7 +45,7 @@ interface Entry extends KnowHow {
 const KNOWLEDGE: Entry[] = [
   {
     id: 'skat',
-    test: (_a, full) => /\b(skat|skat\.dk|[åa]rsopg[øo]relse\w*|forskudsopg[øo]relse\w*|selvangivelse\w*|fradrag\w*)\b/i.test(full),
+    test: (_a, full) => /\b(skat|skat\.dk|[åa]rsopg[øo]relse[\wæøåÆØÅ]*|forskudsopg[øo]relse[\wæøåÆØÅ]*|selvangivelse[\wæøåÆØÅ]*|fradrag[\wæøåÆØÅ]*)\b/i.test(full),
     need: 'MitID, og de tal du skal rette efter: lønsedler, renter, kørsel, fagforening eller a-kasse.',
     where: 'skat.dk. Log ind øverst til højre, så ligger både forskudsopgørelsen og årsopgørelsen på forsiden.',
     how: 'Forskudsopgørelsen er dit gæt på næste år og kan rettes hele året. Årsopgørelsen er facit for året, der gik. Ret det ene felt, du kom for, og lad resten stå.',
@@ -56,7 +56,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'boligstøtte',
-    test: (_a, full) => /\bboligst[øo]tte\w*|\bboligsikring\w*|\bboligydelse\w*|udbetaling danmark/i.test(full),
+    test: (_a, full) => /\bboligst[øo]tte[\wæøåÆØÅ]*|\bboligsikring[\wæøåÆØÅ]*|\bboligydelse[\wæøåÆØÅ]*|udbetaling danmark/i.test(full),
     need: 'MitID, din lejekontrakt, huslejens størrelse, boligens kvadratmeter og antal værelser, og hvem der bor der.',
     where: 'borger.dk. Søg på boligstøtte, så bliver du sendt videre til Udbetaling Danmark.',
     how: 'Ansøgningen gemmer sig selv undervejs, så du kan gå fra den og komme tilbage. Du behøver ikke gøre det færdigt i én omgang.',
@@ -74,7 +74,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'syn',
-    test: (_a, full) => /\bsyn(?:et|shal\w*)?\b|\bbilsyn\w*|\bomsyn\w*/i.test(full),
+    test: (_a, full) => /\bsyn(?:et|shal[\wæøåÆØÅ]*)?\b|\bbilsyn[\wæøåÆØÅ]*|\bomsyn[\wæøåÆØÅ]*/i.test(full),
     need: 'Nummerpladen. Registreringsattesten skal ligge i bilen, men de fleste synshaller slår bilen op på nummerpladen.',
     where: 'En synshal. De fleste kan bookes online, og der er som regel flere at vælge imellem i samme by.',
     how: 'Book tiden, kør derhen, vent i venteområdet. Selve synet tager typisk en halv time.',
@@ -84,7 +84,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'læge',
-    test: (_a, full) => /\bl[æa]ge\w*|\bpraktiserende\b|\bsundhed\.dk\b|\bhenvisning\w*|\bblodpr[øo]ve\w*|\bpr[øo]vesvar\w*/i.test(full),
+    test: (_a, full) => /\bl[æa]ge[\wæøåÆØÅ]*|\bpraktiserende\b|\bsundhed\.dk\b|\bhenvisning[\wæøåÆØÅ]*|\bblodpr[øo]ve[\wæøåÆØÅ]*|\bpr[øo]vesvar[\wæøåÆØÅ]*/i.test(full),
     need: 'Dit sundhedskort eller MitID, og én sætning om hvad det handler om.',
     where: 'Klinikkens egen hjemmeside eller app. Mange bruger Min Læge. Ellers sundhed.dk.',
     how: 'Skriv en e-konsultation i stedet for at ringe, hvis det ikke haster. Den bliver besvaret, og du slipper for telefontiden.',
@@ -94,7 +94,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'apotek',
-    test: (_a, full) => /\bapotek\w*|\brecept\w*|\bmedicin\w*/i.test(full),
+    test: (_a, full) => /\bapotek[\wæøåÆØÅ]*|\brecept[\wæøåÆØÅ]*|\bmedicin[\wæøåÆØÅ]*/i.test(full),
     need: 'Sundhedskortet, eller bare MitID hvis du henter det digitalt.',
     where: 'Apoteket, eller apotekets hjemmeside hvis det skal sendes.',
     how: 'Recepten ligger digitalt. Du skal ikke have en seddel med, kun kortet.',
@@ -103,7 +103,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'pakke',
-    test: (_a, full) => /\bpakke[nr]?\b|\bpakkeshop\w*|\bposthus\w*|\bpostnord\b|\bgls\b|\bdao\b|\breturner\w*|\bretur\b/i.test(full),
+    test: (_a, full) => /\bpakke[nr]?\b|\bpakkeshop[\wæøåÆØÅ]*|\bposthus[\wæøåÆØÅ]*|\bpostnord\b|\bgls\b|\bdao\b|\breturner[\wæøåÆØÅ]*|\bretur\b/i.test(full),
     need: 'Pakken, og koden eller stregkoden fra sms’en eller appen. Til returnering: returlabelen, printet eller som QR-kode.',
     where: 'Pakkeshoppen på kvitteringen eller i appen. Det er ikke altid den nærmeste.',
     how: 'Har du ikke en printer, kan de fleste pakkeshops printe labelen fra QR-koden på din telefon.',
@@ -113,7 +113,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'regning',
-    test: (_a, full) => /\bregning\w*|\bbetal\w*|\brykker\w*|\bnetbank\w*|\bgiro\b|\bfi-?kode\b|\bindbetalingskort\b/i.test(full),
+    test: (_a, full) => /\bregning[\wæøåÆØÅ]*|\bbetal[\wæøåÆØÅ]*|\brykker[\wæøåÆØÅ]*|\bnetbank[\wæøåÆØÅ]*|\bgiro\b|\bfi-?kode\b|\bindbetalingskort\b/i.test(full),
     need: 'Regningen med beløb og betalingsoplysninger, og din netbank eller MobilePay.',
     where: 'Netbanken. Under indbetalingskort skal du bruge kortart, kreditornummer og FI-kode, og alle tre står på selve regningen.',
     how: 'Mange regninger kan sættes til Betalingsservice, mens du alligevel har den åben. Så er det den sidste gang, du gør det manuelt.',
@@ -123,7 +123,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'opsigelse',
-    test: (_a, full) => /\bops[iy]g\w*|\babonnement\w*|\bmedlemskab\w*|\bfitness\w*|\bstreaming\w*/i.test(full),
+    test: (_a, full) => /\bops[iy]g[\wæøåÆØÅ]*|\babonnement[\wæøåÆØÅ]*|\bmedlemskab[\wæøåÆØÅ]*|\bfitness[\wæøåÆØÅ]*|\bstreaming[\wæøåÆØÅ]*/i.test(full),
     need: 'Dit kunde- eller aftalenummer, og en skriftlig kanal.',
     where: 'Selskabets egen side, under Min side eller Kundeservice. Opsig aldrig kun over telefonen.',
     how: 'Skriv det kort: navn, kundenummer, “jeg opsiger min aftale”, og dags dato.',
@@ -133,7 +133,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'forsikring',
-    test: (_a, full) => /\bforsikring\w*|\bskadesanmeldelse\w*|\bskade\b|\bpolice\w*/i.test(full),
+    test: (_a, full) => /\bforsikring[\wæøåÆØÅ]*|\bskadesanmeldelse[\wæøåÆØÅ]*|\bskade\b|\bpolice[\wæøåÆØÅ]*/i.test(full),
     need: 'Policenummeret, datoen for det der skete, og billeder hvis der er noget at fotografere.',
     where: 'Selskabets app eller hjemmeside. Anmeldelse online går hurtigere end telefonen.',
     how: 'Skriv hvad der skete i tre linjer, uden at vurdere om det er dækket. Det er deres arbejde, ikke dit.',
@@ -142,7 +142,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'flytning',
-    test: (_a, full) => /\bflytte\w*|\bflytning\w*|\badresse[æa]ndring\w*|\bny adresse\b/i.test(full),
+    test: (_a, full) => /\bflytte[\wæøåÆØÅ]*|\bflytning[\wæøåÆØÅ]*|\badresse[æa]ndring[\wæøåÆØÅ]*|\bny adresse\b/i.test(full),
     need: 'MitID og den nye adresse med flyttedato.',
     where: 'borger.dk.',
     timing: 'Flytning skal meldes tidligst fire uger før og senest fem dage efter, du er flyttet. Det er en frist, ikke en anbefaling.',
@@ -152,7 +152,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'jobansøgning',
-    test: (_a, full) => /\bans[øo]gning\w*|\bjobans[øo]g\w*|\bcv\b|\bjobopslag\w*/i.test(full),
+    test: (_a, full) => /\bans[øo]gning[\wæøåÆØÅ]*|\bjobans[øo]g[\wæøåÆØÅ]*|\bcv\b|\bjobopslag[\wæøåÆØÅ]*/i.test(full),
     need: 'Opslaget, dit CV, og et tomt dokument.',
     how: 'Skriv de tre ting fra opslaget, de tydeligvis går efter. Skriv en linje til hver, om hvad du har gjort. Det er ansøgningen. Indledningen skriver du til sidst.',
     snag: 'Den bliver ikke bedre af flere gennemlæsninger efter den tredje. Sæt en grænse på forhånd.',
@@ -160,7 +160,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'eksamen',
-    test: (_a, full) => /\beksamen\w*|\bpr[øo]ve\b|\baflevering\w*|\bopgave\w*\s+skal afleveres/i.test(full),
+    test: (_a, full) => /\beksamen[\wæøåÆØÅ]*|\bpr[øo]ve\b|\baflevering[\wæøåÆØÅ]*|\bopgave[\wæøåÆØÅ]*\s+skal afleveres/i.test(full),
     need: 'Datoen, stedet, og hvad der er tilladt at have med.',
     how: 'Læg de tre ting i kalenderen hver for sig: forberedelsen, transporten og selve tiden. Det er transporten, der plejer at blive glemt.',
     snag: 'Tjek reglerne for hjælpemidler i god tid, ikke aftenen før.',
@@ -168,7 +168,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'oprydning',
-    test: (a, full) => /\bryd\w*|\boprydning\w*|\brod\b|\breng[øo]r\w*|\bst[øo]vsug\w*/i.test(full) || a.verb === 'ryd',
+    test: (a, full) => /\bryd[\wæøåÆØÅ]*|\boprydning[\wæøåÆØÅ]*|\brod\b|\breng[øo]r[\wæøåÆØÅ]*|\bst[øo]vsug[\wæøåÆØÅ]*/i.test(full) || a.verb === 'ryd',
     need: 'En pose til skrald, en kasse til det der skal et andet sted hen, og en timer.',
     how: 'Én overflade ad gangen, ikke ét rum. Alt der ikke hører til, ryger i kassen uden at blive vurderet. Kassen tømmer du en anden dag.',
     snag: 'Oprydning har ingen slutning i sig selv, og det er derfor den ikke starter. Timeren er slutningen.',
@@ -176,7 +176,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'vasketøj',
-    test: (_a, full) => /\bvasket[øo]j\b|\bvaskemaskin\w*|\bvaske?\s+t[øo]j\b|\bt[øo]rretumbler\w*/i.test(full),
+    test: (_a, full) => /\bvasket[øo]j\b|\bvaskemaskin[\wæøåÆØÅ]*|\bvaske?\s+t[øo]j\b|\bt[øo]rretumbler[\wæøåÆØÅ]*/i.test(full),
     need: 'Vaskemiddel, og en maskine der er tom.',
     how: 'Sortér ikke i dag. Tag den største bunke, fyld maskinen, tryk start.',
     snag: 'Det er ikke vasken, der går galt, det er de fire timer, hvor tøjet ligger vådt. Sæt en påmindelse, når du trykker start.',
@@ -191,7 +191,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'bank',
-    test: (_a, full) => /\bbank\w*|\bl[åa]n\b|\brente\w*|\bafdrag\w*|\brealkredit\w*|\bkonto\b/i.test(full),
+    test: (_a, full) => /\bbank[\wæøåÆØÅ]*|\bl[åa]n\b|\brente[\wæøåÆØÅ]*|\bafdrag[\wæøåÆØÅ]*|\brealkredit[\wæøåÆØÅ]*|\bkonto\b/i.test(full),
     need: 'Kontonummer eller lånenummer, og én sætning om hvad du vil vide.',
     where: 'Netbankens beskedfunktion. Den er skriftlig, den er dokumenteret, og der er ingen ventetid.',
     how: 'Skriv spørgsmålet, før du beslutter om du ringer. Halvdelen af opkaldet er at finde ud af, hvad man vil spørge om.',
@@ -200,7 +200,7 @@ const KNOWLEDGE: Entry[] = [
   },
   {
     id: 'tandlæge',
-    test: (_a, full) => /\btandl[æa]ge\w*|\btandpine\b|\btandrens\w*/i.test(full),
+    test: (_a, full) => /\btandl[æa]ge[\wæøåÆØÅ]*|\btandpine\b|\btandrens[\wæøåÆØÅ]*/i.test(full),
     need: 'Klinikkens nummer eller bookingside, og to dage der kunne passe.',
     where: 'De fleste klinikker har online booking. Tjek deres side, før du ringer.',
     timing: 'Tandpine og hævelse er akut og skal ringes ind samme dag, ikke bookes online.',

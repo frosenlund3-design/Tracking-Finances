@@ -59,7 +59,7 @@ const KNOWN: KnownTrigger[] = [
   {
     id: 'money',
     label: /regning|[øo]konomi|penge|g[æa]ld|budget|bank/i,
-    cue: /\b(regning\w*|[øo]konomi\w*|penge|g[æa]ld|rykker\w*|budget\w*|netbank\w*|betal\w*|r[øo]dt tal|kontoen|skat)\b/i,
+    cue: /\b(regning[\wæøåÆØÅ]*|[øo]konomi[\wæøåÆØÅ]*|penge|g[æa]ld|rykker[\wæøåÆØÅ]*|budget[\wæøåÆØÅ]*|netbank[\wæøåÆØÅ]*|betal[\wæøåÆØÅ]*|r[øo]dt tal|kontoen|skat)\b/i,
     name: 'Der er penge i den her. Det er et af dine ømme steder, og så er det ikke opgaven, der er tung, det er hvad du kan komme til at se undervejs.',
     around:
       'Kig ikke på saldoen. Åbn kun det ene, der skal betales, betal det, og luk igen. Resten af tallene skal du ikke forholde dig til i dag.',
@@ -68,7 +68,7 @@ const KNOWN: KnownTrigger[] = [
   {
     id: 'phone',
     label: /telefon|ringe|opkald/i,
-    cue: /\b(ring\w*|opkald|telefon\w*|tale med dem|snakke med dem|nummeret)\b/i,
+    cue: /\b(ring[\wæøåÆØÅ]*|opkald|telefon[\wæøåÆØÅ]*|tale med dem|snakke med dem|nummeret)\b/i,
     name: 'Der er et opkald i den. Det er et af de steder, du selv har skrevet ned.',
     around:
       'Der findes næsten altid en skriftlig vej: kontaktformular, chat, beskedfunktionen i deres app, eller en mail. Den tæller lige så meget. Skal vi lede efter den i stedet?',
@@ -77,7 +77,7 @@ const KNOWN: KnownTrigger[] = [
   {
     id: 'post',
     label: /post|e-?boks|brev|kuvert/i,
-    cue: /\b(post\w*|e-?boks|brev\w*|kuvert\w*|rudekuvert\w*|uåbnet)\b/i,
+    cue: /\b(post[\wæøåÆØÅ]*|e-?boks|brev[\wæøåÆØÅ]*|kuvert[\wæøåÆØÅ]*|rudekuvert[\wæøåÆØÅ]*|uåbnet)\b/i,
     name: 'Uåbnet post. Det er sjældent indholdet, der er problemet, det er ikke at vide hvad der står.',
     around:
       'Åbn alle sammen uden at læse noget. Læg dem i tre bunker: skal betales, skal besvares, kan smides ud. Du skal ikke handle på noget i dag, kun vide hvad der er.',
@@ -95,7 +95,7 @@ const KNOWN: KnownTrigger[] = [
   {
     id: 'mess',
     label: /rod|uorden|kaos derhjemme|beskidt/i,
-    cue: /\b(rod\w*|uorden|rodet|beskidt|ulækkert|ser forf[æa]rdeligt ud|kan ikke se bunden)\b/i,
+    cue: /\b(rod[\wæøåÆØÅ]*|uorden|rodet|beskidt|ulækkert|ser forf[æa]rdeligt ud|kan ikke se bunden)\b/i,
     name: 'Rod. Det har ingen slutning, og det er derfor det aldrig starter.',
     around: 'Vælg én overflade. Ikke ét rum, én overflade. Ti minutter på uret, og så er du færdig, uanset hvordan der ser ud.',
     offer: 'Vælg en overflade for mig',
@@ -103,7 +103,7 @@ const KNOWN: KnownTrigger[] = [
   {
     id: 'corrected',
     label: /rettet|kritik|fejl|bed[øo]m/i,
-    cue: /\b(rettet|kritik|fejl|bed[øo]m\w*|de kigger p[åa]|skal godkendes|feedback|gennemgang)\b/i,
+    cue: /\b(rettet|kritik|fejl|bed[øo]m[\wæøåÆØÅ]*|de kigger p[åa]|skal godkendes|feedback|gennemgang)\b/i,
     name: 'Det her kan blive rettet af nogen. Det er der, det plejer at gå i stå.',
     around:
       'Aftal med dig selv nu, hvad der er godt nok, og skriv det ned, før du går i gang. Så er beslutningen taget af dig og ikke af den, der kigger bagefter.',
@@ -121,7 +121,7 @@ const KNOWN: KnownTrigger[] = [
   {
     id: 'deadline',
     label: /deadline|frist/i,
-    cue: /\b(deadline\w*|frist\w*|senest|inden fredag|l[øo]ber ud|udl[øo]ber)\b/i,
+    cue: /\b(deadline[\wæøåÆØÅ]*|frist[\wæøåÆØÅ]*|senest|inden fredag|l[øo]ber ud|udl[øo]ber)\b/i,
     name: 'Der er en frist i den. Du har skrevet, at fristerne selv gør noget ved dig.',
     around:
       'Flyt fristen. Ikke den rigtige, din. Sæt den til dagen før, og lad den rigtige være noget, du ikke tænker på. Så er der luft, hvis dagen går skævt.',
@@ -139,7 +139,7 @@ const KNOWN: KnownTrigger[] = [
   {
     id: 'noise',
     label: /lyd|st[øo]j|larm/i,
-    cue: /\b(larm\w*|st[øo]j\w*|h[øo]jt|larmer|for meget lyd|kan ikke t[æa]nke)\b/i,
+    cue: /\b(larm[\wæøåÆØÅ]*|st[øo]j[\wæøåÆØÅ]*|h[øo]jt|larmer|for meget lyd|kan ikke t[æa]nke)\b/i,
     name: 'Lyd. Det hører til opgaven, ikke ved siden af den.',
     around: 'Høretelefoner på, før du gør noget som helst andet. Det er trin ét, ikke en forberedelse.',
     offer: 'Læg det ind som første trin',

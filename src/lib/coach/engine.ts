@@ -13,6 +13,7 @@
  */
 
 import type { LoopNode, SelfDescription } from '@/db/types'
+import { knowHowFor } from '@/lib/knowhow'
 import { conceptsFor, PROBES } from './knowledge'
 import { matchTriggers } from './triggers'
 import type { Observation } from './memory'
@@ -23,17 +24,21 @@ const PATTERNS: Array<[Intent, RegExp]> = [
   ['thanks', /\b(tak|tusind tak|thanks)\b/i],
   ['done', /\b(f[æa]rdig|gjort|done|klaret|jeg gjorde det|nu er den lavet|check)\b/i],
   ['progress-report', /^\s*(der|jeg er der|st[åa]r op|jeg st[åa]r|ok(?:ay)?|jep|jeg er i gang)\s*[.!]?\s*$/i],
-  ['scrolling', /\b(scroll\w*|tiktok|instagram|telefonen|doomscroll\w*|kan ikke stoppe med at kigge)\b/i],
+  // "Jeg har åbnet den", "jeg har ringet til dem". She is telling the coach how
+  // it went. Answering that with a question about why she has not started is
+  // the app not listening.
+  ['progress-report', /^\s*(?:s[åa] )?jeg har (?:lige |nu |endelig )?[a-zæøå]+(?:et|t)\b(?!.*\bikke\b)/i],
+  ['scrolling', /\b(scroll[\wæøåÆØÅ]*|tiktok|instagram|telefonen|doomscroll[\wæøåÆØÅ]*|kan ikke stoppe med at kigge)\b/i],
   ['cant-start', /\b(kan ikke komme i gang|kan ikke starte|kommer ikke i gang|f[åa]r ikke gjort|sidder fast|starter ikke|jeg ved godt hvad jeg skal)\b/i],
-  ['overwhelmed', /\b(overv[æa]ldet|for meget|kaos|alt for mange|hovedet er fyldt|jeg drukner|panik|ved ikke hvor jeg skal starte|uoverskuelig\w*)\b/i],
+  ['overwhelmed', /\b(overv[æa]ldet|for meget|kaos|alt for mange|hovedet er fyldt|jeg drukner|panik|ved ikke hvor jeg skal starte|uoverskuelig[\wæøåÆØÅ]*)\b/i],
   ['too-many-steps', /\b(for mange (?:steps|trin|ting)|(?:alt |f[øo]les )?for stor|kompliceret|uendelig)\b/i],
   ['forgetful', /\b(glemmer|glemte|husker (?:den )?ikke|falder ud af hovedet)\b/i],
   ['dont-know-what', /\b(hvad skal jeg (?:g[øo]re|lave)|ved ikke hvad jeg skal|hj[æa]lp mig med at v[æa]lge|hvad nu)\b/i],
-  ['cant-decide', /\b(kan ikke bestemme|kan ikke v[æa]lge|beslutning\w*|ved ikke hvilken)\b/i],
+  ['cant-decide', /\b(kan ikke bestemme|kan ikke v[æa]lge|beslutning[\wæøåÆØÅ]*|ved ikke hvilken)\b/i],
   ['no-energy', /\b(tr[æa]t|udmattet|ingen energi|flad|drænet|orker ikke|kan ikke mere|udbr[æa]ndt|burnout)\b/i],
-  ['boring', /\b(kedelig\w*|k[øo]nnu|gider ikke|d[øo]dkedelig\w*|ulidelig\w*)\b/i],
-  ['perfectionism', /\b(perfekt\w*|god nok|bange for at lave (?:det )?forkert|skal v[æa]re rigtigt|detaljer)\b/i],
-  ['anxious', /\b(angst|nerv[øo]s|bange|ubehag|frygt|stress\w*|ked af det)\b/i],
+  ['boring', /\b(kedelig[\wæøåÆØÅ]*|k[øo]nnu|gider ikke|d[øo]dkedelig[\wæøåÆØÅ]*|ulidelig[\wæøåÆØÅ]*)\b/i],
+  ['perfectionism', /\b(perfekt[\wæøåÆØÅ]*|god nok|bange for at lave (?:det )?forkert|skal v[æa]re rigtigt|detaljer)\b/i],
+  ['anxious', /\b(angst|nerv[øo]s|bange|ubehag|frygt|stress[\wæøåÆØÅ]*|ked af det)\b/i],
   ['self-critical', /\b(doven|dum|elendig|d[åa]rlig til|jeg dur ikke|jeg er h[åa]bl[øo]s|skammer mig|d[åa]rlig samvittighed)\b/i],
   ['body-double', /\b(bliv hos mig|v[æa]r her|selskab|sammen med mig|body ?double)\b/i],
   ['stuck-mid-task', /\b(g[åa]et i st[åa]|mistede tr[åa]den|blev afbrudt|glemte hvor jeg var)\b/i],
@@ -97,8 +102,13 @@ function profileBias(state: CoachState, strategies: Strategy[]): Strategy[] {
   return ordered
 }
 
-function pickStrategy(state: CoachState, intent: Intent): Strategy {
+function pickStrategy(state: CoachState, intent: Intent, closedToday = 0): Strategy {
   let candidates = profileBias(state, STRATEGY_MAP[intent] ?? STRATEGY_MAP.unknown)
+
+  // "Du har lukket 0 loops" is not encouragement, it is the app reading her
+  // day back to her at the worst possible moment. Progress is only shown when
+  // there is progress.
+  if (closedToday === 0) candidates = candidates.filter((s) => s !== 'visual-progress')
 
   // Low energy should never be met with a challenge.
   if (state.userEnergy <= 30) candidates = candidates.filter((s) => s !== 'challenge')
@@ -308,12 +318,20 @@ export function respond({
 
   if (intent === 'progress-report' || intent === 'done') {
     const ack = STEP_ACKS[tone][seed % STEP_ACKS[tone].length]
-    const step = nextMicroStep(state.currentTask)
-    if (state.currentTask && state.currentTask.steps.some((s) => !s.done)) {
+    const open = state.currentTask?.steps.filter((s) => !s.done) ?? []
+    if (state.currentTask && open.length) {
+      // She just said she did the one that is still open, and the button below
+      // will tick it. So "næste" has to mean the one after that, or the coach
+      // hands her back the step she has just told it she finished.
+      const after = open[1]?.title
       return {
-        lines: [ack, `Næste: ${step}.`, 'Kun den.'],
+        lines: [
+          ack,
+          after ? `Næste: ${after}.` : `Så mangler kun "${state.currentTask.title}" at blive lukket.`,
+          after ? 'Kun den.' : 'Du er der næsten.',
+        ],
         strategy: 'micro-step',
-        options: ['Der', 'Jeg stopper her'],
+        options: [after ? 'Der' : 'Den er færdig', 'Jeg stopper her'],
         action: { type: 'complete-step', nodeId: state.currentTask.id },
       }
     }
@@ -334,12 +352,36 @@ export function respond({
   }
 
   if (intent === 'self-critical') {
-    // This one is never answered with a productivity tip first.
-    const opening =
-      tone === 'blunt'
-        ? 'Du er ikke doven. Det er igangsætning, ikke karakter.'
-        : 'Du er ikke doven, det er en igangsætningsting, ikke en karakterbrist.'
-    const strategy = pickStrategy(state, intent)
+    // Never answered with a productivity tip, and never with the wrong word.
+    //
+    // Answering "jeg føler mig dum" with "du er ikke doven" is worse than
+    // saying nothing: it proves the coach was not reading, and it hands her a
+    // second accusation to argue with. So the denial uses the word she used,
+    // or none at all.
+    const said = text.toLowerCase()
+    const word = ['doven', 'dum', 'h[åa]bl[øo]s', 'elendig', 'umulig', 'ubrugelig', 'patetisk']
+      .map((w) => new RegExp(`\\b${w}`, 'i'))
+      .find((re) => re.test(said))
+    const opening = word
+      ? tone === 'blunt'
+        ? `Du er ikke ${said.match(word)?.[0]}. Det er igangsætning, ikke karakter.`
+        : `Du er ikke ${said.match(word)?.[0]}. Det er en igangsætningsting, ikke en karakterbrist.`
+      : 'Det der er ikke det, der foregår.'
+
+    // If there is a mechanism behind exactly this, it beats a strategy. Being
+    // told what is actually happening is the thing that lands here; being told
+    // to look at a progress bar is not.
+    const shame = conceptsFor(text, self).find((c) => !usedConcepts.includes(c.id))
+    if (shame) {
+      return {
+        lines: [opening, shame.insight, shame.move],
+        strategy: 'compassionate-reset',
+        conceptId: shame.id,
+        options: ['Ja, det er præcis det', 'Ikke helt', state.currentTask ? 'Hjælp mig i gang' : 'Hvad skal jeg lave?'],
+      }
+    }
+
+    const strategy = pickStrategy(state, intent, closedToday)
     const lines = pickVariation(strategy, tone, seed).map((l) => fill(l, state, { closed: closedToday }))
     return { lines: [opening, ...lines].slice(0, 4), strategy, options: optionsFor(strategy, state), action: actionFor(strategy, state) }
   }
@@ -396,7 +438,7 @@ export function respond({
   const expert = self?.familiarity === 'expert'
   const concept = conceptsFor(text, self).find((c) => !usedConcepts.includes(c.id))
   if (concept && text.trim().split(/\s+/).length >= (expert ? 2 : 3)) {
-    const strategy = pickStrategy(state, intent)
+    const strategy = pickStrategy(state, intent, closedToday)
     const opening = reflect(text, tone)
     return {
       lines: [opening, concept.insight, concept.move].filter(Boolean),
@@ -411,6 +453,27 @@ export function respond({
     }
   }
 
+  // She named a thing the app actually knows something about.
+  //
+  // "Det er e-Boks" is not a request and not a feeling, it is her telling the
+  // coach what this is about. Answering that with a general question ignores
+  // the one concrete thing in the message. Practical knowledge is the better
+  // answer when it exists, and it is the answer she cannot get from a poster.
+  const know = !state.currentTask || !text.toLowerCase().includes(state.currentTask.title.toLowerCase())
+    ? knowHowFor(text)
+    : null
+  if (know && intent === 'unknown' && text.trim().split(/\s+/).length >= 2) {
+    const lines = [reflect(text, tone), know.where, know.need ? `Du skal bruge: ${know.need}` : '', know.snag]
+      .filter(Boolean) as string[]
+    if (lines.length >= 2) {
+      return {
+        lines: lines.slice(0, 4),
+        strategy: 'externalise',
+        options: ['Hvad er første skridt?', 'Læg den ind som opgave', 'Det er ikke det jeg mangler'],
+      }
+    }
+  }
+
   // Nothing to explain: offer something she cannot see about her own data.
   const observation = observations[0]
   if (observation && (intent === 'unknown' || intent === 'greeting') && seed % 3 === 0) {
@@ -421,7 +484,7 @@ export function respond({
     }
   }
 
-  const strategy = pickStrategy(state, intent)
+  const strategy = pickStrategy(state, intent, closedToday)
   const opening = reflect(text, tone)
 
   // Nothing matched, and she already knows every tip we have. Then the honest

@@ -69,7 +69,7 @@ export const CONCEPTS: Concept[] = [
   },
   {
     id: 'shame-cost',
-    triggers: /\b(skammer mig|flov|pinligt|jeg burde kunne|alle andre kan|voksne mennesker|patetisk|f[øo]ler mig dum)\b/i,
+    triggers: /\b(skammer mig|flov|pinligt|jeg burde kunne|alle andre kan|voksne mennesker|patetisk|f[øo]ler mig(?: [\wæøåÆØÅ]+)? dum|f[øo]ler mig(?: [\wæøåÆØÅ]+)? forkert)\b/i,
     insight:
       'Skam over en opgave gør ikke opgaven mindre, den gør den dyrere. Man undgår ikke arbejdet, man undgår at møde sig selv i den, og derfor vokser den, jo længere man venter.',
     move:
@@ -88,7 +88,7 @@ export const CONCEPTS: Concept[] = [
   },
   {
     id: 'burnout-not-laziness',
-    triggers: /\b(kan ingenting|helt tom|lukket ned|kollapset|udbr[æa]ndt|har ligget i s[øo]ngen|kan ikke engang)\b/i,
+    triggers: /\b(kan ingenting|helt tom|lukket ned|kollapset|udbr[æa]ndt|har ligget i s[øo]ngen|kan ikke engang|ikke lavet noget|ingenting i (?:flere )?dage|hele ugen|ligget stille|har st[åa]et stille)\b/i,
     insight:
       'Når alting på én gang bliver umuligt, også det du plejer at kunne, er det sjældent motivation. Det ligner udmattelse fra at have kørt for længe uden at det passede til, hvordan du fungerer, og det kommer typisk efter en periode, hvor det gik godt.',
     move:
@@ -121,6 +121,24 @@ export const CONCEPTS: Concept[] = [
     move:
       'Lav en tidligere nu. Sæt din egen frist flere dage før den rigtige og behandl den som den ægte. Skriv den rigtige ned et sted, du ikke kigger.',
     weight: 81,
+  },
+  {
+    id: 'fear-of-content',
+    triggers: /\b(bange for hvad der st[åa]r|t[øo]r ikke [åa]bne|hvad hvis der (?:st[åa]r|ligger)|uåbnet|ikke [åa]bnet|ligger sikkert|vil ikke vide)\b/i,
+    insight:
+      'Det, du undgår, er ikke handlingen, det er indholdet. At åbne noget tager ti sekunder. At vide hvad der står er det, der ikke kan gøres om, og derfor er det den beslutning, kroppen bremser.',
+    move:
+      'Skil de to fra hinanden. Åbn den uden at gøre noget ved den, og aftal med dig selv på forhånd, at du ikke skal handle på den i dag. At vide er én opgave. At gøre noget er en anden, og den er til i morgen.',
+    weight: 89,
+  },
+  {
+    id: 'catastrophe-check',
+    triggers: /\b(hvad nu hvis|det g[åa]r galt|det v[æa]rste|jeg mister|de tager|kan ikke betale|bliver smidt ud|f[åa]r problemer|bange for hvad|bange for at der)\b/i,
+    insight:
+      'Når noget er uafklaret, fylder den værste udgave hele pladsen, fordi der ikke er noget andet at fylde den med. Det er ikke pessimisme, det er at et ubesvaret spørgsmål bliver besvaret af alarmberedskabet.',
+    move:
+      'Byt gættet ud med ét faktum. Ikke hele billedet, ét tal eller én dato. Så snart der står noget virkeligt, holder den værste udgave op med at være den eneste.',
+    weight: 83,
   },
   {
     id: 'wall-of-awful',

@@ -77,6 +77,9 @@ const VERB_FORMS: Record<string, string[]> = {
   meld: ['meld', 'melde', 'melder', 'meldt', 'tilmeld', 'tilmelde'],
   syn: ['syn', 'syne', 'synes', 'synet'],
   klip: ['klip', 'klippe', 'klipper', 'klippet'],
+  rens: ['rens', 'rense', 'renser', 'renset', 'afrens'],
+  sæt: ['sæt', 'sætte', 'sætter', 'sat'],
+  spar: ['spar', 'spare', 'sparer', 'sparet'],
   hjælp: ['hjælp', 'hjælpe', 'hjælper', 'hjulpet'],
   bestil: ['bestil', 'bestille', 'bestiller', 'bestilt'],
   aflys: ['aflys', 'aflyse', 'aflyser', 'aflyst'],
@@ -116,8 +119,8 @@ export const IMPERATIVE: Record<string, string> = {
   rediger: 'Rediger', træn: 'Træn', læs: 'Læs', tjek: 'Tjek', beslut: 'Beslut', spørg: 'Spørg',
   mal: 'Mal', reparer: 'Reparér', sorter: 'Sortér', hæng: 'Hæng', få: 'Få', gå: 'Gå',
   tag: 'Tag', åbn: 'Åbn', luk: 'Luk', meld: 'Meld', syn: 'Syn', klip: 'Klip',
+  rens: 'Rens', sæt: 'Sæt', spar: 'Spar', 'spar-op': 'Sæt penge til side', underskriv: 'Skriv under',
   hjælp: 'Hjælp', bestil: 'Bestil', aflys: 'Aflys', anmeld: 'Anmeld',
-  underskriv: 'Skriv under på',
 }
 
 /** Multi-word verbs, checked before single words. */
@@ -130,12 +133,16 @@ const PHRASE_VERBS: Array<[RegExp, string]> = [
   // object "styr". Every Danish-final pattern in this file needs the lookahead.
   [/^(?:f[åa]|have|har|havde|f[åa]r|f[åa]et)\s+styr\s+p[åa](?=\s|$)/i, 'få-styr-på'],
   [/^s[æa]tte?\s+over\b/i, 'vask'],
+  [/^skriv(?:e)?\s+under\b/i, 'underskriv'],
+  [/^s[æa]t(?:te)?\s+(?:penge\s+)?til\s+side\b/i, 'spar-op'],
   [/^tage?\s+stilling\s+til\b/i, 'beslut'],
   [/^melde?\s+(?:sig\s+)?til\b/i, 'meld'],
 ]
 
 IMPERATIVE['find-ud-af'] = 'Find ud af'
 IMPERATIVE['få-styr-på'] = 'Få styr på'
+IMPERATIVE['spar-op'] = 'Sæt penge til side'
+IMPERATIVE['underskriv'] = 'Skriv under'
 
 const PREPOSITIONS = ['til', 'på', 'hos', 'i', 'med', 'om', 'for', 'fra', 'ved', 'af']
 
@@ -190,7 +197,7 @@ export function analyse(text: string): Analysis {
   // on purpose, which is exactly how obligations get written down. Read as
   // verb plus object, so it becomes an instruction she can act on.
   if (!verb) {
-    const passive = clean.match(/^([\wæøåÆØÅ]+)\s+(?:skal|skulle|b[øo]r|m[åa])\s+([\wæøå]+e?s)\b\s*(.*)$/i)
+    const passive = clean.match(/^([\wæøåÆØÅ]+)\s+(?:skal|skulle|b[øo]r|m[åa])\s+([\wæøåÆØÅ]+e?s)\b\s*(.*)$/i)
     if (passive) {
       const canonical = lookupVerb(passive[2].toLowerCase())
       if (canonical) {
@@ -261,6 +268,16 @@ export function analyse(text: string): Analysis {
         .replace(STOP_AFTER_VERB, '')
         .trim()
       break
+    }
+  }
+
+  // Trailing adverbs are not part of the thing. "Læs bogen færdig" is about the
+  // book, and "Find bogen færdig frem" is not a sentence anybody wrote.
+  {
+    const TRAILING = /\s+\b(f[æa]rdig|helt|ordentligt|rigtigt|endelig|igen|selv|nu)\b\s*$/i
+    let guard = 0
+    while (TRAILING.test(object) && object.split(' ').length > 1 && guard++ < 3) {
+      object = object.replace(TRAILING, '').trim()
     }
   }
 

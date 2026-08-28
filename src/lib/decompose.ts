@@ -126,6 +126,20 @@ const DOMAINS: Domain[] = [
     ],
   },
   {
+    id: 'flytning',
+    test: (_a, full) => /\bflytning\b|\badresse[æa]ndring[\wæøåÆØÅ]*|\bmeld[e]? flytning\b|\bny adresse\b/i.test(full),
+    minutes: 20,
+    goodEnough: 'Selve flytteanmeldelsen er hele opgaven. Resten kan tages en anden dag.',
+    steps: () => [
+      s('Find MitID frem', 0),
+      s('Åbn borger.dk og søg på flytning', 0),
+      s('Skriv den nye adresse og datoen ind', 0),
+      s('Send den', 0),
+      s('Bestil eftersendelse af post, den flytter ikke af sig selv', 2),
+      s('Skriv ned hvem der ellers skal vide det: bank, forsikring, abonnementer', 3),
+    ],
+  },
+  {
     id: 'pakke',
     test: (a, full) => /\b(pakke|pakken|posthus|pakkeshop|returner|retur)\w*\b/i.test(full) && (a.verb === 'aflever' || a.verb === 'send' || a.verb === 'hent' || /retur/i.test(full)),
     minutes: 20,
@@ -358,6 +372,73 @@ const BY_VERB: Record<string, (a: Analysis) => Step[]> = {
       s('Køb eller bestil det du mangler', 0),
       s(`Skift ${thing}`, 0),
       s('Læg det gamle et sted, hvor det kommer ud af huset', 2),
+    ]
+  },
+  underskriv: (a) => {
+    const thing = a.object || a.target || 'papiret'
+    return [
+      s(`Find ${thing} frem, digitalt eller på papir`, 0),
+      s('Læs kun det, du skal skrive under på. Ikke det hele', 1),
+      s('Skriv under, med MitID eller med en pen', 0),
+      s('Send den tilbage eller aflever den', 0),
+      s('Gem en kopi et sted du kan finde den', 2),
+    ]
+  },
+  bestil: (a) => {
+    const thing = a.object || a.target || 'det'
+    return [
+      s(`Find ud af hvor man bestiller ${thing}`, 0),
+      s('Find det frem, du skal bruge for at bestille: MitID, kortnummer eller kundenummer', 1),
+      s(`Bestil ${thing}`, 0),
+      s('Skriv ned hvornår den kommer', 2),
+    ]
+  },
+  aflys: (a) => {
+    // Rebuild what she wrote: "min tid hos frisøren", not the bare noun "tid".
+    const thing = [a.object, a.targetPreposition, a.target].filter(Boolean).join(' ') || 'aftalen'
+    return [
+      s(`Find ud af hvor ${thing} er booket, mail, sms eller app`, 0),
+      s('Aflys skriftligt, hvis du kan. Så slipper du for at forklare dig', 0),
+      s('Skriv én linje: navn, tidspunkt, "jeg må desværre aflyse"', 1),
+      s('Slet den fra kalenderen, så den ikke ligger og larmer', 2),
+      s('Book en ny med det samme, hvis der skal være en', 2),
+    ]
+  },
+  hæng: (a) => {
+    const thing = a.object || 'tøjet'
+    return [
+      s(`Tag ${thing} ud af maskinen`, 0),
+      s('Ryst det, så det ikke skal stryges bagefter', 2),
+      s(`Hæng ${thing} op`, 0),
+      s('Sæt en påmindelse om at tage det ned igen', 3),
+    ]
+  },
+  rens: (a) => {
+    const thing = a.object || a.target || 'det'
+    return [
+      s('Find kluden og det du gør rent med frem', 0),
+      s('Sæt en timer på ti minutter', 0),
+      s(`Tag kun én overflade i ${thing}`, 1),
+      s('Stop når timeren ringer, uanset hvordan der ser ud', 0),
+    ]
+  },
+  læs: (a) => {
+    const thing = a.object || 'den'
+    return [
+      s(`Find ${thing} frem og læg telefonen et andet sted`, 0),
+      s('Sæt en timer på ti minutter', 0),
+      s('Læs. Du må stoppe når den ringer', 0),
+      s('Sæt et bogmærke, så du ved hvor du kom til', 2),
+    ]
+  },
+  'spar-op': (a) => {
+    const thing = a.target || a.object || 'det'
+    return [
+      s(`Beslut ét beløb til ${thing}. Et lille et, du ikke mærker`, 0),
+      s('Åbn netbanken', 0),
+      s('Opret en konto til det, hvis du ikke har en', 1),
+      s('Sæt en fast overførsel op, så du aldrig skal huske det igen', 0),
+      s('Skriv beløbet ned, så du kan se det vokse', 3),
     ]
   },
   print: (a) => [

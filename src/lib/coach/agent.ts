@@ -205,10 +205,10 @@ function readDate(text: string, now: Date): string | undefined {
 
 function readPart(text: string): TimePart | undefined {
   const t = text.toLowerCase()
-  if (/\bmorgen\w*\b/.test(t) && !/\bi morgen\b/.test(t)) return 'morning'
-  if (/\bformiddag\w*\b/.test(t)) return 'midday'
-  if (/\beftermiddag\w*\b/.test(t)) return 'afternoon'
-  if (/\baften\w*\b/.test(t)) return 'evening'
+  if (/\bmorgen[\wæøåÆØÅ]*\b/.test(t) && !/\bi morgen\b/.test(t)) return 'morning'
+  if (/\bformiddag[\wæøåÆØÅ]*\b/.test(t)) return 'midday'
+  if (/\beftermiddag[\wæøåÆØÅ]*\b/.test(t)) return 'afternoon'
+  if (/\baften[\wæøåÆØÅ]*\b/.test(t)) return 'evening'
   return undefined
 }
 

@@ -42,7 +42,24 @@ export interface CaptureResult {
 const NOT_A_CAPTURE =
   /^\s*(?:hvad|hvorn[åa]r|hvordan|hvorfor|hvem|hvor|kan du|vil du|skal du|hj[æa]lp|giv mig|find|start|[åa]bn|luk|slet|flyt|park|del den|tak)\b/i
 
-const ALREADY_DONE = /\b(jeg har (?:lige )?(?:gjort|lavet|klaret|ringet|betalt|sendt)|den er (?:gjort|klaret|f[æa]rdig))\b/i
+/**
+ * A report, not a request. "Jeg har åbnet den" is her telling the coach how it
+ * went, and filing it as "Åbn den" hands her back the thing she just finished.
+ * Any perfect tense counts, not a list of verbs we thought of.
+ */
+const ALREADY_DONE =
+  /\b(?:jeg|vi) (?:lige )?har (?:lige )?[a-zæøå]+(?:et|t|de)\b|\bden er (?:gjort|klaret|f[æa]rdig|lavet|betalt|sendt|[åa]bnet)\b/i
+
+/**
+ * A confession, not a task.
+ *
+ * "Jeg har ikke lavet noget i tre dage" is the hardest thing she is likely to
+ * type, and turning it into a to-do called "Har ikke lavet noget i tre dage"
+ * is the single worst thing the app could do with it. Anything negated is left
+ * alone and answered as what it is.
+ */
+const NEGATED =
+  /\b(?:har|er|f[åa]r|kan|vil|nåede|fik|orkede) (?:bare |lige |simpelthen |overhovedet )?ikke\b|\bikke (?:f[åa]et|lavet|n[åa]et|gjort|kunnet|orket)\b|\baldrig\b/i
 
 /**
  * Does this message carry things she has to do?
@@ -57,6 +74,7 @@ export function detectCaptures(text: string, map: NodeMap, now = new Date()): Ca
   if (t.length < 6) return null
   if (NOT_A_CAPTURE.test(t)) return null
   if (ALREADY_DONE.test(t)) return null
+  if (NEGATED.test(t)) return null
 
   const parsed = parseBrainDump(t, { now })
   const existing = new Set(

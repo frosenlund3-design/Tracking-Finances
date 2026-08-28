@@ -84,41 +84,44 @@ const RULES: Rule[] = [
   { match: /\btiktok\b/i, path: ['Arbejde', 'SOME', 'TikTok'], area: 'work', minutes: 45, energy: 60 },
   { match: /\bfacebook\b|\blinkedin\b|\byoutube\b/i, path: ['Arbejde', 'SOME'], area: 'work', minutes: 30, energy: 60 },
   { match: /\bsome\b|sociale medier|\bcontent\b|opslag|\bposte?\b|\bstor(?:y|ies)\b|f[øo]lgere/i, path: ['Arbejde', 'SOME'], area: 'work', minutes: 30, energy: 60 },
-  { match: /\bkunde\w*|\btilbud\b|\bfaktura\w*|\btilbudsgivning\b/i, path: ['Arbejde', 'Kunder'], area: 'work', minutes: 25, energy: 60 },
-  { match: /\bm[øo]de\b|\bdeadline\b|\brapport\w*|pr[æa]sentation|\bprojekt\b(?!.*hjem)/i, path: ['Arbejde'], area: 'work', minutes: 40, energy: 60 },
-  { match: /\bbogf[øo]r\w*|\bmoms\b|\bregnskab\w*|administration/i, path: ['Arbejde', 'Administration'], area: 'admin', minutes: 40, energy: 60 },
-  { match: /\barbejde\b|\bjob\b|\bchef\b|\bkollega\w*/i, path: ['Arbejde'], area: 'work', minutes: 30, energy: 60 },
+  // Before the shop rules: "en ansøgning til jobbet i Netto" is about work, and
+  // matching the shop name would file a job application under groceries.
+  { match: /\bjobans[øo]g[\wæøåÆØÅ]*|\bjobopslag[\wæøåÆØÅ]*|\bans[øo]gning[\wæøåÆØÅ]*\s+til\s+jobbet\b|\bcv\b|\bjobsamtale[\wæøåÆØÅ]*|\bs[øo]ge? job\b/i, path: ['Arbejde'], area: 'work', minutes: 60, energy: 100 },
+  { match: /\bkunde[\wæøåÆØÅ]*|\btilbud\b|\bfaktura[\wæøåÆØÅ]*|\btilbudsgivning\b/i, path: ['Arbejde', 'Kunder'], area: 'work', minutes: 25, energy: 60 },
+  { match: /\bm[øo]de\b|\bdeadline\b|\brapport[\wæøåÆØÅ]*|pr[æa]sentation|\bprojekt\b(?!.*hjem)/i, path: ['Arbejde'], area: 'work', minutes: 40, energy: 60 },
+  { match: /\bbogf[øo]r[\wæøåÆØÅ]*|\bmoms\b|\bregnskab[\wæøåÆØÅ]*|administration/i, path: ['Arbejde', 'Administration'], area: 'admin', minutes: 40, energy: 60 },
+  { match: /\barbejde\b|\bjob\b|\bchef\b|\bkollega[\wæøåÆØÅ]*/i, path: ['Arbejde'], area: 'work', minutes: 30, energy: 60 },
 
   { match: /\bskat\b|selvangivel|[åa]rsopg[øo]rel|forskudsopg[øo]rel/i, path: ['Økonomi', 'Skat'], area: 'money', minutes: 45, energy: 100 },
-  { match: /\bregning\w*|\bbetal\w*|\brykker\w*|\bnetbank\w*|\bgiro\b/i, path: ['Økonomi', 'Regninger'], area: 'money', minutes: 10, energy: 60 },
-  { match: /\bbudget\w*|\bopsparing\w*|\bl[åa]n\b|\bbank\w*|\bpension\w*|\bforsikring\w*|\babonnement\w*|\bops[iy]g\w*/i, path: ['Økonomi'], area: 'money', minutes: 25, energy: 60 },
+  { match: /\bregning[\wæøåÆØÅ]*|\bbetal[\wæøåÆØÅ]*|\brykker[\wæøåÆØÅ]*|\bnetbank[\wæøåÆØÅ]*|\bgiro\b/i, path: ['Økonomi', 'Regninger'], area: 'money', minutes: 10, energy: 60 },
+  { match: /\bbudget[\wæøåÆØÅ]*|\bopsparing[\wæøåÆØÅ]*|\bl[åa]n\b|\bbank[\wæøåÆØÅ]*|\bpension[\wæøåÆØÅ]*|\bforsikring[\wæøåÆØÅ]*|\babonnement[\wæøåÆØÅ]*|\bops[iy]g[\wæøåÆØÅ]*/i, path: ['Økonomi'], area: 'money', minutes: 25, energy: 60 },
   // Public benefits: officialdom, forms and a portal, reliably heavy, and
   // reliably about money, whatever the form is called.
-  { match: /\bboligst[øo]tte\w*|\bkontanthj[æa]lp\w*|\bSU\b|\bsygedagpeng\w*|\bbarselsdagpeng\w*|\bb[øo]rnepeng\w*|\bb[øo]rne(?:check|tilskud)\w*|udbetaling danmark|\bfriplads\w*|\btilskud\b/i, path: ['Økonomi', 'Det offentlige'], area: 'admin', minutes: 35, energy: 100 },
+  { match: /\bboligst[øo]tte[\wæøåÆØÅ]*|\bkontanthj[æa]lp[\wæøåÆØÅ]*|\bSU\b|\bsygedagpeng[\wæøåÆØÅ]*|\bbarselsdagpeng[\wæøåÆØÅ]*|\bb[øo]rnepeng[\wæøåÆØÅ]*|\bb[øo]rne(?:check|tilskud)[\wæøåÆØÅ]*|udbetaling danmark|\bfriplads[\wæøåÆØÅ]*|\btilskud\b/i, path: ['Økonomi', 'Det offentlige'], area: 'admin', minutes: 35, energy: 100 },
 
-  { match: /\btandl[æa]ge\w*/i, path: ['Mig', 'Tandlæge'], area: 'health', minutes: 8, energy: 60 },
-  { match: /\bl[æa]ge\w*|\bpsykolog\w*|\bfysioterap\w*|\bspeciall[æa]ge\w*|sundhed\.dk|\brecept\w*|\bmedicin\w*|\bblodpr[øo]ve\w*|\bpr[øo]vesvar\w*|\bhenvisning\w*|\bscanning\w*|\bvaccin\w*/i, path: ['Mig', 'Sundhed'], area: 'health', minutes: 10, energy: 60 },
-  { match: /\btr[æa]n\w*|\bl[øo]betur\w*|\byoga\b|\bmotion\b|\bg[åa]tur\b|\bfitness\b|\bsv[øo]mme\w*/i, path: ['Mig', 'Krop'], area: 'health', minutes: 40, energy: 60 },
-  { match: /\bfris[øo]r\w*|\bnegle\w*|\bmassage\b|\bwellness\b|\bmig selv\b|\bpause\b|\bhvile\b/i, path: ['Mig', 'Aftaler'], area: 'personal', minutes: 15, energy: 30 },
-  { match: /\bferie\w*|\brejse\w*|\bfly\b|\bhotel\b|\bsommerhus\w*/i, path: ['Mig', 'Ferie'], area: 'personal', minutes: 45, energy: 60 },
+  { match: /\btandl[æa]ge[\wæøåÆØÅ]*/i, path: ['Mig', 'Tandlæge'], area: 'health', minutes: 8, energy: 60 },
+  { match: /\bl[æa]ge[\wæøåÆØÅ]*|\bpsykolog[\wæøåÆØÅ]*|\bfysioterap[\wæøåÆØÅ]*|\bspeciall[æa]ge[\wæøåÆØÅ]*|sundhed\.dk|\brecept[\wæøåÆØÅ]*|\bmedicin[\wæøåÆØÅ]*|\bblodpr[øo]ve[\wæøåÆØÅ]*|\bpr[øo]vesvar[\wæøåÆØÅ]*|\bhenvisning[\wæøåÆØÅ]*|\bscanning[\wæøåÆØÅ]*|\bvaccin[\wæøåÆØÅ]*/i, path: ['Mig', 'Sundhed'], area: 'health', minutes: 10, energy: 60 },
+  { match: /\btr[æa]n[\wæøåÆØÅ]*|\bl[øo]betur[\wæøåÆØÅ]*|\byoga\b|\bmotion\b|\bg[åa]tur\b|\bfitness\b|\bsv[øo]mme[\wæøåÆØÅ]*/i, path: ['Mig', 'Krop'], area: 'health', minutes: 40, energy: 60 },
+  { match: /\bfris[øo]r[\wæøåÆØÅ]*|\bnegle[\wæøåÆØÅ]*|\bmassage\b|\bwellness\b|\bmig selv\b|\bpause\b|\bhvile\b/i, path: ['Mig', 'Aftaler'], area: 'personal', minutes: 15, energy: 30 },
+  { match: /\bferie[\wæøåÆØÅ]*|\brejse[\wæøåÆØÅ]*|\bfly\b|\bhotel\b|\bsommerhus[\wæøåÆØÅ]*/i, path: ['Mig', 'Ferie'], area: 'personal', minutes: 45, energy: 60 },
 
-  { match: /\bposthus\w*|\bpakkeshop\w*|\bpakke[nr]?\b|\bafhentningssted\w*|\bgenbrugsplads\w*|\bbibliotek\w*|\bapotek\w*|\brenseri\w*|\bskomager\w*|\bflaskeautomat\w*|\bafleveres?\s+p[åa]\b/i, path: ['Hjem', 'Ærinder'], area: 'home', minutes: 20, energy: 30 },
-  { match: /\bindk[øo]b\w*|\bk[øo]b\w*\s+ind\b|\bhandle\s+ind\b|\bnetto\b|\bf[øo]tex\b|\bbilka\b|\brema\b|\blidl\b|\bsuper\w*|vaskemid\w*|\bshampoo\b|\btandpasta\b|\bm[æa]lk\b|\bbr[øo]d\b|\btoiletpapir\b/i, path: ['Hjem', 'Indkøb'], area: 'home', minutes: 25, energy: 30 },
-  { match: /\bopvask\w*|\bk[øo]kken\w*|\btallerken\w*|\bmadpakke\w*|\bmadplan\w*|\baftensmad\b|\bservice\b/i, path: ['Hjem', 'Køkken'], area: 'home', minutes: 15, energy: 30 },
+  { match: /\bposthus[\wæøåÆØÅ]*|\bpakkeshop[\wæøåÆØÅ]*|\bpakke[nr]?\b|\bafhentningssted[\wæøåÆØÅ]*|\bgenbrugsplads[\wæøåÆØÅ]*|\bbibliotek[\wæøåÆØÅ]*|\bapotek[\wæøåÆØÅ]*|\brenseri[\wæøåÆØÅ]*|\bskomager[\wæøåÆØÅ]*|\bflaskeautomat[\wæøåÆØÅ]*|\bafleveres?\s+p[åa]\b/i, path: ['Hjem', 'Ærinder'], area: 'home', minutes: 20, energy: 30 },
+  { match: /\bindk[øo]b[\wæøåÆØÅ]*|\bk[øo]b[\wæøåÆØÅ]*\s+ind\b|\bhandle\s+ind\b|\bnetto\b|\bf[øo]tex\b|\bbilka\b|\brema\b|\blidl\b|\bsuper[\wæøåÆØÅ]*|vaskemid[\wæøåÆØÅ]*|\bshampoo\b|\btandpasta\b|\bm[æa]lk\b|\bbr[øo]d\b|\btoiletpapir\b/i, path: ['Hjem', 'Indkøb'], area: 'home', minutes: 25, energy: 30 },
+  { match: /\bopvask[\wæøåÆØÅ]*|\bk[øo]kken[\wæøåÆØÅ]*|\btallerken[\wæøåÆØÅ]*|\bmadpakke[\wæøåÆØÅ]*|\bmadplan[\wæøåÆØÅ]*|\baftensmad\b|\bservice\b/i, path: ['Hjem', 'Køkken'], area: 'home', minutes: 15, energy: 30 },
   // Anchored deliberately: bare "vask" also lives inside "vaskemiddel" and
   // "opvask", and matching those put shopping and dishes into the laundry.
-  { match: /\bvasket[øo]j\b|\bvaskemaskin\w*|\bvaske?\s+t[øo]j\b|\bt[øo]rretumbler\b|\bstrygning\b|\bt[øo]rre\s+t[øo]j\b/i, path: ['Hjem', 'Vasketøj'], area: 'home', minutes: 10, energy: 30 },
-  { match: /\breng[øo]r\w*|\bst[øo]vsug\w*|\bg[øo]re rent\b|\bryd op\b|\boprydning\b|\bgulv\w*|\bbadev[æa]rels\w*|\bst[øo]v\b|\bskrald\b|\baffald\b/i, path: ['Hjem', 'Rengøring'], area: 'home', minutes: 20, energy: 30 },
-  { match: /\bbil(?:en|er|erne)?\b|\bv[æa]rksted\w*|\bd[æa]k(?:ket|kene)?\b|\bsyn(?:et)?\b|\bbenzin\b|\bcykel\w*|\bnummerplade\w*|\bbilsyn\w*/i, path: ['Hjem', 'Praktisk'], area: 'home', minutes: 20, energy: 60 },
-  { match: /\bhaven\b|\bhavearbejde\b|\bplante\w*|\bmale\b|\bmaling\b|\breparer\w*|\bh[åa]ndv[æa]rker\w*|\bskur\b|\bloftet\b|\bk[æa]lderen\b/i, path: ['Hjem', 'Praktisk'], area: 'home', minutes: 45, energy: 60 },
-  { match: /\bhjem\w*|\bboligen\b|\blejlighed\w*|\bhus(?:et)?\b/i, path: ['Hjem'], area: 'home', minutes: 25, energy: 30 },
+  { match: /\bvasket[øo]j\b|\bvaskemaskin[\wæøåÆØÅ]*|\bvaske?\s+t[øo]j\b|\bt[øo]rretumbler\b|\bstrygning\b|\bt[øo]rre\s+t[øo]j\b/i, path: ['Hjem', 'Vasketøj'], area: 'home', minutes: 10, energy: 30 },
+  { match: /\breng[øo]r[\wæøåÆØÅ]*|\bst[øo]vsug[\wæøåÆØÅ]*|\bg[øo]re rent\b|\bryd op\b|\boprydning\b|\bgulv[\wæøåÆØÅ]*|\bbadev[æa]rels[\wæøåÆØÅ]*|\bst[øo]v\b|\bskrald\b|\baffald\b/i, path: ['Hjem', 'Rengøring'], area: 'home', minutes: 20, energy: 30 },
+  { match: /\bbil(?:en|er|erne)?\b|\bv[æa]rksted[\wæøåÆØÅ]*|\bd[æa]k(?:ket|kene)?\b|\bsyn(?:et)?\b|\bbenzin\b|\bcykel[\wæøåÆØÅ]*|\bnummerplade[\wæøåÆØÅ]*|\bbilsyn[\wæøåÆØÅ]*/i, path: ['Hjem', 'Praktisk'], area: 'home', minutes: 20, energy: 60 },
+  { match: /\bhaven\b|\bhavearbejde\b|\bplante[\wæøåÆØÅ]*|\bmale\b|\bmaling\b|\breparer[\wæøåÆØÅ]*|\bh[åa]ndv[æa]rker[\wæøåÆØÅ]*|\bskur\b|\bloftet\b|\bk[æa]lderen\b/i, path: ['Hjem', 'Praktisk'], area: 'home', minutes: 45, energy: 60 },
+  { match: /\bhjem[\wæøåÆØÅ]*|\bboligen\b|\blejlighed[\wæøåÆØÅ]*|\bhus(?:et)?\b/i, path: ['Hjem'], area: 'home', minutes: 25, energy: 30 },
 
-  { match: /\bmor\b|\bfar\b|\bs[øo]ster\b|\bbror\b|\bsvigermor\b|\bsvigerfar\b|\bfamilie\w*|\bmormor\b|\bfarmor\b/i, path: ['Familie'], area: 'family', minutes: 15, energy: 30 },
-  { match: /\bb[øo]rn\w*|\bskole\w*|\bb[øo]rnehave\w*|\bvuggestue\w*|\blektier\b|\bforældrem[øo]de\b|\bdatter\w*|\bs[øo]n(?:nen)?\b/i, path: ['Familie', 'Børn'], area: 'family', minutes: 20, energy: 60 },
-  { match: /\bgave\w*|\bf[øo]dselsdag\w*|\bjul\b|\bbryllup\w*|\bkonfirmation\w*|\bfest\b/i, path: ['Familie', 'Mærkedage'], area: 'family', minutes: 25, energy: 60 },
+  { match: /\bmor\b|\bfar\b|\bs[øo]ster\b|\bbror\b|\bsvigermor\b|\bsvigerfar\b|\bfamilie[\wæøåÆØÅ]*|\bmormor\b|\bfarmor\b/i, path: ['Familie'], area: 'family', minutes: 15, energy: 30 },
+  { match: /\bb[øo]rn[\wæøåÆØÅ]*|\bskole[\wæøåÆØÅ]*|\bb[øo]rnehave[\wæøåÆØÅ]*|\bvuggestue[\wæøåÆØÅ]*|\blektier\b|\bforældrem[øo]de\b|\bdatter[\wæøåÆØÅ]*|\bs[øo]n(?:nen)?\b/i, path: ['Familie', 'Børn'], area: 'family', minutes: 20, energy: 60 },
+  { match: /\bgave[\wæøåÆØÅ]*|\bf[øo]dselsdag[\wæøåÆØÅ]*|\bjul\b|\bbryllup[\wæøåÆØÅ]*|\bkonfirmation[\wæøåÆØÅ]*|\bfest\b/i, path: ['Familie', 'Mærkedage'], area: 'family', minutes: 25, energy: 60 },
 
-  { match: /\bmail\w*|\be-?mail\w*|\bindbakke\w*|\bsvar p[åa](?=\s|$)/i, path: ['Løst og fast'], area: 'admin', minutes: 10, energy: 60, confidence: 0.5 },
-  { match: /\bpapir\w*|\bdokument\w*|\bblanket\w*|\bkontrakt\w*|\bans[øo]g\w*|\bborger\.dk\b|\bmitid\b|\be-?boks\b/i, path: ['Løst og fast'], area: 'admin', minutes: 25, energy: 60, confidence: 0.5 },
+  { match: /\bmail[\wæøåÆØÅ]*|\be-?mail[\wæøåÆØÅ]*|\bindbakke[\wæøåÆØÅ]*|\bsvar p[åa](?=\s|$)/i, path: ['Løst og fast'], area: 'admin', minutes: 10, energy: 60, confidence: 0.5 },
+  { match: /\bpapir[\wæøåÆØÅ]*|\bdokument[\wæøåÆØÅ]*|\bblanket[\wæøåÆØÅ]*|\bkontrakt[\wæøåÆØÅ]*|\bans[øo]g[\wæøåÆØÅ]*|\bborger\.dk\b|\bmitid\b|\be-?boks\b/i, path: ['Løst og fast'], area: 'admin', minutes: 25, energy: 60, confidence: 0.5 },
 ]
 
 /** Anything that opens with a verb we recognise is an instruction. */
@@ -299,9 +302,9 @@ const WEEKDAYS: Record<string, number> = {
 
 const PART_WORDS: Array<[RegExp, TimePart]> = [
   [/\bmorgen(?:en)?\b(?!\s*dag)/i, 'morning'],
-  [/\bformiddag\w*/i, 'midday'],
-  [/\beftermiddag\w*/i, 'afternoon'],
-  [/\baften\w*/i, 'evening'],
+  [/\bformiddag[\wæøåÆØÅ]*/i, 'midday'],
+  [/\beftermiddag[\wæøåÆØÅ]*/i, 'afternoon'],
+  [/\baften[\wæøåÆØÅ]*/i, 'evening'],
 ]
 
 /**
