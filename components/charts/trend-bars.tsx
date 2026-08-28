@@ -68,13 +68,13 @@ export function TrendBars({ data, currency }: { data: TrendDatum[]; currency: st
                   role="tooltip"
                 >
                   <p className="text-[12px] font-medium text-ink">{d.label}</p>
-                  <p className="tnum mt-1 text-[12px] text-ink-muted">
+                  <p className="numeral mt-1 text-[12px] text-ink-muted">
                     In {formatMoney(d.incomeMinor, currency, { compact: true })}
                   </p>
-                  <p className="tnum text-[12px] text-ink-muted">
+                  <p className="numeral text-[12px] text-ink-muted">
                     Out {formatMoney(d.expenseMinor, currency, { compact: true })}
                   </p>
-                  <p className="tnum mt-1 border-t border-border pt-1 text-[12px] font-medium text-ink">
+                  <p className="numeral mt-1 border-t border-border pt-1 text-[12px] font-medium text-ink">
                     Net {formatMoney(d.netMinor, currency, { compact: true, signed: true })}
                   </p>
                 </div>

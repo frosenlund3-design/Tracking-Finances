@@ -53,7 +53,7 @@ export default async function AdvancedPage() {
     fixedVsVariable,
   ] = await Promise.all([
     periodTotals(user.id, range, currency),
-    channelBreakdown(user.id, range),
+    channelBreakdown(user.id, { ...range, excludeInternal: true }),
     accountFlows(user.id, range),
     monthlyTrend(user.id, 12, 'all', now),
     compareCategories(user.id, 'all', now),

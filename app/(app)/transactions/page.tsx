@@ -190,7 +190,7 @@ function SummaryCell({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-border bg-surface px-3 py-2">
       <p className="text-[11px] text-ink-subtle">{label}</p>
-      <p className="tnum mt-0.5 text-[14px] font-medium">{value}</p>
+      <p className="numeral mt-0.5 text-[14px] font-medium">{value}</p>
     </div>
   );
 }

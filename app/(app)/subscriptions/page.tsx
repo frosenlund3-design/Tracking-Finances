@@ -132,7 +132,7 @@ function Group({
       <div className="flex items-baseline justify-between px-1">
         <h2 className="text-[13px] font-medium uppercase tracking-wide text-ink-subtle">{title}</h2>
         {!muted ? (
-          <span className="tnum text-[13px] text-ink-muted">
+          <span className="numeral text-[13px] text-ink-muted">
             {formatMoney(total, currency, { compact: true })}/mo
           </span>
         ) : null}
@@ -155,10 +155,10 @@ function Group({
                 </p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="tnum text-[15px] font-medium">
+                <p className="numeral text-[15px] font-medium">
                   {formatMoney(s.amountMinor, s.currency)}
                 </p>
-                <p className="tnum text-[12px] text-ink-subtle">
+                <p className="numeral text-[12px] text-ink-subtle">
                   {formatMoney(s.monthlyEquivalentMinor, s.currency)}/mo
                 </p>
               </div>
@@ -175,7 +175,7 @@ function Group({
               </div>
               <div>
                 <dt className="text-ink-subtle">Per year</dt>
-                <dd className="tnum mt-0.5">
+                <dd className="numeral mt-0.5">
                   {formatMoney(s.annualEquivalentMinor, s.currency, { compact: true })}
                 </dd>
               </div>

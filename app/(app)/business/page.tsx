@@ -156,7 +156,7 @@ export default async function BusinessPage() {
                 {topCustomers.map((c) => (
                   <li key={c.merchantKey} className="flex items-center justify-between gap-3 py-2.5">
                     <span className="min-w-0 truncate text-[14px]">{c.merchant}</span>
-                    <span className="tnum shrink-0 text-[14px] text-ink-muted">
+                    <span className="numeral shrink-0 text-[14px] text-ink-muted">
                       {formatMoney(c.amountMinor, currency, { compact: true })}
                     </span>
                   </li>
@@ -186,7 +186,7 @@ export default async function BusinessPage() {
               {subscriptions.slice(0, 6).map((s) => (
                 <li key={s.id} className="flex items-center justify-between gap-3 py-2.5">
                   <span className="min-w-0 truncate text-[14px]">{s.merchantLabel}</span>
-                  <span className="tnum shrink-0 text-[14px] text-ink-muted">
+                  <span className="numeral shrink-0 text-[14px] text-ink-muted">
                     {formatMoney(s.monthlyEquivalentMinor, s.currency)}/mo
                   </span>
                 </li>
@@ -221,7 +221,7 @@ function SmallStat({ label, value, hint }: { label: string; value: string; hint?
   return (
     <div className="rounded-lg border border-border bg-surface px-3 py-2.5">
       <p className="text-[11px] text-ink-subtle">{label}</p>
-      <p className="tnum mt-0.5 text-[15px] font-medium">{value}</p>
+      <p className="numeral mt-0.5 text-[15px] font-medium">{value}</p>
       {hint ? <p className="text-[11px] text-ink-subtle">{hint}</p> : null}
     </div>
   );

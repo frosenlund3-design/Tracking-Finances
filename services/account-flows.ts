@@ -319,14 +319,22 @@ export async function accountDetail(
   const where = buildWhere(userId, { ...filters, accountIds: [accountId] });
 
   return withUser(userId, async (db) => {
+    // Who actually paid, and who was actually paid. Moving money to your own
+    // savings is not "one of your biggest expenses".
+    const externalWhere = buildWhere(userId, {
+      ...filters,
+      accountIds: [accountId],
+      excludeInternal: true,
+    });
+
     const counterparties = async (direction: 'in' | 'out') => {
       const { rows } = await db.query<{ label: string; amount: number; n: number }>(
         `SELECT COALESCE(t.counterparty, t.merchant, t.description) AS label,
                 sum(abs(t.amount_minor)) AS amount, count(*)::int AS n
            FROM transactions t
-          WHERE ${where.sql} AND t.amount_minor ${direction === 'in' ? '>' : '<'} 0
+          WHERE ${externalWhere.sql} AND t.amount_minor ${direction === 'in' ? '>' : '<'} 0
           GROUP BY label ORDER BY amount DESC LIMIT 8`,
-        where.params,
+        externalWhere.params,
       );
       return rows.map((r) => ({
         label: r.label,

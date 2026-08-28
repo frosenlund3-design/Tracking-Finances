@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/primitives';
 import { formatDay } from '@/lib/dates';
 import { DemoBanner } from '@/components/demo-banner';
+import { InstallPrompt } from '@/components/pwa';
 
 export const metadata: Metadata = { title: 'Dashboard' };
 export const dynamic = 'force-dynamic';
@@ -97,19 +98,25 @@ export default async function DashboardPage() {
     <div className="rise space-y-6">
       <DemoBanner demoMode={user.demoMode} />
 
-      <header>
+      {/* The balance is a summary of the accounts, so it leads to them. */}
+      <Link href="/accounts" className="pressable block">
         <p className="text-[13px] text-ink-muted">{month.label}</p>
-        <h1 className="tnum mt-1 text-[32px] font-semibold leading-none tracking-tight sm:text-4xl">
+        <h1 className="numeral mt-1 text-[34px] font-semibold leading-none sm:text-[40px]">
           {formatMoney(balance.totalMinor, currency, { compact: true })}
         </h1>
-        <p className="mt-1.5 text-[13px] text-ink-muted">
+        <p className="mt-1.5 flex items-center gap-1 text-[13px] text-ink-muted">
           across {accounts.filter((a) => a.isActive).length} account
           {accounts.filter((a) => a.isActive).length === 1 ? '' : 's'}
           {balance.excludedAccounts > 0
             ? ` · ${balance.excludedAccounts} in another currency not included`
             : ''}
+          <span aria-hidden="true" className="text-ink-subtle">
+            ›
+          </span>
         </p>
-      </header>
+      </Link>
+
+      <InstallPrompt />
 
       <section className="grid grid-cols-2 gap-3">
         <StatTile label="Money in" minor={totals.incomeMinor} currency={currency} />
@@ -242,7 +249,7 @@ export default async function DashboardPage() {
                       {formatDay(s.nextPredictedDate)} · {s.interval}
                     </p>
                   </div>
-                  <span className="tnum shrink-0 text-[14px] text-ink-muted">
+                  <span className="numeral shrink-0 text-[14px] text-ink-muted">
                     {formatMoney(-s.amountMinor, s.currency)}
                   </span>
                 </li>

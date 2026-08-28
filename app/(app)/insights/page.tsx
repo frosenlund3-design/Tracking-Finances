@@ -95,10 +95,10 @@ export default async function InsightsPage() {
             {forecast.points.map((p) => (
               <div key={p.horizonDays} className="rounded-lg border border-border p-3">
                 <p className="text-[11px] text-ink-subtle">In {p.horizonDays} days</p>
-                <p className="tnum mt-1 text-[16px] font-medium">
+                <p className="numeral mt-1 text-[16px] font-medium">
                   {formatMoney(p.balanceMinor, currency, { compact: true })}
                 </p>
-                <p className="tnum mt-0.5 text-[11px] text-ink-subtle">
+                <p className="numeral mt-0.5 text-[11px] text-ink-subtle">
                   {formatMoney(p.lowMinor, currency, { compact: true })} –{' '}
                   {formatMoney(p.highMinor, currency, { compact: true })}
                 </p>
@@ -145,7 +145,7 @@ export default async function InsightsPage() {
                 <li key={m.category} className="flex items-center justify-between gap-3 py-2.5">
                   <span className="min-w-0 truncate text-[14px]">{m.label}</span>
                   <span className="flex shrink-0 items-baseline gap-2">
-                    <span className="tnum text-[13px] text-ink-muted">
+                    <span className="numeral text-[13px] text-ink-muted">
                       {formatMoney(m.previousMinor, currency, { compact: true })} →{' '}
                       {formatMoney(m.currentMinor, currency, { compact: true })}
                     </span>
@@ -184,7 +184,7 @@ export default async function InsightsPage() {
                     className="flex items-center justify-between gap-3 py-2.5 transition-colors hover:text-accent"
                   >
                     <span className="min-w-0 truncate text-[14px]">{m.merchant}</span>
-                    <span className="tnum shrink-0 text-[13px] text-ink-muted">
+                    <span className="numeral shrink-0 text-[13px] text-ink-muted">
                       {formatMoney(m.amountMinor, currency, { compact: true })} · {m.transactionCount}×
                     </span>
                   </Link>
@@ -212,7 +212,7 @@ export default async function InsightsPage() {
                       <span className="block truncate text-[14px]">{b.merchant}</span>
                       <span className="text-[12px] text-ink-subtle">{b.transactionDate}</span>
                     </span>
-                    <span className="tnum shrink-0 text-[14px]">
+                    <span className="numeral shrink-0 text-[14px]">
                       {formatMoney(b.amountMinor, currency, { compact: true })}
                     </span>
                   </Link>

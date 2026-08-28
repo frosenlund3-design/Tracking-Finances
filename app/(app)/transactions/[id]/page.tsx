@@ -58,7 +58,7 @@ export default async function TransactionDetailPage({
           <h1 className="mt-1 text-xl font-semibold tracking-tight">
             {transaction.merchant ?? transaction.description}
           </h1>
-          <p className="tnum mt-2 text-[30px] font-semibold leading-none tracking-tight">
+          <p className="numeral mt-2 text-[30px] font-semibold leading-none tracking-tight">
             {formatMoney(transaction.amountMinor, transaction.currency, { signed: true })}
           </p>
 

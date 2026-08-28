@@ -32,7 +32,7 @@ export function Money({
           : 'text-ink-muted';
 
   return (
-    <span className={cn('tnum', colour, className)}>
+    <span className={cn('numeral', colour, className)}>
       {formatMoney(minor, currency, { signed, compact })}
     </span>
   );
@@ -56,7 +56,7 @@ export function StatTile({
   return (
     <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-[var(--shadow-card)]">
       <p className="text-[12px] font-medium text-ink-muted">{label}</p>
-      <p className="tnum mt-1.5 text-[22px] font-semibold leading-tight tracking-tight text-ink sm:text-2xl">
+      <p className="numeral mt-1.5 text-[23px] font-semibold leading-tight text-ink sm:text-[26px]">
         {formatMoney(minor, currency, { compact: true, signed })}
       </p>
       {hint ? <p className="mt-1 text-[12px] text-ink-subtle">{hint}</p> : null}

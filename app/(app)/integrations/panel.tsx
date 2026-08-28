@@ -127,7 +127,7 @@ export function IntegrationsPanel({
                             <span className="ml-1.5 text-ink-subtle">{a.maskedReference}</span>
                           ) : null}
                         </span>
-                        <span className="tnum shrink-0 text-ink-muted">
+                        <span className="numeral shrink-0 text-ink-muted">
                           {a.balanceMinor === null
                             ? '—'
                             : formatMoney(a.balanceMinor, a.currency, { compact: true })}

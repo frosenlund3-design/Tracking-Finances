@@ -179,6 +179,25 @@ describe('payment channels', () => {
   });
 });
 
+describe('account detail', () => {
+  it('leaves internal movements out of the biggest-counterparty lists', async () => {
+    const { accountDetail } = await import('@/services/account-flows');
+    const detail = (await accountDetail(userId, businessId, RANGE))!;
+    // The business account only moved money to the owner in this window, so
+    // there is nothing it actually paid out to anyone else.
+    expect(detail.topOutgoing).toHaveLength(0);
+    expect(detail.internalOutMinor).toBe(750_000);
+  });
+
+  it('still counts real spending in the counterparty list', async () => {
+    const { accountDetail } = await import('@/services/account-flows');
+    const detail = (await accountDetail(userId, checkingId, RANGE))!;
+    const labels = detail.topOutgoing.map((r) => r.label);
+    expect(labels).toContain('Boligselskabet Vest');
+    expect(labels).not.toContain('Egen Konto');
+  });
+});
+
 describe('MobilePay', () => {
   it('groups payments by person with a net per person', async () => {
     const { mobilePaySummary } = await import('@/services/mobilepay');

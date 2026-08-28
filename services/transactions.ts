@@ -318,6 +318,12 @@ export interface TransactionFilters {
   search?: string;
   needsReview?: boolean;
   paymentChannels?: Array<Transaction['paymentChannel']>;
+  /**
+   * Drops movements between the user's own accounts. Use wherever the question
+   * is "what did I actually spend", so a transfer to savings does not appear
+   * beside real merchants.
+   */
+  excludeInternal?: boolean;
 }
 
 interface WhereClause {
@@ -348,6 +354,9 @@ export function buildWhere(userId: string, f: TransactionFilters): WhereClause {
   if (f.providers?.length) add('t.provider = ANY(?)', f.providers);
   if (f.taxRelevant) add('t.tax_relevant = ?', f.taxRelevant);
   if (f.paymentChannels?.length) add('t.payment_channel = ANY(?)', f.paymentChannels);
+  if (f.excludeInternal) {
+    parts.push("(t.category <> 'transfers' AND t.transaction_type <> 'payout')");
+  }
   if (f.needsReview) parts.push("(t.confidence_score < 0.5 AND t.category_locked = FALSE)");
   if (f.search?.trim()) {
     const term = `%${f.search.trim().toLowerCase()}%`;

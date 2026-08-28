@@ -30,7 +30,7 @@ export default async function AccountDetailPage({
   if (!detail) notFound();
 
   const [channels, recent] = await Promise.all([
-    channelBreakdown(user.id, { ...range, accountIds: [id] }),
+    channelBreakdown(user.id, { ...range, accountIds: [id], excludeInternal: true }),
     listTransactions(user.id, { ...range, accountIds: [id] }, { limit: 12 }),
   ]);
 
@@ -106,6 +106,9 @@ export default async function AccountDetailPage({
               }))}
               currency={currency}
             />
+            <p className="mt-3 text-[12px] leading-relaxed text-ink-subtle">
+              Money you moved to your own accounts is excluded — it is shown separately above.
+            </p>
           </CardBody>
         </Card>
       ) : null}
