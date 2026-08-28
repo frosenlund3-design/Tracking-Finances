@@ -72,6 +72,12 @@ export interface LoopNode {
   blockReason?: ProcrastinationReason
   /** When the coach last raised this task, so it does not nag. */
   lastAskedAt?: number
+  /**
+   * What closing this is worth in kroner, if she says so. Never guessed — the
+   * app has no way of knowing what a piece of work pays, and inventing a
+   * number would make every statistic built on it a lie.
+   */
+  valueDKK?: number
 }
 
 export interface MicroStep {
@@ -126,6 +132,10 @@ export interface Completion {
   /** How the loop got closed, for the friction model. */
   via: 'manual' | 'start-mode' | 'body-double' | 'what-now' | 'coach'
   minutes?: number
+  /** Copied at completion time so statistics survive the task being deleted. */
+  area?: LifeArea
+  wasAvoided?: boolean
+  valueDKK?: number
 }
 
 export type RewardKind =
@@ -198,6 +208,26 @@ export interface UserPreferences {
   spentXP: number
   currentEnergy: EnergyLevel
   energySetAt: number
+  /**
+   * The day she has declared finished — either by reaching a small daily
+   * goal, or by simply saying so. Stored as 'YYYY-MM-DD'.
+   */
+  doneForDay?: string
+  /**
+   * Extra loops she has asked for beyond today's goal. Asking for one more
+   * raises the bar by one rather than clearing the day, so "nok" stays a real
+   * number instead of something that silently resets.
+   */
+  extraToday?: number
+  extraTodayDate?: string
+  /** Mental load at the first opening of the day, for "det faldt X%". */
+  loadSnapshot?: number
+  loadSnapshotDate?: string
+  /**
+   * Optional. Used only to estimate what her closed work loops were worth,
+   * and every number derived from it is labelled as an estimate.
+   */
+  hourlyRateDKK?: number
 }
 
 export interface RewardGoal {

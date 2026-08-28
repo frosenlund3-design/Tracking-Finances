@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  ArrowDownToLine, Check, ChevronRight, CircleDashed, Clock, Play, Plus, Split, Trash2, UserPlus, X,
+  ArrowDownToLine, Banknote, Check, ChevronRight, CircleDashed, Clock, Play, Plus, Split, Trash2,
+  UserPlus, X,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useStore } from '@/store/useStore'
@@ -36,6 +37,8 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
 
   const [showPark, setShowPark] = useState(false)
   const [showTime, setShowTime] = useState(false)
+  const [showValue, setShowValue] = useState(false)
+  const [value, setValue] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [title, setTitle] = useState(node?.title ?? '')
   const [editing, setEditing] = useState(false)
@@ -212,6 +215,16 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
         {!isRoot && (
           <SmallAction icon={<Clock size={16} />} label="Læg på en dag" onClick={() => setShowTime((v) => !v)} />
         )}
+        {!isRoot && !node.isArea && (
+          <SmallAction
+            icon={<Banknote size={16} />}
+            label={node.valueDKK ? `${node.valueDKK} kr.` : 'Er den penge værd?'}
+            onClick={() => {
+              setValue(node.valueDKK ? String(node.valueDKK) : '')
+              setShowValue((v) => !v)
+            }}
+          />
+        )}
         {!isRoot && (
           <SmallAction
             icon={<X size={16} />}
@@ -260,6 +273,44 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
               </div>
               <p className="mt-3 text-[12.5px] leading-relaxed text-faint">
                 Perfekt. Så behøver du ikke holde den i hovedet indtil da.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {showValue && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 rounded-xl2 border border-line bg-surface p-4">
+              <p className="text-[14px] text-muted">
+                Hvad er den her værd, når den er lukket? Fx en kundeopgave.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={value}
+                  onChange={(e) => setValue(e.target.value.replace(/[^0-9]/g, ''))}
+                  inputMode="numeric"
+                  placeholder="kr."
+                  className="min-h-[48px] flex-1 rounded-xl2 border border-line bg-raised px-4 text-[16px] outline-none focus:border-ink/20"
+                />
+                <button
+                  onClick={async () => {
+                    await useStore.getState().updateNode(node.id, {
+                      valueDKK: value ? Number(value) : undefined,
+                    })
+                    setShowValue(false)
+                  }}
+                  className="focus-ring min-h-[48px] rounded-xl2 bg-ink px-5 text-[15px] font-medium text-canvas active:scale-[0.98]"
+                >
+                  Gem
+                </button>
+              </div>
+              <p className="mt-2.5 text-[12.5px] leading-relaxed text-faint">
+                Det tæller med i statistikken inde i indstillinger. Helt frivilligt.
               </p>
             </div>
           </motion.div>

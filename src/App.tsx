@@ -6,6 +6,7 @@ import { CircleUniverse } from '@/components/CircleUniverse'
 import { TimeRings } from '@/components/TimeRings'
 import { Rewards } from '@/components/Rewards'
 import { Settings } from '@/components/Settings'
+import { Stats } from '@/components/Stats'
 import { TabBar } from '@/components/TabBar'
 import { Sheet } from '@/components/ui/Sheet'
 import { BrainDumpPanel } from '@/components/BrainDump'
@@ -53,6 +54,7 @@ export default function App() {
         {screen === 'time' && <TimeRings />}
         {screen === 'rewards' && <Rewards />}
         {screen === 'settings' && <Settings />}
+        {screen === 'stats' && <Stats />}
       </main>
 
       <TabBar />

@@ -34,7 +34,8 @@ export function TabBar() {
       />
       <div className="relative mx-auto flex max-w-[560px] items-stretch px-2">
         {TABS.map((t) => {
-          const active = screen === t.id || (t.id === 'rewards' && screen === 'settings')
+          const active =
+            screen === t.id || (t.id === 'rewards' && (screen === 'settings' || screen === 'stats'))
           const Icon = t.icon
           return (
             <button

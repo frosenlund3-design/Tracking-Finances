@@ -1,4 +1,4 @@
-import { ChevronLeft, Download, Info, Lock, LockOpen, Share, Trash2, Upload } from 'lucide-react'
+import { BarChart3, ChevronLeft, Download, Info, Lock, LockOpen, Share, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useStore } from '@/store/useStore'
 import { downloadBackup, importBackup, BackupError, wipeEverything } from '@/lib/backup'
@@ -73,6 +73,14 @@ export function Settings() {
           </button>
           <h1 className="text-[24px] font-semibold tracking-[-0.028em]">Indstillinger</h1>
         </div>
+
+        <Section title="Det du har flyttet">
+          <Row
+            icon={<BarChart3 size={17} />}
+            label="Se hvad det er blevet til"
+            onClick={() => setScreen('stats')}
+          />
+        </Section>
 
         <Section title="Din profil">
           <div className="rounded-xl2 border border-line bg-surface p-5">

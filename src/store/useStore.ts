@@ -14,7 +14,7 @@ import type {
   UserPreferences,
   UserProfile,
 } from '@/db/types'
-import { actionableLeaves, canFocus, isParkedNow, makeNode, toMap, toStep, type NodeMap } from '@/lib/nodes'
+import { actionableLeaves, areaOf, canFocus, isParkedNow, makeNode, toMap, toStep, type NodeMap } from '@/lib/nodes'
 import { computeMentalLoad, type MentalLoad } from '@/lib/mentalLoad'
 import { rankTasks, scoreTask, xpFor, type ScoredTask } from '@/lib/scoring'
 import { decompose } from '@/lib/decompose'
@@ -27,7 +27,7 @@ import {
   deriveKey, isStrongEnough, isUnlocked, newSalt, openText, sameVerifier, sealText, setSessionKey, verifierFor,
 } from '@/lib/vault'
 
-export type Screen = 'home' | 'map' | 'time' | 'rewards' | 'settings'
+export type Screen = 'home' | 'map' | 'time' | 'rewards' | 'settings' | 'stats'
 
 export type Overlay =
   | { kind: 'none' }
@@ -103,6 +103,9 @@ interface State {
 
   commitBrainDump: (raw: string, parsed: ParsedLoop[]) => Promise<number>
   award: (kind: RewardKind, opts?: { xp?: number; label?: string; nodeId?: string }) => Promise<void>
+
+  declareDayDone: () => Promise<void>
+  wantMoreToday: () => Promise<void>
 
   setRewardGoal: (storeId: string, amountDKK: 50 | 100 | 200) => Promise<void>
   clearRewardGoal: () => Promise<void>
@@ -181,7 +184,20 @@ export const useStore = create<State>((set, get) => ({
       data.nodes = data.nodes.map((n) => updated.find((u) => u.id === n.id) ?? n)
     }
 
+    const today = isoDate(new Date())
+    const map = toMap(data.nodes)
     const prefs = { ...data.prefs, lastOpenedAt: now }
+    if (prefs.loadSnapshotDate !== today) {
+      // Taken on the first opening of the day, so "mental load er faldet X%"
+      // measures the day rather than the session.
+      prefs.loadSnapshot = computeMentalLoad(data.nodes, map).percent
+      prefs.loadSnapshotDate = today
+      // A new day is a fresh one. Yesterday's "finished" never carries over,
+      // and neither do the extras she asked for.
+      prefs.doneForDay = undefined
+      prefs.extraToday = 0
+      prefs.extraTodayDate = today
+    }
     await db.prefs.put(prefs)
     setHapticsEnabled(prefs.haptics)
     applyTheme(data.profile.theme, prefs.reducedStimulation)
@@ -191,7 +207,7 @@ export const useStore = create<State>((set, get) => ({
       authState: authRow ? 'unlocked' : 'none',
       authName: authRow?.name,
       nodes: data.nodes,
-      map: toMap(data.nodes),
+      map,
       profile: data.profile,
       prefs,
       completions: data.completions,
@@ -463,6 +479,22 @@ export const useStore = create<State>((set, get) => ({
     set({ prefs, rewards: [event, ...get().rewards].slice(0, 200) })
   },
 
+  async declareDayDone() {
+    await get().savePrefs({ doneForDay: isoDate(new Date()) })
+    haptic('success')
+  },
+
+  async wantMoreToday() {
+    // Never a lock. Asking for one more raises today's bar by one and clears
+    // the "finished" flag — clearing the flag alone would do nothing, since
+    // the goal she already reached would immediately close the day again.
+    const today = isoDate(new Date())
+    const { prefs } = get()
+    const extra = prefs.extraTodayDate === today ? (prefs.extraToday ?? 0) : 0
+    await get().savePrefs({ doneForDay: undefined, extraToday: extra + 1, extraTodayDate: today })
+    set({ skipped: [] })
+  },
+
   async setRewardGoal(storeId, amountDKK) {
     const goal: RewardGoal = {
       storeId,
@@ -669,6 +701,9 @@ async function closeLoop(
     xp,
     via,
     minutes: node.estimatedMinutes,
+    area: areaOf(state.map, node),
+    wasAvoided: node.avoidanceCount >= 2,
+    valueDKK: node.valueDKK,
   }
 
   await putNodes(closing)

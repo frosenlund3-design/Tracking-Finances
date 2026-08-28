@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Battery, ChevronRight, Gift, MessageCircleHeart, Plus, Settings as SettingsIcon, Waves } from 'lucide-react'
+import { Battery, Check, ChevronRight, Gift, MessageCircleHeart, Moon, Plus, Settings as SettingsIcon, Waves } from 'lucide-react'
 import { useMemo } from 'react'
 import { useStore, useClosedToday, useMentalLoad, useNextTask, useParked, useAvailableXP } from '@/store/useStore'
 import { greeting, relativeDay, isoDate } from '@/lib/time'
@@ -9,6 +9,7 @@ import { ROOT_ID } from '@/db/db'
 import { firstActionFor } from '@/lib/firstAction'
 import { scanAttention } from '@/lib/attention'
 import { toneFor } from '@/lib/colors'
+import { enoughBody, enoughHeadline, enoughState } from '@/lib/enough'
 
 /**
  * Dagens view.
@@ -35,6 +36,10 @@ export function Home() {
   const closedToday = useClosedToday()
   const parked = useParked()
   const availableXP = useAvailableXP()
+  const declareDayDone = useStore((s) => s.declareDayDone)
+  const wantMoreToday = useStore((s) => s.wantMoreToday)
+
+  const enough = enoughState(prefs, closedToday, load.percent)
 
   const worlds = visibleChildren(map, ROOT_ID)
   const streak = streakLine(prefs.streak, daysAway)
@@ -68,8 +73,48 @@ export function Home() {
           </button>
         </div>
 
-        {/* ── The one small thing ─────────────────────────────────────── */}
-        {next && action && tone ? (
+        {/* ── Enough for today ────────────────────────────────────────── */}
+        {enough.done ? (
+          <motion.div
+            layout
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            className="mt-4 rounded-[30px] border border-line bg-surface p-7 text-center"
+          >
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-calm/15">
+              {enough.closed > 0 ? (
+                <Check size={26} className="text-calm" />
+              ) : (
+                <Moon size={24} className="text-calm" />
+              )}
+            </div>
+
+            <h2 className="mt-5 text-[24px] font-semibold leading-tight tracking-[-0.03em]">
+              {enoughHeadline(enough)}
+            </h2>
+            <p className="mx-auto mt-2.5 max-w-[19rem] text-[15px] leading-relaxed text-muted">
+              {enoughBody(enough)}
+            </p>
+
+            <p className="mt-6 text-[13.5px] text-faint">Luk appen. Vi ses i morgen.</p>
+
+            <div className="mt-5 flex flex-col gap-1">
+              <button
+                onClick={() => void wantMoreToday()}
+                className="focus-ring min-h-[48px] w-full rounded-3xl border border-line text-[14.5px] text-muted active:scale-[0.99]"
+              >
+                Jeg vil gerne én mere
+              </button>
+              <button
+                onClick={() => openOverlay({ kind: 'braindump' })}
+                className="focus-ring min-h-[44px] w-full text-[13.5px] text-faint"
+              >
+                Der ligger stadig noget i hovedet
+              </button>
+            </div>
+          </motion.div>
+        ) : next && action && tone ? (
           <motion.div
             layout
             initial={{ opacity: 0, y: 10 }}
@@ -140,8 +185,18 @@ export function Home() {
           </div>
         )}
 
+        {/* ── Permission to stop ──────────────────────────────────────── */}
+        {!enough.done && (
+          <button
+            onClick={() => void declareDayDone()}
+            className="focus-ring mt-2.5 min-h-[44px] w-full text-[13px] text-faint"
+          >
+            Jeg er færdig for i dag
+          </button>
+        )}
+
         {/* ── Something has been sitting there ────────────────────────── */}
-        {attention && (
+        {attention && !enough.done && (
           <button
             onClick={() => openOverlay({ kind: 'coach', nodeId: attention.node.id, ask: true })}
             className="focus-ring mt-3 flex w-full items-center gap-3 rounded-3xl border border-line bg-surface px-5 py-4 text-left active:scale-[0.99]"
@@ -174,11 +229,21 @@ export function Home() {
               transition={{ type: 'spring', stiffness: 90, damping: 20 }}
             />
           </span>
-          {closedToday > 0 && (
-            <span className="mt-2 block text-[12.5px] text-calm">
-              {closedToday} {closedToday === 1 ? 'loop' : 'loops'} lukket i dag.
+          <span className="mt-2.5 flex items-center gap-2">
+            <span className="flex gap-1" aria-hidden>
+              {Array.from({ length: enough.goal }).map((_, i) => (
+                <span
+                  key={i}
+                  className={`h-1.5 w-1.5 rounded-full ${i < enough.closed ? 'bg-calm' : 'bg-line'}`}
+                />
+              ))}
             </span>
-          )}
+            <span className="text-[12px] text-faint">
+              {closedToday === 0
+                ? `Nok for i dag: ${enough.goal} ${enough.goal === 1 ? 'loop' : 'loops'}`
+                : `${closedToday} af ${enough.goal} — nok for i dag`}
+            </span>
+          </span>
         </button>
 
         {/* ── Tools, one quiet row ────────────────────────────────────── */}

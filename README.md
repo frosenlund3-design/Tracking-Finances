@@ -139,6 +139,27 @@ for det.
 Ekstra point for det der er svært: at *starte*, at bryde en scroll, at tømme
 hovedet, og især for opgaver man længe har cirklet om.
 
+### "Der er ikke noget, du skal lige nu"
+
+Den sætning er den mest værdifulde skærm i appen — og den var uopnåelig. Den
+kom kun frem, når hvert eneste loop var lukket, hvilket for et menneske med et
+fuldt liv aldrig sker. Så den gjorde aldrig sit arbejde.
+
+Nu er der to veje til den, i `enough.ts`:
+
+1. **Luk et lille antal loops.** Tallet skalerer med den energi hun har angivet
+   — 1 ved 10%, op til 4 ved 100% — og det er med vilje lille. Tre lukkede
+   loops på en 30%-dag er en god dag, ikke en fiasko på vej mod ti.
+2. **Sig det.** "Jeg er færdig for i dag" er en legitim beslutning, præcis som
+   at parkere noget, og det tager ét tryk.
+
+Så skifter forsiden til en rolig afslutning: hvad hun nåede, hvor meget mental
+load faldt siden i morges, og **"Luk appen. Vi ses i morgen."** Det er hele
+pointen med succeskriteriet — appen skal have hende ud af appen.
+
+Det er aldrig en lås. "Jeg vil gerne én mere" hæver dagens mål med én i stedet
+for bare at rydde flaget, så "nok" bliver ved med at være et rigtigt tal.
+
 ### Det der har ligget for længe
 
 `attention.ts` scanner efter loops der er blevet skubbet flere gange, ligger
@@ -199,6 +220,29 @@ Ingen knap i Loops lover noget browseren ikke kan:
   står både før hun vælger en kode og på låseskærmen.
 
 ---
+
+## De stille statistikker
+
+`stats.ts` samler det, der er blevet til noget, og skærmen ligger bag
+Indstillinger — ikke på forsiden. Et tal på forsiden bliver til et mål, og et
+mål bliver til pres, hvilket er det ene appen ikke må tilføje. Hernede gør
+tallene det modsatte: på en dårlig dag er de bevis for, at det faktisk virker.
+
+- loops lukket, timer taget ud af hovedet, gange hun er kommet i gang
+- ting hun havde skubbet flere gange — og alligevel klarede
+- ting hun besluttede ikke var vigtige (det er også arbejde)
+- hvornår på dagen hun rent faktisk lukker ting
+- **hvad det har givet hende i kroner**
+
+Penge er det eneste sted, hvor ærlighed kræver ekstra omtanke. Appen kan ikke
+vide, hvad et stykke arbejde er værd, og et gættet tal ville gøre hver eneste
+statistik bygget på det til en løgn. Derfor kommer beløb kun to steder fra:
+
+- en værdi hun selv sætter på den enkelte opgave (fx en kundeopgave: 4.500 kr.)
+- et skøn ud fra en timepris hun selv indtaster, kun på lukkede arbejdsopgaver,
+  og altid mærket som et skøn
+
+Det står i UI'et: *"Loops ved ikke hvad dit arbejde koster, og gætter ikke."*
 
 ## Profil, kode og kryptering
 
