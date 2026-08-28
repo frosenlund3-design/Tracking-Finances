@@ -432,6 +432,31 @@ passer ikke på mig".
 Samtaler gemmes hver for sig og navngives efter det første hun selv skriver, så
 man kan gå tilbage i en gammel tråd og tage fat igen.
 
+### Den åbner med noget nyt hver gang
+
+Den plukkede før én af tre hilsner tilfældigt og tilbød de samme tre knapper
+hver gang. Efter en uge er det ikke en samtale, det er en dørklokke.
+
+Nu vælges åbningen ud fra hvad der faktisk er sandt lige nu, og den samme
+bruges aldrig to gange i træk. Det den ved om hendes dag kommer først:
+
+> Du har lukket 3 i dag. Skal vi tage én mere, eller skal vi kigge på noget der
+> er sværere end det?
+
+> I går lukkede du 4. I dag er der ikke sket noget endnu. Det er ikke en
+> anklage, det er et spørgsmål: er der noget andet i dag, eller er det bare i
+> dag?
+
+> Der ligger 22 åbne loops. Nogle af dem skal du sandsynligvis aldrig lave.
+> Skal vi finde dem og smide dem ud?
+
+Er der ikke noget særligt at sige, roterer den blandt ti spørgsmål, der ikke
+kan besvares med en knap. Det er meningen: et spørgsmål, man skal tænke over i
+to sekunder, er en samtale der starter. En hilsen er ikke.
+
+De sidste seks gemmes i indstillingerne, så det holder også efter en
+genstart.
+
 ### Coachen kan gøre ting, ikke bare sige ting
 
 En assistent, der kun kan snakke, er endnu en ting man skal styre. Og det at
@@ -550,6 +575,51 @@ mangler.
 
 "Jeg mangler tid" og "jeg har ikke overskud" er noget andet og bliver ikke
 behandlet som en mangel, der kan hentes frem.
+
+### Skærmen der frøs
+
+Den var ikke frossen. Den var forskubbet.
+
+Appen er én beholder med fast højde, der ikke scroller, og det er dét, der får
+den til at føles som en app frem for en hjemmeside. På iOS støder det ind i
+tastaturet. Når tastaturet kommer op, skrumper layout-viewporten ikke:
+`100dvh` melder stadig hele skærmen. Kun den *visuelle* viewport skrumper. Så
+beholderen er højere end det synlige område, feltet hun skriver i sidder bag
+tastaturet, og iOS reagerer ved selv at scrolle den visuelle viewport op.
+
+Når tastaturet forsvinder igen, bliver den scroll ikke altid rullet tilbage.
+Siden tegnes ét sted og modtager tryk et andet, så knapper holder op med at
+reagere, uden at noget ser forkert ud. At lukke appen og åbne den igen nulstiller
+viewporten, hvilket er præcis derfor det så ud til at være kuren.
+
+`lib/viewport.ts` måler den visuelle viewport, udgiver den som `--app-height`,
+og sætter layout-viewporten på plads igen hver gang tastaturet lukker. Aldrig
+mens hun skriver: dét ville kæmpe mod browseren og skjule det felt, hun kigger
+på.
+
+Den anden kilde var arket. Hele arket kunne trækkes, hvilket kæmper mod den
+scrollende liste indeni: et strøg opad i indholdet er både en scroll og et træk,
+og hvis browseren afbryder pegeren undervejs (en systemgestus, en notifikation,
+tastaturet der kommer op), kan trækket blive hængende uden noget til at afslutte
+det. Nu trækkes der kun i håndtaget øverst.
+
+### Tale, og hvorfor knappen ikke virkede
+
+På en iPhone har en web-app startet fra hjemmeskærmen `webkitSpeechRecognition`
+defineret, og den virker ikke. At starte den slutter med det samme uden ord og
+tit uden fejl. Så knappen så rigtig ud, gjorde ingenting og sagde ingenting,
+hvilket er den værste af de tre mulige opførsler.
+
+Der findes ingen omvej, så appen siger det i stedet og peger på det, der
+virker overalt på iOS: **mikrofon-tasten på selve tastaturet.** Det er Apples
+egen diktering, den samme motor, i hvert eneste felt i Loops, og på nyere
+iPhones kører den på selve telefonen.
+
+Hvor appen godt må lytte, holder den nu sessionen i live selv. Safari laver
+ikke rigtig `continuous`: sessionen slutter efter en sætning eller efter en kort
+pause. Loops åbner den bare igen, indtil hun trykker stop. Og en session, der
+ender uden at have hørt et eneste ord, siger det nu højt frem for at stoppe i
+stilhed.
 
 ### Når browseren siger nej
 

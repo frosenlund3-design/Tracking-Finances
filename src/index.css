@@ -113,9 +113,18 @@ body {
 .pb-safe {
   padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
 }
+/*
+ * The visible height, not the theoretical one.
+ *
+ * --app-height is written by lib/viewport.ts from window.visualViewport, which
+ * is the only measurement on iOS that shrinks when the keyboard opens. The dvh
+ * values are the fallback for the first paint and for anything without a
+ * visual viewport.
+ */
 .h-safe-screen {
   height: 100vh;
   height: 100dvh;
+  height: var(--app-height, 100dvh);
 }
 
 button {

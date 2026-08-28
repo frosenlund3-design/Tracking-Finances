@@ -5,7 +5,8 @@ import { useStore, useClosedToday, useMentalLoad, useNextTask } from '@/store/us
 import { askCoach } from '@/lib/coach/adapter'
 import { complexityOf, findTaskByText } from '@/lib/coach/engine'
 import type { CoachAction, CoachState, Strategy } from '@/lib/coach/types'
-import { GREETINGS } from '@/lib/coach/responses'
+import { chooseOpening, OPENING_MEMORY } from '@/lib/coach/opening'
+import { isoDate } from '@/lib/time'
 import { haptic } from '@/lib/haptics'
 import { parkPresets } from '@/lib/time'
 import { MicButton } from './ui/MicButton'
@@ -143,9 +144,37 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
       }
 
       if (existing.length === 0) {
-        const line = GREETINGS[profile.tone][Math.floor(Math.random() * GREETINGS[profile.tone].length)]
-        void addMessage({ sessionId: id, role: 'coach', text: line })
-        setOptions(['Jeg kan ikke komme i gang', 'Der er for meget', 'Hvad skal jeg lave?'])
+        // A new conversation asks something new. The same greeting five times
+        // in a row stops being a coach and becomes a doorbell.
+        const yesterday = isoDate(new Date(Date.now() - 86_400_000))
+        const opening = chooseOpening({
+          tone: profile.tone,
+          closedToday,
+          closedYesterday: completions.filter((c) => isoDate(new Date(c.completedAt)) === yesterday)
+            .length,
+          energy: prefs.currentEnergy,
+          openLoops: load.openLoops,
+          stale: scanAttention(map)[0]?.node ?? null,
+          observations,
+          daysSinceLastChat: sessions[0]
+            ? Math.floor((Date.now() - sessions[0].updatedAt) / 86_400_000)
+            : null,
+          recent: prefs.recentOpenings ?? [],
+        })
+        void addMessage({ sessionId: id, role: 'coach', text: opening.lines.join('\n') })
+        setOptions(opening.options)
+        void savePrefs({
+          recentOpenings: [opening.id, ...(prefs.recentOpenings ?? [])].slice(0, OPENING_MEMORY),
+        })
+        // An opening that named a stale task is also a diagnosis question.
+        if (opening.id === 'stale') {
+          const node = scanAttention(map)[0]?.node
+          if (node) {
+            setNamedTaskId(node.id)
+            setDiagnosing(node.id)
+            void updateNode(node.id, { lastAskedAt: Date.now() })
+          }
+        }
 
         // Asked once, when she has used the coach enough to know whether she
         // wants it to know her. Not during onboarding, where it would be one

@@ -16,6 +16,7 @@ import { handleAgentRequest } from '../src/lib/coach/agent'
 import { detectCaptures } from '../src/lib/coach/capture'
 import { matchTriggers } from '../src/lib/coach/triggers'
 import { observe } from '../src/lib/coach/memory'
+import { chooseOpening, type OpeningContext } from '../src/lib/coach/opening'
 import type { Completion } from '../src/db/types'
 import type { LoopNode } from '../src/db/types'
 
@@ -257,6 +258,38 @@ console.log('\nmønstre den kan se, som man ikke selv kan')
   check('men siger ingenting uden nok data',
     observe(nodes.slice(0, 2), thin as never, completions.slice(0, 2), NOW).length === 0,
     observe(nodes.slice(0, 2), thin as never, completions.slice(0, 2), NOW).map((o) => o.text).join(' | '))
+}
+
+console.log('\ncoachen åbner med noget nyt hver gang')
+{
+  const base: OpeningContext = {
+    tone: 'calm', closedToday: 0, closedYesterday: 0, energy: 60, openLoops: 4,
+    stale: null, observations: [], daysSinceLastChat: 1, recent: [],
+  }
+  const ids: string[] = []
+  let recent: string[] = []
+  for (let i = 0; i < 8; i++) {
+    const o = chooseOpening({ ...base, recent })
+    ids.push(o.id)
+    recent = [o.id, ...recent].slice(0, 6)
+  }
+  check('otte samtaler i træk gentager ikke sig selv',
+    new Set(ids.slice(0, 6)).size === 6, ids.join(', '))
+  check('og hver åbning stiller et spørgsmål',
+    chooseOpening(base).lines.join(' ').includes('?'))
+
+  check('lav energi bliver nævnt',
+    chooseOpening({ ...base, energy: 10 }).id === 'low-energy')
+  check('en god gårsdag uden en god i dag bliver nævnt',
+    chooseOpening({ ...base, closedYesterday: 4 }).id === 'yesterday-worked')
+  check('fremgang i dag bliver nævnt',
+    chooseOpening({ ...base, closedToday: 3 }).id === 'after-progress')
+  check('en meget lang liste bliver nævnt',
+    chooseOpening({ ...base, openLoops: 22 }).id === 'a-lot-open')
+  check('og en lang pause bliver nævnt',
+    chooseOpening({ ...base, daysSinceLastChat: 9 }).id === 'been-a-while')
+  check('men ikke den samme to gange i træk',
+    chooseOpening({ ...base, energy: 10, recent: ['low-energy'] }).id !== 'low-energy')
 }
 
 console.log(failures ? `\n${failures} FAILED\n` : '\nalt passerer\n')

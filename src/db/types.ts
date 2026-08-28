@@ -335,6 +335,13 @@ export interface UserPreferences {
    */
   selfInvited?: boolean
   /**
+   * Openings the coach has already used, most recent first.
+   *
+   * So a new conversation asks something new. Reading the same greeting for the
+   * fifth time is how a coach stops feeling like anybody is there.
+   */
+  recentOpenings?: string[]
+  /**
    * The day she has declared finished, either by reaching a small daily
    * goal, or by simply saying so. Stored as 'YYYY-MM-DD'.
    */

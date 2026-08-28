@@ -1,7 +1,13 @@
 import { motion } from 'framer-motion'
 import { Mic, Square } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Dictation, DICTATION_ERRORS, speechSupported, type DictationError } from '@/lib/speech'
+import {
+  Dictation,
+  DICTATION_ERRORS,
+  KEYBOARD_MIC_HINT,
+  dictationAvailability,
+  type DictationError,
+} from '@/lib/speech'
 import { haptic } from '@/lib/haptics'
 import { useStore } from '@/store/useStore'
 
@@ -28,6 +34,7 @@ export function MicButton({ onText, existing = '', size = 'sm', label }: Props) 
   const [listening, setListening] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consented, setConsented] = useState(false)
+  const [keyboardHint, setKeyboardHint] = useState(false)
   const dictation = useRef(new Dictation())
   const base = useRef('')
   const voiceAllowed = useStore((s) => s.prefs.voiceEnabled !== false)
@@ -36,10 +43,19 @@ export function MicButton({ onText, existing = '', size = 'sm', label }: Props) 
 
   useEffect(() => () => dictation.current.stop(), [])
 
-  if (!speechSupported() || !voiceAllowed) return null
+  const availability = dictationAvailability()
+  if (availability === 'none' || !voiceAllowed) return null
 
   /** The gate: the notice is shown once, before the first word is recorded. */
   const begin = () => {
+    // On the home screen on an iPhone, Loops is not allowed to listen at all.
+    // Pretending to try produces a button that flashes and does nothing, which
+    // is exactly what she reported. Say what works instead.
+    if (availability === 'keyboard-only') {
+      setKeyboardHint(true)
+      haptic('soft')
+      return
+    }
     if (!seenNotice && !consented) {
       setConsented(true)
       return
@@ -79,7 +95,13 @@ export function MicButton({ onText, existing = '', size = 'sm', label }: Props) 
       <button
         type="button"
         onClick={() => (listening ? end() : begin())}
-        aria-label={listening ? 'Stop diktering' : (label ?? 'Tal i stedet for at skrive')}
+        aria-label={
+          listening
+            ? 'Stop diktering'
+            : availability === 'keyboard-only'
+              ? 'Sådan taler du i stedet for at skrive'
+              : (label ?? 'Tal i stedet for at skrive')
+        }
         className={`focus-ring relative grid ${dimension} place-items-center rounded-xl2 border transition active:scale-95 ${
           listening ? 'border-transparent bg-warm text-canvas' : 'border-line bg-surface text-muted'
         }`}
@@ -99,6 +121,24 @@ export function MicButton({ onText, existing = '', size = 'sm', label }: Props) 
         <span className="absolute -top-6 right-0 whitespace-nowrap text-[11.5px] text-warm">
           Jeg lytter…
         </span>
+      )}
+
+      {keyboardHint && (
+        <div className="absolute bottom-full right-0 z-20 mb-3 w-[min(80vw,21rem)] rounded-xl2 border border-line bg-raised p-4 shadow-lift">
+          <p className="text-[13.5px] font-medium">Brug tastaturets mikrofon</p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-muted">{KEYBOARD_MIC_HINT}</p>
+          <p className="mt-2 text-[12.5px] leading-relaxed text-faint">
+            Når Loops ligger på hjemmeskærmen, må den ikke selv bruge mikrofonen. Det er en
+            begrænsning i iPhonen, ikke noget jeg kan lave om på. Tastaturets mikrofon er den samme
+            stemmegenkendelse.
+          </p>
+          <button
+            onClick={() => setKeyboardHint(false)}
+            className="focus-ring mt-3 min-h-[44px] w-full rounded-xl2 border border-line text-[14px]"
+          >
+            Forstået
+          </button>
+        </div>
       )}
 
       {(error || (consented && !seenNotice)) && (
