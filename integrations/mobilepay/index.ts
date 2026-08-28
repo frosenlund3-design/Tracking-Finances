@@ -32,6 +32,26 @@ const CLIENT_ID = process.env.MOBILEPAY_CLIENT_ID;
 const CLIENT_SECRET = process.env.MOBILEPAY_CLIENT_SECRET;
 const SUBSCRIPTION_KEY = process.env.MOBILEPAY_SUBSCRIPTION_KEY;
 
+export interface MobilePayStatus {
+  /** Merchant API credentials are present. */
+  businessConfigured: boolean;
+  /**
+   * Personal MobilePay has no consumer API and never has. Those payments
+   * arrive through the bank feed instead, where the counterparty's name is in
+   * the description — which is what the MobilePay view reads.
+   */
+  personalViaBank: true;
+  setupUrl: string;
+}
+
+export function mobilePayStatus(): MobilePayStatus {
+  return {
+    businessConfigured: Boolean(CLIENT_ID && CLIENT_SECRET && SUBSCRIPTION_KEY),
+    personalViaBank: true,
+    setupUrl: 'https://developer.vippsmobilepay.com/',
+  };
+}
+
 export const mobilepayProvider: PaymentProvider = {
   id: 'mobilepay',
   displayName: 'MobilePay (business)',

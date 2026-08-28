@@ -9,6 +9,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Kroner' },
   formatDetection: { telephone: false },
+  other: {
+    // Next emits the standardized `mobile-web-app-capable`; older iOS versions
+    // still read the prefixed one, and that is the audience installing from
+    // Safari in the first place.
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+  },
 };
 
 export const viewport: Viewport = {

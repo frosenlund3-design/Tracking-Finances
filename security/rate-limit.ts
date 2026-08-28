@@ -53,7 +53,9 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
 
 export const LIMITS = {
   login: { limit: 8, windowMs: 15 * 60_000 },
-  signup: { limit: 5, windowMs: 60 * 60_000 },
+  // Households, offices and phone networks share an IP, so a handful per hour
+  // is too tight to be about abuse and tight enough to lock out a family.
+  signup: { limit: 12, windowMs: 60 * 60_000 },
   passwordReset: { limit: 5, windowMs: 60 * 60_000 },
   assistant: { limit: 30, windowMs: 60 * 60_000 },
   sync: { limit: 12, windowMs: 60 * 60_000 },

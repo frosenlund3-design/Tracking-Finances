@@ -81,7 +81,7 @@ export default async function DashboardPage() {
             title="Nothing to show yet"
             description="Load nine months of realistic demo data, or connect a real account. The dashboard fills in immediately either way."
             action={
-              <Link href="/integrations">
+              <Link href="/connect">
                 <Button>Connect or load data</Button>
               </Link>
             }

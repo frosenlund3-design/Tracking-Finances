@@ -58,7 +58,7 @@ export default async function BusinessPage() {
             title="No business activity yet"
             description="Mark a transaction as business, or connect Stripe, and the business view fills in."
             action={
-              <Link href="/integrations">
+              <Link href="/connect">
                 <Button>Connect Stripe</Button>
               </Link>
             }

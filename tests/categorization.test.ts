@@ -168,4 +168,87 @@ describe('categorization tiers', () => {
     const result = classify({ merchant: 'Stripe', description: '', amountMinor: 500000 }, []);
     expect(result.category).toBe('business_revenue');
   });
+
+  it('does not count a payout landing as revenue a second time', () => {
+    // The revenue was already booked on the processor; counting the payout
+    // into the bank as revenue would inflate income by the whole amount.
+    const landing = classify(
+      { merchant: 'Stripe', description: 'Overfoersel fra Stripe Payments', amountMinor: 1_000_000 },
+      [],
+    );
+    expect(landing.category).toBe('transfers');
+  });
+
+  it('keeps rent as rent when it happens to be paid by bank transfer', () => {
+    // A description mentioning "overførsel" must not outrank knowing the
+    // merchant is a landlord — otherwise rent leaves the spending totals.
+    const rent = classify(
+      {
+        merchant: 'Boligselskabet Vest',
+        description: 'Overfoersel husleje Boligselskabet Vest',
+        amountMinor: -985_000,
+      },
+      [],
+    );
+    expect(rent.category).toBe('rent');
+    expect(rent.source).toBe('merchant_seed');
+  });
+
+  it('still treats an unidentified transfer as a transfer', () => {
+    const own = classify(
+      { merchant: 'Egen Konto', description: 'Overfoersel til egen konto', amountMinor: -500_000 },
+      [],
+    );
+    expect(own.category).toBe('transfers');
+  });
+
+  it('reads the payment rail out of Danish bank wording', async () => {
+    const { detectPaymentChannel } = await import('@/lib/normalize');
+    expect(detectPaymentChannel('VISA/DANKORT NETTO 5412', null)).toBe('card');
+    expect(detectPaymentChannel('BS Andel Energi', null)).toBe('direct_debit');
+    expect(detectPaymentChannel('MobilePay til Anders', null)).toBe('mobilepay');
+    expect(detectPaymentChannel('Haeveautomat kontant udbetaling', null)).toBe('cash');
+    expect(detectPaymentChannel('Loenoverfoersel', null)).toBe('transfer');
+    expect(detectPaymentChannel('BSH Hausgeraete', null)).toBe('unknown');
+    // A provider hint wins, because it is a fact rather than a reading.
+    expect(detectPaymentChannel('anything', null, 'processor')).toBe('processor');
+  });
+
+  it('gives a payment to a person its own category, not "needs review"', () => {
+    const result = classify(
+      {
+        merchant: 'Anders Kjeldsen',
+        description: 'MobilePay til Anders Kjeldsen',
+        amountMinor: -15_000,
+        paymentChannel: 'mobilepay',
+        counterparty: 'Anders Kjeldsen',
+      },
+      [],
+    );
+    expect(result.category).toBe('peer_transfer');
+    expect(result.confidence).toBeGreaterThan(0.8);
+  });
+
+  it('still recognises a business paid by MobilePay', () => {
+    // Knowing the merchant beats knowing the rail: a café is a café even when
+    // it is paid the same way a friend is.
+    const result = classify(
+      {
+        merchant: 'Cafe Hjoerne',
+        description: 'MobilePay til Cafe Hjoerne',
+        amountMinor: -11_800,
+        paymentChannel: 'mobilepay',
+        counterparty: 'Cafe Hjoerne',
+      },
+      [],
+    );
+    expect(result.category).toBe('restaurants');
+  });
+
+  it('pulls the person out of a MobilePay description', async () => {
+    const { extractMobilePayCounterparty } = await import('@/lib/normalize');
+    expect(extractMobilePayCounterparty('MobilePay til Anders Kjeldsen', null)).toBe('Anders Kjeldsen');
+    expect(extractMobilePayCounterparty('MobilePay fra Sofie Lindberg', null)).toBe('Sofie Lindberg');
+    expect(extractMobilePayCounterparty('VISA/DANKORT NETTO', null)).toBeNull();
+  });
 });

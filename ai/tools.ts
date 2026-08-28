@@ -18,6 +18,8 @@ import { listSubscriptions, upcomingCharges } from '@/services/subscriptions';
 import { cashFlowForecast } from '@/services/forecast';
 import { listTransactions } from '@/services/transactions';
 import { totalBalanceMinor } from '@/services/accounts';
+import { accountFlows, internalTransfers } from '@/services/account-flows';
+import { channelBreakdown, mobilePaySummary } from '@/services/mobilepay';
 import type { Ownership } from '@/types/finance';
 
 /**
@@ -438,6 +440,128 @@ export const TOOLS = [
           amount: money(s.amountMinor, s.currency),
           interval: s.interval,
         })),
+      };
+    },
+  }),
+
+  tool({
+    name: 'get_account_flows',
+    description:
+      'Per-account detail: balance, what came in from outside, what went out, and how much only moved between the user\'s own accounts. Use for "what went in and out of my business account", "how much is in each account".',
+    schema: z.object({
+      period: periodSchema,
+      ownership: ownershipSchema,
+    }),
+    run: async (input, ctx) => {
+      const range = resolvePeriod(input.period, ctx.now);
+      const flows = await accountFlows(ctx.userId, {
+        from: range.start,
+        to: range.end,
+        ownership: input.ownership,
+      });
+      return {
+        period: range.label,
+        accounts: flows.map((f) => ({
+          name: f.name,
+          institution: f.institution,
+          type: f.type,
+          ownership: f.ownership,
+          active: f.isActive,
+          balance: f.balanceMinor === null ? null : money(f.balanceMinor, f.currency),
+          inFromOutside: money(f.externalInMinor, f.currency),
+          outToOutside: money(f.externalOutMinor, f.currency),
+          movedInFromOwnAccounts: money(f.internalInMinor, f.currency),
+          movedOutToOwnAccounts: money(f.internalOutMinor, f.currency),
+          movementCount: f.transactionCount,
+        })),
+        note: 'Money moved between the user\'s own accounts is reported separately because counting it as income or spending would double it.',
+      };
+    },
+  }),
+
+  tool({
+    name: 'get_transfers_between_accounts',
+    description:
+      'Movements between the user\'s own accounts, with both legs paired where possible. Use for "how much did I move to savings", "what went from Stripe to my bank".',
+    schema: z.object({ period: periodSchema }),
+    run: async (input, ctx) => {
+      const range = resolvePeriod(input.period, ctx.now);
+      const [transfers, flows] = await Promise.all([
+        internalTransfers(ctx.userId, { from: range.start, to: range.end }),
+        accountFlows(ctx.userId, { from: range.start, to: range.end }),
+      ]);
+      const names = new Map(flows.map((f) => [f.accountId, f.name]));
+      return {
+        period: range.label,
+        total: money(
+          transfers.reduce((sum, t) => sum + t.amountMinor, 0),
+          ctx.currency,
+        ),
+        transfers: transfers.slice(0, 25).map((t) => ({
+          date: t.date,
+          amount: money(t.amountMinor, ctx.currency),
+          from: t.fromAccountId ? (names.get(t.fromAccountId) ?? 'Unknown') : 'Outside',
+          to: t.toAccountId ? (names.get(t.toAccountId) ?? 'Unknown') : 'Outside',
+          label: t.label,
+        })),
+      };
+    },
+  }),
+
+  tool({
+    name: 'get_payment_channels',
+    description:
+      'How money moved: card, MobilePay, bank transfer, direct debit or cash. Use for "how much do I spend on card", "how much goes out on direct debit".',
+    schema: z.object({
+      period: periodSchema,
+      ownership: ownershipSchema,
+    }),
+    run: async (input, ctx) => {
+      const range = resolvePeriod(input.period, ctx.now);
+      const rows = await channelBreakdown(ctx.userId, {
+        from: range.start,
+        to: range.end,
+        ownership: input.ownership,
+      });
+      return {
+        period: range.label,
+        channels: rows.map((r) => ({
+          channel: r.channel,
+          label: r.label,
+          out: money(r.outMinor, ctx.currency),
+          in: money(r.inMinor, ctx.currency),
+          transactionCount: r.transactionCount,
+          shareOfSpendingPct: Math.round(r.share * 1000) / 10,
+        })),
+        note: 'Read from the payment rail named in each bank description. Entries the bank did not label appear as "unknown" rather than being guessed at.',
+      };
+    },
+  }),
+
+  tool({
+    name: 'get_mobilepay_summary',
+    description:
+      'MobilePay payments grouped by person: sent, received and net with each. Use for "who do I MobilePay most", "who owes me".',
+    schema: z.object({ period: periodSchema }),
+    run: async (input, ctx) => {
+      const range = resolvePeriod(input.period, ctx.now);
+      const summary = await mobilePaySummary(ctx.userId, { from: range.start, to: range.end });
+      return {
+        period: range.label,
+        available: summary.available,
+        transactionCount: summary.transactionCount,
+        sent: money(summary.sentMinor, ctx.currency),
+        received: money(summary.receivedMinor, ctx.currency),
+        net: money(summary.netMinor, ctx.currency),
+        people: summary.people.slice(0, 20).map((p) => ({
+          name: p.name,
+          sent: money(p.sentMinor, ctx.currency),
+          received: money(p.receivedMinor, ctx.currency),
+          net: money(p.netMinor, ctx.currency),
+          transactionCount: p.transactionCount,
+          lastPayment: p.lastDate,
+        })),
+        note: 'MobilePay has no consumer API; these are read out of the bank feed. Net is what has moved over the period, not a settled balance.',
       };
     },
   }),

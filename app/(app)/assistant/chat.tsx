@@ -136,7 +136,7 @@ export function AssistantChat({
           <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
             Load demo data or connect an account, then come back and ask anything.
           </p>
-          <Link href="/integrations" className="mt-4 block">
+          <Link href="/connect" className="mt-4 block">
             <Button size="sm">Add some data</Button>
           </Link>
         </Card>

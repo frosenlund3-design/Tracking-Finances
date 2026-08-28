@@ -46,7 +46,7 @@ export default async function InsightsPage() {
             title="Not enough data yet"
             description="Insights compare periods against each other, so they appear once there is a month or two of history."
             action={
-              <Link href="/integrations">
+              <Link href="/connect">
                 <Button size="sm">Add some data</Button>
               </Link>
             }

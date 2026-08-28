@@ -6,6 +6,9 @@ import { Logo } from '@/components/nav';
 import { getCurrentUser } from '@/lib/auth';
 import { signUpAction } from '@/app/auth-actions';
 
+// Reads the session cookie to redirect anyone already signed in.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = { title: 'Create account' };
 
 export default async function SignupPage() {

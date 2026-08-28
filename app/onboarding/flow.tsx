@@ -120,16 +120,16 @@ export function OnboardingFlow({
                 ? 'Authorize read-only access at your own bank through Open Banking.'
                 : 'Open Banking credentials are not configured on this deployment yet. You can add them later in Integrations.'}
             </p>
-            <Link href="/integrations" className="mt-4 block">
+            <Link href="/connect" className="mt-4 block">
               <Button variant="secondary" full>
-                {bankConfigured ? 'Connect bank' : 'See integrations'}
+                {bankConfigured ? 'Connect bank' : 'See connections'}
               </Button>
             </Link>
           </Card>
 
           {!stripeConfigured ? null : (
             <p className="mt-3 px-1 text-[12px] text-ink-subtle">
-              Stripe can be connected from Integrations once you are set up.
+              Stripe and MobilePay can be connected once you are set up.
             </p>
           )}
 

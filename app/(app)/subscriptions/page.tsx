@@ -44,7 +44,7 @@ export default async function SubscriptionsPage() {
             title="Nothing detected yet"
             description="A subscription appears once a merchant has charged you at least three times on a regular cadence. Nothing is guessed from the merchant name alone."
             action={
-              <Link href="/integrations">
+              <Link href="/connect">
                 <Button size="sm">Connect an account</Button>
               </Link>
             }

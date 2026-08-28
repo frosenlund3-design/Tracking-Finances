@@ -36,6 +36,63 @@ const TRAILING_NOISE: RegExp[] = [
   /\s+\*+\d+$/,
 ];
 
+export type PaymentChannel =
+  | 'card'
+  | 'mobilepay'
+  | 'transfer'
+  | 'direct_debit'
+  | 'cash'
+  | 'processor'
+  | 'unknown';
+
+/**
+ * Which rail the money travelled on, read from the raw description before any
+ * cleaning happens — the noise this function looks for is exactly what
+ * `normalizeMerchant` strips away.
+ */
+const CHANNEL_PATTERNS: Array<{ channel: PaymentChannel; re: RegExp }> = [
+  { channel: 'mobilepay', re: /\bmobile\s?pay\b/i },
+  // Betalingsservice only. A recurring *card* charge ("automatisk
+  // kortbetaling") is still a card payment and is matched as one below.
+  { channel: 'direct_debit', re: /\b(?:betalingsservice|bs|pbs|direct\s?debit)\b/i },
+  { channel: 'card', re: /\b(?:visa|dankort|mastercard|maestro|kortk(?:ø|oe)b|kortbetaling|card\s+purchase|contactless)\b/i },
+  // Cash is checked before transfer: "hæveautomat ... udbetaling" contains
+  // both, and the withdrawal is the more specific fact.
+  { channel: 'cash', re: /(?:h(?:æ|ae)veautomat|kontant(?:hævning|udbetaling)?)|\b(?:atm|cash\s+withdrawal)\b/i },
+  // Danish compounds ("lønoverførsel", "straksoverførsel") mean the leading
+  // word boundary has to go; these stems are distinctive enough without one.
+  { channel: 'transfer', re: /(?:overf(?:ø|oe|o)rsel|indbetaling|udbetaling)|\b(?:transfer|sepa)\b/i },
+];
+
+export function detectPaymentChannel(
+  description: string,
+  merchant: string | null,
+  providerHint?: PaymentChannel,
+): PaymentChannel {
+  if (providerHint) return providerHint;
+  const haystack = `${merchant ?? ''} ${description}`;
+  for (const { channel, re } of CHANNEL_PATTERNS) {
+    if (re.test(haystack)) return channel;
+  }
+  return 'unknown';
+}
+
+/**
+ * The person on the other side of a MobilePay payment.
+ *
+ * "MobilePay Anders Jensen" is not a merchant — it is a person, and grouping
+ * it as a merchant would put a friend in the same list as Netflix.
+ */
+export function extractMobilePayCounterparty(description: string, merchant: string | null): string | null {
+  const source = `${merchant ?? ''} ${description}`;
+  const match = source.match(/mobile\s?pay\s*(?:til|fra|to|from)?\s*[-:]?\s*([\p{L}][\p{L}\s.'-]{1,48})/iu);
+  const name = match?.[1]?.trim().replace(/\s{2,}/g, ' ');
+  if (!name) return null;
+  // A trailing reference number is not part of anyone's name.
+  const cleaned = name.replace(/\s*\d[\d\s-]*$/, '').trim();
+  return cleaned.length >= 2 ? cleaned : null;
+}
+
 /** Human-facing merchant label: cleaned but still readable. */
 export function normalizeMerchant(raw: string): string {
   let s = (raw ?? '').replace(/\s+/g, ' ').trim();

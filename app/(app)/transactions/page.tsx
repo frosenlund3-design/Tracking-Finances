@@ -124,7 +124,7 @@ export default async function TransactionsPage({
                   </Button>
                 </Link>
               ) : (
-                <Link href="/integrations">
+                <Link href="/connect">
                   <Button size="sm">Connect an account</Button>
                 </Link>
               )

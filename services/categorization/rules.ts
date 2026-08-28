@@ -8,6 +8,10 @@ export interface ClassifyInput {
   amountMinor: number;
   transactionType?: TransactionType;
   provider?: string;
+  /** The rail the money moved on, when it could be read from the description. */
+  paymentChannel?: string;
+  /** The person on the other side of a peer-to-peer payment, if there is one. */
+  counterparty?: string | null;
 }
 
 export interface Classification {
@@ -23,13 +27,19 @@ export interface Classification {
 /**
  * Tiered classifier, cheapest and most certain first:
  *
- *   1. user rules      — a correction the user made; always wins
- *   2. structural      — what the transaction *is* (a Stripe payout, a refund)
- *   3. merchant seeds  — curated merchant knowledge
- *   4. AI              — only for what is left over (see ai/categorize.ts)
- *   5. fallback        — miscellaneous, low confidence, flagged for review
+ *   1. user rules       — a correction the user made; always wins
+ *   2. strong structural — what the transaction *is*: a Stripe fee, a refund,
+ *                          a payout, a salary. These are facts, not guesses.
+ *   3. merchant seeds    — curated merchant knowledge
+ *   4. weak structural   — the description merely *mentions* a transfer. This
+ *                          sits below merchant knowledge on purpose: rent paid
+ *                          by bank transfer says "overførsel", and treating
+ *                          that as an internal transfer would delete rent from
+ *                          the user's spending entirely.
+ *   5. AI                — only for what is left over
+ *   6. fallback          — miscellaneous, low confidence, flagged for review
  *
- * Tiers 1-3 are pure and synchronous, which is what makes them testable and
+ * Tiers 1-4 are pure and synchronous, which is what makes them testable and
  * makes the vast majority of transactions never reach a model at all.
  */
 export function classify(input: ClassifyInput, userRules: MerchantRule[]): Classification {
@@ -49,14 +59,17 @@ export function classify(input: ClassifyInput, userRules: MerchantRule[]): Class
     };
   }
 
-  // 2. Structural facts beat merchant names.
+  // 2. Facts about what the transaction is beat merchant names.
   const structural = classifyStructural(input);
   if (structural) return structural;
 
   // 3. Curated merchants.
   const seed = matchSeed(haystackKey) ?? matchSeed(descKey);
   if (seed) {
-    const category = adjustForDirection(seed.category, input.amountMinor);
+    const mentionsTransfer = TRANSFER_HINTS.test(
+      merchantKey(`${input.merchant ?? ''} ${input.description}`),
+    );
+    const category = adjustForDirection(seed.category, input.amountMinor, mentionsTransfer);
     return {
       category,
       subcategory: seed.subcategory ?? null,
@@ -67,7 +80,29 @@ export function classify(input: ClassifyInput, userRules: MerchantRule[]): Class
     };
   }
 
-  // 5. Unknown — deliberately low confidence so the UI can ask.
+  // 4a. A payment to or from a person, where no merchant claimed it.
+  //
+  // Deliberately below merchant knowledge: "MobilePay til Cafe Hjørne" is a
+  // café, and calling it a person-to-person payment would lose that. But an
+  // unrecognised name really is a person, and burying eighty of those in
+  // "Miscellaneous, needs review" leaves a pile nobody can ever clear.
+  if (input.paymentChannel === 'mobilepay' && input.counterparty) {
+    return {
+      category: 'peer_transfer',
+      subcategory: null,
+      ownership: 'personal',
+      taxRelevant: 'non_deductible',
+      // We know exactly what this is; what we cannot know is what it was for.
+      confidence: 0.9,
+      source: 'structural',
+    };
+  }
+
+  // 4b. The description mentions a transfer and nothing else claimed it.
+  const weakTransfer = classifyWeakTransfer(input);
+  if (weakTransfer) return weakTransfer;
+
+  // 6. Unknown — deliberately low confidence so the UI can ask.
   const fallback = input.amountMinor > 0 ? 'miscellaneous' : 'miscellaneous';
   return {
     category: fallback,
@@ -203,23 +238,47 @@ function classifyStructural(input: ClassifyInput): Classification | null {
       source: 'structural',
     };
   }
-  if (TRANSFER_HINTS.test(text)) {
-    return {
-      category: 'transfers',
-      subcategory: null,
-      ownership: 'personal',
-      taxRelevant: 'non_deductible',
-      confidence: 0.8,
-      source: 'structural',
-    };
-  }
   return null;
 }
 
+/**
+ * The description mentions a transfer and nothing else identified it.
+ *
+ * Deliberately last: "Overførsel husleje Boligselskabet" is rent that happens
+ * to be paid by transfer, not a move between the user's own accounts, and
+ * mislabelling it removes rent from every spending total in the product.
+ */
+function classifyWeakTransfer(input: ClassifyInput): Classification | null {
+  const text = merchantKey(`${input.merchant ?? ''} ${input.description}`);
+  if (!TRANSFER_HINTS.test(text)) return null;
+  return {
+    category: 'transfers',
+    subcategory: null,
+    ownership: 'personal',
+    taxRelevant: 'non_deductible',
+    // Lower than a merchant match, because this is an inference about wording.
+    confidence: 0.55,
+    source: 'structural',
+  };
+}
+
 /** Money arriving at a cost category is a refund of that cost, not the cost. */
-function adjustForDirection(category: string, amountMinor: number): string {
+/**
+ * Money arriving at a cost category usually means revenue, not the cost.
+ *
+ * The exception is a payout landing: "Overførsel fra Stripe" in a bank account
+ * is the same krone that was already booked as revenue on the processor, so
+ * counting it again would inflate income by the whole payout.
+ */
+function adjustForDirection(
+  category: string,
+  amountMinor: number,
+  mentionsTransfer: boolean,
+): string {
   if (amountMinor <= 0) return category;
-  if (category === 'business_processing_fees') return 'business_revenue';
+  if (category === 'business_processing_fees') {
+    return mentionsTransfer ? 'transfers' : 'business_revenue';
+  }
   return category;
 }
 

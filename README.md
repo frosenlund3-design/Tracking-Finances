@@ -9,6 +9,19 @@ that can move money, and the AI assistant has no tool that could reach one.
 
 ---
 
+## Install it on your phone
+
+Open it in Safari or Chrome and use **Add to Home Screen**. It then launches
+full screen with its own icon, like any other app — the manifest, icons and
+service worker are all in place. On Android the app offers the real install
+dialog; iOS has never allowed that, so it shows the two taps Safari requires
+instead of pretending.
+
+The service worker deliberately caches no financial data. A cached balance is
+a wrong balance, and a shared phone must not be able to read a previous
+session's figures out of a cache. It caches the app shell and an offline page,
+and nothing else.
+
 ## Run it
 
 ```bash
@@ -82,6 +95,48 @@ dedupe fingerprint, and the (sanitized) provider payload.
 **Money is never a float.** Amounts are integer øre from the moment they are
 parsed. `lib/money.ts` is the only place that converts.
 
+## Connecting, in one tap each
+
+Three tiles on `/connect`, one tap each:
+
+**Your bank** — Nordea, Danske Bank, Jyske, Nykredit, Sydbank, Spar Nord,
+Arbejdernes Landsbank, Lunar, Revolut and Wise are one-tap tiles; the rest are
+searchable. Institution ids change, so the tiles are matched against the live
+list by name rather than hard-coded, and a tile that cannot connect is not
+shown. You approve at your own bank — Kroner never sees MitID or a password.
+
+**Stripe** — Connect OAuth with `scope=read_only`. Nothing to copy, and the
+read-only restriction is enforced by Stripe, not by this app's good behaviour.
+A grant that comes back wider than read-only is refused rather than stored.
+Without a Connect platform configured, the fallback is a pasted restricted key.
+
+**MobilePay** — personal MobilePay has no consumer API and never has, so there
+is no login to ask for and asking for one would be the wrong thing to do.
+Instead Kroner reads MobilePay out of the bank feed, where the payments
+already appear with the other person's name, and gives them their own screen:
+who you pay, who pays you, and the net with each person. The merchant side
+(Vipps MobilePay) is a real API and is wired separately.
+
+### Every krone, per account
+
+`/accounts` shows exactly what entered and left each account, with one
+distinction most dashboards get wrong: money moved between your own accounts
+is separated from money that actually came in or went out. Both legs of a
+transfer are paired — including an owner's draw, which leaves a business
+account labelled a transfer and arrives labelled salary — and internality is
+decided once, from the pairing, so no two screens can disagree about the same
+krone. Where two candidates could match, neither is chosen: an ambiguous guess
+about someone's money is worse than none.
+
+### How the money moved
+
+Danish bank descriptions name the rail — `VISA/DANKORT`, `MobilePay`, `BS` for
+Betalingsservice, `Overførsel`, `Hæveautomat` — and Kroner reads it before
+normalization strips it away. That is what makes the MobilePay view possible,
+and it answers a question people actually ask: how much goes out on card,
+how much on direct debit, how much in cash. Anything the bank did not label
+stays "unknown" rather than being guessed at.
+
 ### Swapping providers
 
 Every integration implements `BankProvider` or `PaymentProvider` from
@@ -126,6 +181,13 @@ ownership filter, a direction and an amount floor; whatever is left over is
 searched as text, so a phrase never silently matches nothing because part of it
 was a qualifier rather than a merchant name. Everything it sets lands in the
 URL, so a filtered view is shareable and survives a reload.
+
+### Advanced
+
+`/advanced` is the numbers behind the numbers: savings rate, committed vs.
+discretionary spending, daily burn, runway, twelve-month trend, per-account
+flow, the biggest category movements, and where money goes over 90 days. Every
+figure is a direct query with the count it came from, and the estimates say so.
 
 ### Subscription detection
 

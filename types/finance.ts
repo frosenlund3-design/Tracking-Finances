@@ -43,6 +43,16 @@ export type TaxRelevance =
   | 'non_deductible'
   | 'needs_review';
 
+/** Which rail the money travelled on. */
+export type PaymentChannel =
+  | 'card'
+  | 'mobilepay'
+  | 'transfer'
+  | 'direct_debit'
+  | 'cash'
+  | 'processor'
+  | 'unknown';
+
 export type AccountType =
   | 'checking'
   | 'savings'
@@ -106,6 +116,10 @@ export interface Transaction {
   /** Hash used for near-duplicate detection across providers. */
   dedupeHash: string;
   notes: string | null;
+  /** How the money moved: card, MobilePay, transfer, direct debit, cash. */
+  paymentChannel: PaymentChannel;
+  /** The person on the other side of a peer-to-peer payment, when there is one. */
+  counterparty: string | null;
   /** Raw provider payload, minus anything sensitive. Never sent to the model. */
   originalProviderMetadata: Record<string, unknown>;
   createdAt: string;

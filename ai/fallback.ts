@@ -89,6 +89,77 @@ export async function answerDeterministically(
     return { tool, result };
   };
 
+  // MobilePay
+  if (/\bmobile\s?pay\b/.test(q)) {
+    const { tool, result } = await call('get_mobilepay_summary', { period });
+    const r = result as {
+      available: boolean; transactionCount: number; sent: MoneyValue; received: MoneyValue;
+      net: MoneyValue; people: Array<{ name: string; net: MoneyValue; transactionCount: number }>;
+    };
+    if (!r.available) {
+      return {
+        answer:
+          'No MobilePay payments in that period. MobilePay has no consumer API, so these are read out of your bank feed — connect a bank and they appear automatically.',
+        toolsUsed: [tool],
+        evidence: [{ tool, result }],
+      };
+    }
+    const top = r.people.slice(0, 5)
+      .map((p) => `• ${p.name} — ${p.net.formatted} net across ${p.transactionCount}`)
+      .join('\n');
+    return {
+      answer: `${r.transactionCount} MobilePay payments: ${r.sent.formatted} sent, ${r.received.formatted} received, ${r.net.formatted} net.\n\n${top}`,
+      toolsUsed: [tool],
+      evidence: [{ tool, result }],
+    };
+  }
+
+  // Payment rails
+  if (/\b(card|kort|direct debit|betalingsservice|cash|kontant)\b/.test(q) && /\bspend|\bhow much|\bpay\b/.test(q)) {
+    const { tool, result } = await call('get_payment_channels', { period, ownership });
+    const r = result as {
+      period: string;
+      channels: Array<{ label: string; out: MoneyValue; shareOfSpendingPct: number; transactionCount: number }>;
+    };
+    const list = r.channels
+      .filter((c) => c.out.minor > 0)
+      .map((c) => `• ${c.label} — ${c.out.formatted} (${c.shareOfSpendingPct}%, ${c.transactionCount})`)
+      .join('\n');
+    return {
+      answer: list
+        ? `How money left your accounts in ${r.period.toLowerCase()}:\n\n${list}`
+        : `No spending recorded in ${r.period.toLowerCase()}.`,
+      toolsUsed: [tool],
+      evidence: [{ tool, result }],
+    };
+  }
+
+  // Per-account
+  if (/\baccounts?\b|\bkonto\b|\bkonti\b|\bbalance/.test(q)) {
+    const { tool, result } = await call('get_account_flows', { period, ownership });
+    const r = result as {
+      period: string;
+      accounts: Array<{
+        name: string; balance: MoneyValue | null; inFromOutside: MoneyValue;
+        outToOutside: MoneyValue; active: boolean;
+      }>;
+    };
+    const list = r.accounts
+      .filter((a) => a.active)
+      .map(
+        (a) =>
+          `• ${a.name} — ${a.balance ? a.balance.formatted : 'no balance'} · ${a.inFromOutside.formatted} in, ${a.outToOutside.formatted} out`,
+      )
+      .join('\n');
+    return {
+      answer: list
+        ? `Your accounts in ${r.period.toLowerCase()}:\n\n${list}\n\nMoney moved between your own accounts is excluded from the in and out figures.`
+        : 'No accounts connected yet.',
+      toolsUsed: [tool],
+      evidence: [{ tool, result }],
+    };
+  }
+
   // Subscriptions
   if (/\bsubscription|\brecurring\b|\babonnement/.test(q)) {
     const { tool, result } = await call('get_subscriptions', { ownership, includeLapsed: false });

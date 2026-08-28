@@ -34,7 +34,7 @@ export default async function NewTransactionPage() {
             title="No account to add it to"
             description="Load demo data or connect an account first — a transaction has to belong somewhere."
             action={
-              <Link href="/integrations">
+              <Link href="/connect">
                 <Button size="sm">Go to integrations</Button>
               </Link>
             }

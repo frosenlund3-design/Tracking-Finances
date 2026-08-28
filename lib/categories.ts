@@ -22,6 +22,7 @@ export const PERSONAL_CATEGORIES: CategoryDef[] = [
   { key: 'health', label: 'Health', scope: 'personal' },
   { key: 'salary', label: 'Salary', scope: 'personal', isRevenue: true },
   { key: 'transfers', label: 'Transfers', scope: 'personal' },
+  { key: 'peer_transfer', label: 'Person to person', scope: 'personal' },
   { key: 'savings', label: 'Savings', scope: 'personal' },
   { key: 'miscellaneous', label: 'Miscellaneous', scope: 'personal' },
 ];

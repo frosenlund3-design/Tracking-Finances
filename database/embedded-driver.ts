@@ -10,7 +10,9 @@ import type { DbClient, Driver, QueryResult } from './driver';
  * turns that into a sentence someone can act on.
  */
 function acquireLock(dataDir: string): () => void {
-  const lockPath = path.join(dataDir, '.kroner.lock');
+  // Beside the directory, not inside it: `rm -rf .data/pgdata` is a natural
+  // thing to try, and it must not disarm the guard for a process still running.
+  const lockPath = `${dataDir.replace(/[/\\]+$/, '')}.lock`;
 
   try {
     const existing = Number(fs.readFileSync(lockPath, 'utf8').trim());
@@ -61,8 +63,9 @@ export function createEmbeddedDriver(dataDir: string): Driver {
 
   async function db() {
     if (!instance) {
-      fs.mkdirSync(dataDir, { recursive: true });
+      fs.mkdirSync(path.dirname(dataDir), { recursive: true });
       releaseLock = acquireLock(dataDir);
+      fs.mkdirSync(dataDir, { recursive: true });
       instance = import('@electric-sql/pglite').then(
         ({ PGlite, types }) =>
           new PGlite(dataDir, {
@@ -86,14 +89,14 @@ export function createEmbeddedDriver(dataDir: string): Driver {
         await pg.exec('BEGIN');
         const client: DbClient = {
           async query<R>(sql: string, params: unknown[] = []) {
-            const res = await pg.query(sql, params as unknown[]).catch(rethrowEngineAbort);
+            const res = await pg.query(sql, params as unknown[]).catch(rethrowEngineAbort(dataDir));
             return {
               rows: (res.rows ?? []) as R[],
               rowCount: res.affectedRows ?? (res.rows?.length ?? 0),
             } satisfies QueryResult<R>;
           },
           async exec(sql: string) {
-            await pg.exec(sql).catch(rethrowEngineAbort);
+            await pg.exec(sql).catch(rethrowEngineAbort(dataDir));
           },
         };
         try {
@@ -126,17 +129,25 @@ export function createEmbeddedDriver(dataDir: string): Driver {
 }
 
 /**
- * PGlite reports engine-level failures as a bare WASM abort. The most common
- * cause by far is a second process on the same data directory, so say so.
+ * PGlite reports engine-level failures as a bare WASM abort with no detail.
+ *
+ * There are two realistic causes and the message names both, because guessing
+ * one sends people down the wrong path: a second process on the same data
+ * directory (which the lock above catches when it can), or a directory left
+ * inconsistent by a hard kill mid-write, which the embedded engine cannot
+ * always replay its way out of.
  */
-function rethrowEngineAbort(err: unknown): never {
-  const message = err instanceof Error ? err.message : String(err);
-  if (/Aborted\(|RuntimeError/.test(message)) {
-    throw new Error(
-      'The embedded database aborted. This usually means another process opened the same ' +
-        'data directory. Stop the other instance, or set DATABASE_URL to use a real ' +
-        `PostgreSQL server. (${message})`,
-    );
-  }
-  throw err;
+function rethrowEngineAbort(dataDir: string) {
+  return (err: unknown): never => {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/Aborted\(|RuntimeError/.test(message)) {
+      throw new Error(
+        'The embedded database aborted. Either another process has the same data directory ' +
+          'open, or it was left inconsistent by an abrupt shutdown. Stop any other instance; ' +
+          `if the problem persists, delete ${dataDir} to start clean, or set DATABASE_URL to ` +
+          `run against a real PostgreSQL server. (${message})`,
+      );
+    }
+    throw err;
+  };
 }

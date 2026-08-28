@@ -13,7 +13,7 @@ export function DemoBanner({ demoMode }: { demoMode: boolean }) {
         aria-hidden="true"
       />
       <span className="flex-1">These are demo figures, not your real accounts.</span>
-      <Link href="/integrations" className="shrink-0 font-medium text-accent">
+      <Link href="/connect" className="shrink-0 font-medium text-accent">
         Connect
       </Link>
     </div>

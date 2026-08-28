@@ -11,15 +11,16 @@
     Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
 
-  --color-canvas: oklch(0.985 0.002 260);
+  --color-canvas: oklch(0.978 0.003 265);
   --color-surface: oklch(1 0 0);
-  --color-surface-muted: oklch(0.972 0.003 260);
-  --color-border: oklch(0.918 0.004 260);
-  --color-border-strong: oklch(0.86 0.005 260);
+  --color-surface-muted: oklch(0.962 0.004 265);
+  --color-surface-sunken: oklch(0.945 0.005 265);
+  --color-border: oklch(0.922 0.004 265);
+  --color-border-strong: oklch(0.862 0.006 265);
 
-  --color-ink: oklch(0.22 0.012 260);
-  --color-ink-muted: oklch(0.52 0.011 260);
-  --color-ink-subtle: oklch(0.64 0.009 260);
+  --color-ink: oklch(0.19 0.014 265);
+  --color-ink-muted: oklch(0.505 0.012 265);
+  --color-ink-subtle: oklch(0.635 0.010 265);
 
   --color-accent: oklch(0.52 0.13 250);
   --color-accent-soft: oklch(0.95 0.025 250);
@@ -45,22 +46,40 @@
   /* Magnitude ranking uses one hue, stepped, not a rotation of hues. */
   --color-magnitude: #2a78d6;
 
-  --radius-card: 1rem;
-  --shadow-card: 0 1px 2px oklch(0.2 0.01 260 / 0.04), 0 1px 3px oklch(0.2 0.01 260 / 0.03);
-  --shadow-raised: 0 4px 16px oklch(0.2 0.01 260 / 0.08);
+  /* Soft geometry: large radii, layered depth, no hard edges. */
+  --radius-card: 1.25rem;
+  --radius-tile: 1.125rem;
+  --radius-pill: 999px;
+
+  --shadow-card:
+    0 1px 2px oklch(0.2 0.01 265 / 0.05),
+    0 4px 12px -6px oklch(0.2 0.01 265 / 0.06);
+  --shadow-raised:
+    0 2px 6px oklch(0.2 0.01 265 / 0.06),
+    0 16px 40px -12px oklch(0.2 0.01 265 / 0.16);
+  --shadow-sheet: 0 -8px 48px -12px oklch(0.2 0.01 265 / 0.22);
+
+  /* One spring, used everywhere, so the whole product moves the same way. */
+  --ease-spring: linear(
+    0, 0.0039 1.7%, 0.0157 3.4%, 0.0625 7%, 0.1407 10.7%, 0.25 14.6%,
+    0.5625 22.7%, 0.7188 26.9%, 0.8438 31.4%, 0.9297 36.2%, 0.9805 41.6%,
+    1.0117 48.2%, 1.0195 54%, 1.0117 63.4%, 1 79.6%, 1
+  );
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   @theme {
-    --color-canvas: oklch(0.165 0.008 260);
-    --color-surface: oklch(0.205 0.009 260);
-    --color-surface-muted: oklch(0.24 0.009 260);
-    --color-border: oklch(0.28 0.009 260);
-    --color-border-strong: oklch(0.36 0.01 260);
+    --color-canvas: oklch(0.145 0.009 265);
+    --color-surface: oklch(0.196 0.010 265);
+    --color-surface-muted: oklch(0.238 0.011 265);
+    --color-surface-sunken: oklch(0.172 0.010 265);
+    --color-border: oklch(0.272 0.011 265);
+    --color-border-strong: oklch(0.355 0.012 265);
 
-    --color-ink: oklch(0.955 0.003 260);
-    --color-ink-muted: oklch(0.72 0.008 260);
-    --color-ink-subtle: oklch(0.58 0.008 260);
+    --color-ink: oklch(0.965 0.003 265);
+    --color-ink-muted: oklch(0.735 0.009 265);
+    --color-ink-subtle: oklch(0.585 0.009 265);
 
     --color-accent: oklch(0.72 0.12 250);
     --color-accent-soft: oklch(0.28 0.05 250);
@@ -77,8 +96,9 @@
     --color-series-out: #d95926;
     --color-magnitude: #3987e5;
 
-    --shadow-card: 0 1px 2px oklch(0 0 0 / 0.3);
-    --shadow-raised: 0 6px 24px oklch(0 0 0 / 0.4);
+    --shadow-card: 0 1px 2px oklch(0 0 0 / 0.34), 0 4px 12px -6px oklch(0 0 0 / 0.4);
+    --shadow-raised: 0 2px 6px oklch(0 0 0 / 0.4), 0 20px 44px -12px oklch(0 0 0 / 0.6);
+    --shadow-sheet: 0 -8px 48px -12px oklch(0 0 0 / 0.7);
   }
 }
 
@@ -99,6 +119,36 @@ body {
   text-rendering: optimizeLegibility;
   /* iPhone safe areas: the bottom nav sits above the home indicator. */
   min-height: 100dvh;
+  /* Rubber-band scrolling past the top of an installed app looks broken. */
+  overscroll-behavior-y: none;
+}
+
+/*
+ * Installed to the home screen, there is no browser chrome to long-press or
+ * text-select against, and both gestures read as bugs. Inputs keep both.
+ */
+@media (display-mode: standalone) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  input,
+  textarea,
+  select,
+  [contenteditable],
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Display numerals: tight, optically aligned, never wrapped mid-figure. */
+.numeral {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum', 'ss01';
+  letter-spacing: -0.035em;
+  white-space: nowrap;
 }
 
 /* Tabular figures everywhere money appears, so columns line up. */
@@ -134,7 +184,31 @@ body {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }
 }
-.rise { animation: rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.rise { animation: rise 0.32s var(--ease-out) both; }
+
+@keyframes sheet-in {
+  from { transform: translateY(8%); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.sheet-in { animation: sheet-in 0.34s var(--ease-out) both; }
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-in { animation: fade-in 0.2s ease-out both; }
+
+/*
+ * Press feedback. A tap on a phone has no hover to fall back on, so the
+ * surface itself has to acknowledge the touch.
+ */
+.pressable {
+  transition: transform 0.16s var(--ease-spring), background-color 0.16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.pressable:active {
+  transform: scale(0.975);
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -144,6 +218,15 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Horizontal chip rows should snap and hide their scrollbar. */
+.scroll-x {
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scroll-x::-webkit-scrollbar { display: none; }
+.scroll-x > * { scroll-snap-align: start; }
 
 /* Focus that is visible without being loud. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {

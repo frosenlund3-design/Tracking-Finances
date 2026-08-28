@@ -88,39 +88,39 @@ interface RecurringSpec {
 
 const RECURRING: RecurringSpec[] = [
   { merchant: 'Nordisk Design ApS', description: 'Loenoverfoersel', account: 'demo-checking', amount: 38_400, day: 28 },
-  { merchant: 'Boligselskabet Vest', description: 'Husleje', account: 'demo-checking', amount: -9_850, day: 1 },
-  { merchant: 'Andel Energi', description: 'El-regning', account: 'demo-checking', amount: -612, day: 5, jitterDays: 2 },
-  { merchant: 'Hofor', description: 'Vand og varme', account: 'demo-checking', amount: -448, day: 6 },
-  { merchant: 'YouSee', description: 'Bredbaand', account: 'demo-checking', amount: -349, day: 8 },
-  { merchant: 'CBB Mobil', description: 'Mobilabonnement', account: 'demo-checking', amount: -129, day: 12 },
-  { merchant: 'Fitness World', description: 'Medlemskab', account: 'demo-checking', amount: -279, day: 3 },
-  { merchant: 'Tryg Forsikring', description: 'Indboforsikring', account: 'demo-checking', amount: -318, day: 15 },
+  { merchant: 'Boligselskabet Vest', description: 'Overfoersel husleje Boligselskabet Vest', account: 'demo-checking', amount: -9_850, day: 1 },
+  { merchant: 'Andel Energi', description: 'BS Andel Energi el-regning', account: 'demo-checking', amount: -612, day: 5, jitterDays: 2 },
+  { merchant: 'Hofor', description: 'BS Hofor vand og varme', account: 'demo-checking', amount: -448, day: 6 },
+  { merchant: 'YouSee', description: 'BS YouSee bredbaand', account: 'demo-checking', amount: -349, day: 8 },
+  { merchant: 'CBB Mobil', description: 'Automatisk kortbetaling Mobilabonnement', account: 'demo-checking', amount: -129, day: 12 },
+  { merchant: 'Fitness World', description: 'Automatisk kortbetaling Medlemskab', account: 'demo-checking', amount: -279, day: 3 },
+  { merchant: 'Tryg Forsikring', description: 'BS Tryg indboforsikring', account: 'demo-checking', amount: -318, day: 15 },
 
-  { merchant: 'Netflix', description: 'Netflix.com', account: 'demo-checking', amount: -139, day: 17,
+  { merchant: 'Netflix', description: 'Automatisk kortbetaling Netflix.com', account: 'demo-checking', amount: -139, day: 17,
     priceChange: { afterMonths: 7, amount: -159 } },
-  { merchant: 'Spotify', description: 'Spotify P16D8A', account: 'demo-checking', amount: -119, day: 9 },
-  { merchant: 'Storytel', description: 'Storytel abonnement', account: 'demo-checking', amount: -139, day: 22 },
-  { merchant: 'Viaplay', description: 'Viaplay Group', account: 'demo-checking', amount: -169, day: 24 },
-  { merchant: 'Rejsekort', description: 'Rejsekort automatisk optankning', account: 'demo-checking', amount: -300, day: 11, jitterDays: 4 },
+  { merchant: 'Spotify', description: 'Automatisk kortbetaling Spotify P16D8A', account: 'demo-checking', amount: -119, day: 9 },
+  { merchant: 'Storytel', description: 'Automatisk kortbetaling Storytel abonnement', account: 'demo-checking', amount: -139, day: 22 },
+  { merchant: 'Viaplay', description: 'Automatisk kortbetaling Viaplay Group', account: 'demo-checking', amount: -169, day: 24 },
+  { merchant: 'Rejsekort', description: 'Automatisk kortbetaling Rejsekort automatisk optankning', account: 'demo-checking', amount: -300, day: 11, jitterDays: 4 },
 
-  { merchant: 'OpenAI', description: 'OPENAI *CHATGPT SUBSCR', account: 'demo-business', amount: -152, day: 14, ownership: 'business' },
-  { merchant: 'Anthropic', description: 'ANTHROPIC CLAUDE', account: 'demo-business', amount: -138, day: 14, ownership: 'business' },
-  { merchant: 'GitHub', description: 'GITHUB INC', account: 'demo-business', amount: -145, day: 2, ownership: 'business' },
-  { merchant: 'Vercel', description: 'VERCEL INC', account: 'demo-business', amount: -137, day: 4, ownership: 'business',
+  { merchant: 'OpenAI', description: 'MASTERCARD OPENAI *CHATGPT SUBSCR', account: 'demo-business', amount: -152, day: 14, ownership: 'business' },
+  { merchant: 'Anthropic', description: 'MASTERCARD ANTHROPIC CLAUDE', account: 'demo-business', amount: -138, day: 14, ownership: 'business' },
+  { merchant: 'GitHub', description: 'MASTERCARD GITHUB INC', account: 'demo-business', amount: -145, day: 2, ownership: 'business' },
+  { merchant: 'Vercel', description: 'MASTERCARD VERCEL INC', account: 'demo-business', amount: -137, day: 4, ownership: 'business',
     priceChange: { afterMonths: 8, amount: -274 } },
-  { merchant: 'Figma', description: 'FIGMA MONTHLY', account: 'demo-business', amount: -103, day: 7, ownership: 'business' },
-  { merchant: 'Linear', description: 'LINEAR ORB INC', account: 'demo-business', amount: -110, day: 19, ownership: 'business' },
-  { merchant: 'Google Workspace', description: 'GOOGLE WORKSPACE', account: 'demo-business', amount: -96, day: 21, ownership: 'business' },
-  { merchant: 'Adobe', description: 'ADOBE CREATIVE CLOUD', account: 'demo-business', amount: -329, day: 26, ownership: 'business' },
-  { merchant: 'Notion', description: 'NOTION LABS', account: 'demo-business', amount: -78, day: 13, ownership: 'business' },
-  { merchant: 'Amazon Web Services', description: 'AWS EMEA', account: 'demo-business', amount: -412, day: 3, ownership: 'business', jitterDays: 1 },
+  { merchant: 'Figma', description: 'MASTERCARD FIGMA MONTHLY', account: 'demo-business', amount: -103, day: 7, ownership: 'business' },
+  { merchant: 'Linear', description: 'MASTERCARD LINEAR ORB INC', account: 'demo-business', amount: -110, day: 19, ownership: 'business' },
+  { merchant: 'Google Workspace', description: 'MASTERCARD GOOGLE WORKSPACE', account: 'demo-business', amount: -96, day: 21, ownership: 'business' },
+  { merchant: 'Adobe', description: 'MASTERCARD ADOBE CREATIVE CLOUD', account: 'demo-business', amount: -329, day: 26, ownership: 'business' },
+  { merchant: 'Notion', description: 'MASTERCARD NOTION LABS', account: 'demo-business', amount: -78, day: 13, ownership: 'business' },
+  { merchant: 'Amazon Web Services', description: 'MASTERCARD AWS EMEA', account: 'demo-business', amount: -412, day: 3, ownership: 'business', jitterDays: 1 },
 
   { merchant: 'Nordisk Design ApS', description: 'Loenoverfoersel til ejer', account: 'demo-business', amount: -38_400, day: 27, ownership: 'business' },
   { merchant: 'Regus', description: 'Kontorplads', account: 'demo-business', amount: -2_450, day: 1, ownership: 'business' },
   { merchant: 'Dinero', description: 'Bogfoeringsprogram', account: 'demo-business', amount: -229, day: 10, ownership: 'business' },
   { merchant: 'Skattestyrelsen', description: 'B-skat rate', account: 'demo-business', amount: -6_200, day: 20, ownership: 'business' },
 
-  { merchant: 'JetBrains', description: 'JETBRAINS ALL PRODUCTS', account: 'demo-business', amount: -2_190, day: 18, everyMonths: 12, ownership: 'business' },
+  { merchant: 'JetBrains', description: 'MASTERCARD JETBRAINS ALL PRODUCTS', account: 'demo-business', amount: -2_190, day: 18, everyMonths: 12, ownership: 'business' },
 ];
 
 interface VariableSpec {
@@ -135,26 +135,47 @@ interface VariableSpec {
 }
 
 const VARIABLE: VariableSpec[] = [
-  { merchant: 'Netto', description: 'NETTO 5412 KBH N', account: 'demo-checking', min: 68, max: 412, perMonth: 9 },
-  { merchant: 'Foetex', description: 'FOETEX NOERREBRO', account: 'demo-checking', min: 120, max: 640, perMonth: 4 },
-  { merchant: 'Rema 1000', description: 'REMA 1000 DK', account: 'demo-checking', min: 55, max: 380, perMonth: 5 },
-  { merchant: 'Nemlig.com', description: 'NEMLIG COM A/S', account: 'demo-checking', min: 480, max: 1_240, perMonth: 1 },
-  { merchant: 'Espresso House', description: 'ESPRESSO HOUSE', account: 'demo-checking', min: 38, max: 79, perMonth: 6 },
-  { merchant: 'Joe and the Juice', description: 'JOE AND THE JUICE', account: 'demo-checking', min: 55, max: 98, perMonth: 3 },
-  { merchant: 'Wolt', description: 'WOLT DENMARK', account: 'demo-checking', min: 135, max: 380, perMonth: 4 },
-  { merchant: 'Sunset Boulevard', description: 'SUNSET BOULEVARD', account: 'demo-checking', min: 79, max: 165, perMonth: 2 },
-  { merchant: 'Restaurant Koedbyen', description: 'RESTAURANT KOEDBYEN', account: 'demo-checking', min: 240, max: 720, perMonth: 1 },
-  { merchant: 'DSB', description: 'DSB BILLET', account: 'demo-checking', min: 42, max: 320, perMonth: 3 },
-  { merchant: 'Dantaxi', description: 'DANTAXI 4X48', account: 'demo-checking', min: 95, max: 285, perMonth: 2 },
-  { merchant: 'Matas', description: 'MATAS FISKETORVET', account: 'demo-checking', min: 85, max: 340, perMonth: 1 },
-  { merchant: 'Zalando', description: 'ZALANDO SE', account: 'demo-checking', min: 199, max: 1_190, perMonth: 1 },
-  { merchant: 'Elgiganten', description: 'ELGIGANTEN A/S', account: 'demo-checking', min: 249, max: 2_400, perMonth: 0.4 },
-  { merchant: 'Apotek', description: 'KBH APOTEK', account: 'demo-checking', min: 55, max: 280, perMonth: 1 },
-  { merchant: 'Flying Tiger', description: 'FLYING TIGER COPENHAGEN', account: 'demo-checking', min: 30, max: 180, perMonth: 1 },
-  { merchant: 'Google Ads', description: 'GOOGLE ADS 8842', account: 'demo-business', min: 800, max: 4_200, perMonth: 2, ownership: 'business' },
-  { merchant: 'Meta Platforms', description: 'META PLATFORMS ADS', account: 'demo-business', min: 600, max: 3_100, perMonth: 2, ownership: 'business' },
+  { merchant: 'Netto', description: 'VISA/DANKORT NETTO 5412 KBH N', account: 'demo-checking', min: 68, max: 412, perMonth: 9 },
+  { merchant: 'Foetex', description: 'VISA/DANKORT FOETEX NOERREBRO', account: 'demo-checking', min: 120, max: 640, perMonth: 4 },
+  { merchant: 'Rema 1000', description: 'VISA/DANKORT REMA 1000 DK', account: 'demo-checking', min: 55, max: 380, perMonth: 5 },
+  { merchant: 'Nemlig.com', description: 'VISA/DANKORT NEMLIG COM A/S', account: 'demo-checking', min: 480, max: 1_240, perMonth: 1 },
+  { merchant: 'Espresso House', description: 'KORTKOEB ESPRESSO HOUSE', account: 'demo-checking', min: 38, max: 79, perMonth: 6 },
+  { merchant: 'Joe and the Juice', description: 'VISA/DANKORT JOE AND THE JUICE', account: 'demo-checking', min: 55, max: 98, perMonth: 3 },
+  { merchant: 'Wolt', description: 'VISA/DANKORT WOLT DENMARK', account: 'demo-checking', min: 135, max: 380, perMonth: 4 },
+  { merchant: 'Sunset Boulevard', description: 'VISA/DANKORT SUNSET BOULEVARD', account: 'demo-checking', min: 79, max: 165, perMonth: 2 },
+  { merchant: 'Restaurant Koedbyen', description: 'VISA/DANKORT RESTAURANT KOEDBYEN', account: 'demo-checking', min: 240, max: 720, perMonth: 1 },
+  { merchant: 'DSB', description: 'VISA/DANKORT DSB BILLET', account: 'demo-checking', min: 42, max: 320, perMonth: 3 },
+  { merchant: 'Dantaxi', description: 'VISA/DANKORT DANTAXI 4X48', account: 'demo-checking', min: 95, max: 285, perMonth: 2 },
+  { merchant: 'Matas', description: 'VISA/DANKORT MATAS FISKETORVET', account: 'demo-checking', min: 85, max: 340, perMonth: 1 },
+  { merchant: 'Zalando', description: 'VISA/DANKORT ZALANDO SE', account: 'demo-checking', min: 199, max: 1_190, perMonth: 1 },
+  { merchant: 'Elgiganten', description: 'VISA/DANKORT ELGIGANTEN A/S', account: 'demo-checking', min: 249, max: 2_400, perMonth: 0.4 },
+  { merchant: 'Apotek', description: 'VISA/DANKORT KBH APOTEK', account: 'demo-checking', min: 55, max: 280, perMonth: 1 },
+  { merchant: 'Flying Tiger', description: 'VISA/DANKORT FLYING TIGER COPENHAGEN', account: 'demo-checking', min: 30, max: 180, perMonth: 1 },
+  { merchant: 'Google Ads', description: 'MASTERCARD GOOGLE ADS 8842', account: 'demo-business', min: 800, max: 4_200, perMonth: 2, ownership: 'business' },
+  { merchant: 'Meta Platforms', description: 'MASTERCARD META PLATFORMS ADS', account: 'demo-business', min: 600, max: 3_100, perMonth: 2, ownership: 'business' },
   { merchant: 'Frilans Udvikler ApS', description: 'Faktura konsulent', account: 'demo-business', min: 3_500, max: 12_000, perMonth: 0.7, ownership: 'business' },
   { merchant: 'Kestrel Freelance', description: 'Underleverandoer faktura', account: 'demo-business', min: 4_200, max: 14_500, perMonth: 1.2, ownership: 'business' },
+];
+
+/**
+ * Peer-to-peer MobilePay. These arrive through the bank feed with the person's
+ * name in the description, which is exactly what the MobilePay view reads.
+ */
+interface MobilePaySpec {
+  person: string;
+  direction: 'out' | 'in' | 'both';
+  min: number;
+  max: number;
+  perMonth: number;
+}
+
+const MOBILEPAY_PEOPLE: MobilePaySpec[] = [
+  { person: 'Anders Kjeldsen', direction: 'both', min: 40, max: 480, perMonth: 2.2 },
+  { person: 'Sofie Lindberg', direction: 'both', min: 60, max: 350, perMonth: 1.8 },
+  { person: 'Mikkel Thorup', direction: 'out', min: 50, max: 260, perMonth: 1.2 },
+  { person: 'Emma Dalgaard', direction: 'in', min: 75, max: 420, perMonth: 1.1 },
+  { person: 'Cafe Hjoerne', direction: 'out', min: 45, max: 190, perMonth: 1.6 },
+  { person: 'Jonas Vestergaard', direction: 'both', min: 100, max: 900, perMonth: 0.8 },
 ];
 
 const STRIPE_CUSTOMERS = [
@@ -238,6 +259,33 @@ export function generateDemoData(seedKey: string, months = 9, now: Date = new Da
           transactionType: isIncome ? 'income' : 'expense',
           ownershipHint: spec.ownership,
           metadata: { source: 'demo', pattern: 'variable' },
+        });
+      }
+    }
+  }
+
+  for (const spec of MOBILEPAY_PEOPLE) {
+    for (let m = 0; m <= months; m++) {
+      const ym = addMonths(startDate, m).slice(0, 7);
+      const count = Math.max(0, Math.round(spec.perMonth * (0.5 + rand() * 1.1)));
+      for (let i = 0; i < count; i++) {
+        const day = 1 + Math.floor(rand() * lastDayOf(ym));
+        const date = `${ym}-${String(day).padStart(2, '0')}`;
+        if (date < startDate || date > endDate) continue;
+        const incoming =
+          spec.direction === 'in' || (spec.direction === 'both' && rand() < 0.42);
+        const magnitude = Math.round(between(spec.min, spec.max));
+        transactions.push({
+          transactionId: nextId('mp'),
+          providerAccountId: 'demo-checking',
+          amountMinor: toMinor(incoming ? magnitude : -magnitude),
+          currency: 'DKK',
+          transactionDate: date,
+          bookingDate: date,
+          merchant: spec.person,
+          description: `MobilePay ${incoming ? 'fra' : 'til'} ${spec.person}`,
+          transactionType: incoming ? 'income' : 'expense',
+          metadata: { source: 'demo', pattern: 'mobilepay' },
         });
       }
     }
@@ -341,12 +389,34 @@ export function generateDemoData(seedKey: string, months = 9, now: Date = new Da
     }
   }
 
+  for (let m = 0; m <= months; m++) {
+    const ym = addMonths(startDate, m).slice(0, 7);
+    const withdrawals = rand() < 0.7 ? 1 : 2;
+    for (let i = 0; i < withdrawals; i++) {
+      const day = 1 + Math.floor(rand() * lastDayOf(ym));
+      const date = `${ym}-${String(day).padStart(2, '0')}`;
+      if (date < startDate || date > endDate) continue;
+      transactions.push({
+        transactionId: nextId('atm'),
+        providerAccountId: 'demo-checking',
+        amountMinor: toMinor(-(200 + Math.round(rand() * 6) * 100)),
+        currency: 'DKK',
+        transactionDate: date,
+        bookingDate: date,
+        merchant: 'Haeveautomat',
+        description: 'Haeveautomat kontant udbetaling',
+        transactionType: 'expense',
+        metadata: { source: 'demo', pattern: 'cash' },
+      });
+    }
+  }
+
   const oneOffs = [
-    { merchant: 'Ryanair', description: 'RYANAIR DUB', amount: -1_240, monthOffset: 2 },
-    { merchant: 'Booking.com', description: 'BOOKING COM AMSTERDAM', amount: -3_180, monthOffset: 2 },
-    { merchant: 'IKEA', description: 'IKEA GENTOFTE', amount: -2_745, monthOffset: 4 },
-    { merchant: 'Norwegian', description: 'NORWEGIAN AIR', amount: -1_890, monthOffset: 6 },
-    { merchant: 'Proshop', description: 'PROSHOP A/S', amount: -8_995, monthOffset: 5 },
+    { merchant: 'Ryanair', description: 'VISA/DANKORT RYANAIR DUB', amount: -1_240, monthOffset: 2 },
+    { merchant: 'Booking.com', description: 'VISA/DANKORT BOOKING COM AMSTERDAM', amount: -3_180, monthOffset: 2 },
+    { merchant: 'IKEA', description: 'VISA/DANKORT IKEA GENTOFTE', amount: -2_745, monthOffset: 4 },
+    { merchant: 'Norwegian', description: 'VISA/DANKORT NORWEGIAN AIR', amount: -1_890, monthOffset: 6 },
+    { merchant: 'Proshop', description: 'VISA/DANKORT PROSHOP A/S', amount: -8_995, monthOffset: 5 },
   ];
   for (const one of oneOffs) {
     const ym = addMonths(startDate, one.monthOffset).slice(0, 7);

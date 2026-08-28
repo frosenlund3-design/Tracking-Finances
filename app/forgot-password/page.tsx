@@ -4,6 +4,9 @@ import { AuthForm } from '@/components/auth-form';
 import { Logo } from '@/components/nav';
 import { requestPasswordResetAction } from '@/app/auth-actions';
 
+// Reads the session cookie to redirect anyone already signed in.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = { title: 'Reset password' };
 
 export default function ForgotPasswordPage() {

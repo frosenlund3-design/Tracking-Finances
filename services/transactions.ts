@@ -1,7 +1,14 @@
 import '@/lib/server-guard';
 import { randomUUID } from 'node:crypto';
 import { withUser, type DbClient } from '@/database';
-import { dedupeHash, isoDate, merchantKey, normalizeMerchant } from '@/lib/normalize';
+import {
+  dedupeHash,
+  detectPaymentChannel,
+  extractMobilePayCounterparty,
+  isoDate,
+  merchantKey,
+  normalizeMerchant,
+} from '@/lib/normalize';
 import { classify, ruleFromCorrection } from '@/services/categorization/rules';
 import { redact } from '@/security/redact';
 import type { NormalizedTransaction } from '@/integrations/types';
@@ -38,6 +45,8 @@ interface TransactionRow {
   category_locked: boolean;
   dedupe_hash: string;
   notes: string | null;
+  payment_channel: Transaction['paymentChannel'];
+  counterparty: string | null;
   original_provider_metadata: Record<string, unknown> | string;
   created_at: string | Date;
   updated_at: string | Date;
@@ -72,6 +81,8 @@ export function mapTransactionRow(row: TransactionRow): Transaction {
     categoryLocked: row.category_locked,
     dedupeHash: row.dedupe_hash,
     notes: row.notes,
+    paymentChannel: row.payment_channel ?? 'unknown',
+    counterparty: row.counterparty,
     originalProviderMetadata:
       typeof row.original_provider_metadata === 'string'
         ? (JSON.parse(row.original_provider_metadata) as Record<string, unknown>)
@@ -84,7 +95,8 @@ export function mapTransactionRow(row: TransactionRow): Transaction {
 const COLUMNS = `id, user_id, transaction_id, provider, account_id, amount_minor, currency,
   transaction_date, booking_date, merchant, merchant_key, description, category, subcategory,
   transaction_type, ownership, recurring_status, subscription_id, tax_relevant, confidence_score,
-  category_locked, dedupe_hash, notes, original_provider_metadata, created_at, updated_at`;
+  category_locked, dedupe_hash, notes, payment_channel, counterparty,
+  original_provider_metadata, created_at, updated_at`;
 
 export async function loadMerchantRules(db: DbClient, userId: string): Promise<MerchantRule[]> {
   const { rows } = await db.query<{
@@ -142,6 +154,15 @@ export async function ingestTransactions(
   return withUser(userId, async (db) => {
     const rules = await loadMerchantRules(db, userId);
 
+    // The rail is a property of the account the money sat in, not of which
+    // aggregator delivered the row: demo Stripe data arrives under provider
+    // 'demo' but still moved on a payment processor.
+    const { rows: accountTypes } = await db.query<{ id: string; type: string }>(
+      'SELECT id, type FROM financial_accounts WHERE user_id = $1',
+      [userId],
+    );
+    const typeByAccount = new Map(accountTypes.map((a) => [a.id, a.type]));
+
     const { rows: existingRows } = await db.query<{ provider: string; transaction_id: string; dedupe_hash: string }>(
       'SELECT provider, transaction_id, dedupe_hash FROM transactions WHERE user_id = $1',
       [userId],
@@ -181,6 +202,15 @@ export async function ingestTransactions(
         continue;
       }
 
+      // Read the rail from the raw text, before normalization strips it.
+      const channel = detectPaymentChannel(
+        tx.description,
+        tx.merchant,
+        typeByAccount.get(accountId) === 'payment_processor' ? 'processor' : undefined,
+      );
+      const counterparty =
+        channel === 'mobilepay' ? extractMobilePayCounterparty(tx.description, tx.merchant) : null;
+
       const classification = classify(
         {
           merchant: merchantLabel,
@@ -188,6 +218,8 @@ export async function ingestTransactions(
           amountMinor: tx.amountMinor,
           transactionType: tx.transactionType,
           provider,
+          paymentChannel: channel,
+          counterparty,
         },
         rules,
       );
@@ -201,7 +233,7 @@ export async function ingestTransactions(
         tx.currency.toUpperCase(), tx.transactionDate, tx.bookingDate, merchantLabel, key,
         redact(tx.description).slice(0, 500), classification.category, classification.subcategory,
         transactionType, ownership, classification.taxRelevant, classification.confidence,
-        hash, JSON.stringify(sanitizeMetadata(tx.metadata ?? {})),
+        hash, channel, counterparty, JSON.stringify(sanitizeMetadata(tx.metadata ?? {})),
       ]);
 
       seenIds.add(idKey);
@@ -215,7 +247,7 @@ export async function ingestTransactions(
 }
 
 /** Number of columns `insertBatched` writes per row, in fixed order. */
-const INSERT_COLUMNS = 20;
+const INSERT_COLUMNS = 22;
 /**
  * Postgres caps a statement at 65535 bind parameters, and one round-trip per
  * row makes a two-year bank sync take minutes. 250 rows per statement stays
@@ -242,7 +274,7 @@ async function insertBatched(db: DbClient, rows: unknown[][]): Promise<number> {
          id, user_id, transaction_id, provider, account_id, amount_minor, currency,
          transaction_date, booking_date, merchant, merchant_key, description, category,
          subcategory, transaction_type, ownership, tax_relevant, confidence_score,
-         dedupe_hash, original_provider_metadata)
+         dedupe_hash, payment_channel, counterparty, original_provider_metadata)
        VALUES ${tuples.join(',')}
        ON CONFLICT (user_id, provider, transaction_id) DO NOTHING`,
       params,
@@ -285,6 +317,7 @@ export interface TransactionFilters {
   taxRelevant?: TaxRelevance;
   search?: string;
   needsReview?: boolean;
+  paymentChannels?: Array<Transaction['paymentChannel']>;
 }
 
 interface WhereClause {
@@ -314,6 +347,7 @@ export function buildWhere(userId: string, f: TransactionFilters): WhereClause {
   if (f.subscriptionsOnly) parts.push("t.recurring_status = 'recurring'");
   if (f.providers?.length) add('t.provider = ANY(?)', f.providers);
   if (f.taxRelevant) add('t.tax_relevant = ?', f.taxRelevant);
+  if (f.paymentChannels?.length) add('t.payment_channel = ANY(?)', f.paymentChannels);
   if (f.needsReview) parts.push("(t.confidence_score < 0.5 AND t.category_locked = FALSE)");
   if (f.search?.trim()) {
     const term = `%${f.search.trim().toLowerCase()}%`;
@@ -492,6 +526,7 @@ export interface ManualTransactionInput {
   transactionType: TransactionType;
   taxRelevant?: TaxRelevance;
   notes?: string | null;
+  paymentChannel?: Transaction['paymentChannel'];
 }
 
 export async function createManualTransaction(
@@ -519,8 +554,8 @@ export async function createManualTransaction(
          id, user_id, transaction_id, provider, account_id, amount_minor, currency,
          transaction_date, booking_date, merchant, merchant_key, description, category,
          subcategory, transaction_type, ownership, tax_relevant, confidence_score,
-         category_locked, dedupe_hash, notes)
-       VALUES ($1,$2,$3,'manual',$4,$5,$6,$7,$7,$8,$9,$10,$11,$12,$13,$14,$15,1,TRUE,$16,$17)
+         category_locked, dedupe_hash, notes, payment_channel)
+       VALUES ($1,$2,$3,'manual',$4,$5,$6,$7,$7,$8,$9,$10,$11,$12,$13,$14,$15,1,TRUE,$16,$17,$18)
        RETURNING ${COLUMNS}`,
       [
         id, userId, `manual_${id}`, input.accountId, input.amountMinor,
@@ -529,6 +564,7 @@ export async function createManualTransaction(
         input.category, input.subcategory ?? null, input.transactionType, input.ownership,
         input.taxRelevant ?? 'needs_review', hash,
         input.notes ? redact(input.notes).slice(0, 1000) : null,
+        input.paymentChannel ?? 'cash',
       ],
     );
     return mapTransactionRow(rows[0]!);
@@ -562,6 +598,8 @@ export async function recategorizeAll(userId: string): Promise<number> {
           amountMinor: Number(row.amount_minor),
           transactionType: row.transaction_type,
           provider: row.provider,
+          paymentChannel: row.payment_channel,
+          counterparty: row.counterparty,
         },
         rules,
       );

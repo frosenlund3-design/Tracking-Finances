@@ -11,9 +11,15 @@ import type { User } from '@/types/finance';
  * component in a single render.
  */
 export const getCurrentUser = cache(async (): Promise<User | null> => {
-  await ensureMigrated();
+  // Read the cookie before anything else. It marks the render dynamic up
+  // front, and it means an anonymous request never touches the database —
+  // which is also what lets `next build` run without one.
   const store = await cookies();
-  return resolveSessionUser(store.get(SESSION_COOKIE)?.value);
+  const token = store.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+
+  await ensureMigrated();
+  return resolveSessionUser(token);
 });
 
 /** For pages: bounces to the login screen when signed out. */

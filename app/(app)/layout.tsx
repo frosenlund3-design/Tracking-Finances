@@ -1,5 +1,6 @@
 import { requireUser } from '@/lib/auth';
 import { BottomNav, Sidebar } from '@/components/nav';
+import { ServiceWorkerRegistrar } from '@/components/pwa';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -14,6 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="lg:pl-6">{children}</div>
       </main>
       <BottomNav />
+      <ServiceWorkerRegistrar />
     </div>
   );
 }
