@@ -15,6 +15,8 @@ import { analyse, toImperativeSentence } from '../src/lib/language'
 import { handleAgentRequest } from '../src/lib/coach/agent'
 import { detectCaptures } from '../src/lib/coach/capture'
 import { matchTriggers } from '../src/lib/coach/triggers'
+import { observe } from '../src/lib/coach/memory'
+import type { Completion } from '../src/db/types'
 import type { LoopNode } from '../src/db/types'
 
 const NOW = new Date('2026-08-28T10:00:00')
@@ -204,6 +206,58 @@ check('almindelig tekst udløser ingenting',
   matchTriggers('Jeg skal vaske tøj i morgen', triggers).length === 0)
 check('en fritekst-trigger matcher på hendes egne ord',
   matchTriggers('Jeg skal til tandlæge på torsdag', ['Tandlægen']).length === 1)
+
+/* ------------------------------------------------------------------ *
+ * Patterns in her own data, which is the only thing the coach knows
+ * that she does not.
+ * ------------------------------------------------------------------ */
+
+console.log('\nmønstre den kan se, som man ikke selv kan')
+{
+  const day = 86_400_000
+  const t0 = NOW.getTime()
+  const mkNode = (title: string, ageDays: number, i: number) =>
+    ({
+      id: `x${i}`, parentId: 'root', childIds: [], title, isArea: false, status: 'open',
+      createdAt: t0 - ageDays * day, updatedAt: t0 - ageDays * day, area: 'other',
+      estimatedMinutes: 8, mentalWeight: 3, energyRequired: 60, urgency: 'none',
+      steps: [], avoidanceCount: 0,
+    }) as unknown as LoopNode
+
+  const nodes = ([
+    ['Ring til tandlægen', 40], ['Ring til banken', 35], ['Ring til kommunen', 44],
+    ['Ring til forsikringen', 30], ['Køb mælk', 2], ['Vask tøj', 3],
+    ['Ryd op i entreen', 6], ['Betal elregningen', 4],
+  ] as Array<[string, number]>).map(([t, a], i) => mkNode(t, a, i))
+
+  const root = {
+    id: 'root', parentId: null, childIds: nodes.map((n) => n.id), title: 'Mit liv', isArea: true,
+    status: 'open', createdAt: t0, updatedAt: t0, area: 'other', estimatedMinutes: 0,
+    mentalWeight: 1, energyRequired: 30, urgency: 'none', steps: [], avoidanceCount: 0,
+  } as unknown as LoopNode
+  const map = Object.fromEntries([root, ...nodes].map((n) => [n.id, n]))
+
+  const completions: Completion[] = []
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(t0 - i * day)
+    d.setHours(20, 30, 0, 0)
+    completions.push({
+      id: `c${i}`, nodeId: `n${i}`, title: 'Vask tøj', completedAt: d.getTime(), kind: 'done',
+      xp: 12, via: 'start-mode', minutes: 10, area: 'home', wasAvoided: false,
+    })
+  }
+
+  const found = observe(nodes, map as never, completions, NOW)
+  check('den ser hvilken slags opgave der rådner',
+    found.some((o) => /Telefonopkald bliver liggende/.test(o.text)),
+    found.map((o) => o.text).join(' | '))
+  check('og hvornår hun rent faktisk lukker ting',
+    found.some((o) => /lukker det meste aften/.test(o.text)))
+  const thin = Object.fromEntries([root, ...nodes.slice(0, 2)].map((n) => [n.id, n]))
+  check('men siger ingenting uden nok data',
+    observe(nodes.slice(0, 2), thin as never, completions.slice(0, 2), NOW).length === 0,
+    observe(nodes.slice(0, 2), thin as never, completions.slice(0, 2), NOW).map((o) => o.text).join(' | '))
+}
 
 console.log(failures ? `\n${failures} FAILED\n` : '\nalt passerer\n')
 process.exit(failures ? 1 : 0)

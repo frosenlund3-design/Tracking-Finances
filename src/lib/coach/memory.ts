@@ -98,19 +98,27 @@ function whatRots(map: NodeMap, now: number): Observation[] {
     byVerb.set(verb, entry)
   }
 
-  const overallAvg = open.reduce((sum, n) => sum + (now - n.createdAt) / DAY, 0) / open.length
+  const ageOf = (n: LoopNode) => (now - n.createdAt) / DAY
 
   const out: Observation[] = []
   for (const [verb, entry] of byVerb) {
     if (entry.ages.length < 3) continue
     const avg = entry.ages.reduce((a, b) => a + b, 0) / entry.ages.length
-    if (avg < overallAvg * 1.8 || avg < 5) continue
+
+    // Compare against everything that is NOT this group. Comparing against the
+    // overall average included the group in its own baseline, so the clearer
+    // the pattern the more it hid itself: six rotting phone calls out of seven
+    // open loops dragged the average up until they no longer stood out.
+    const others = open.filter((n) => analyse(n.title).verb !== verb)
+    if (others.length < 2) continue
+    const restAvg = others.reduce((sum, n) => sum + ageOf(n), 0) / others.length
+    if (avg < restAvg * 1.8 || avg < 5) continue
 
     out.push({
       id: `rots-${verb}`,
       kind: 'pattern',
       text: `Det er ikke opgaverne, det er én bestemt slags. ${VERB_NOUN[verb] ?? `"${verb}"-opgaver`} bliver liggende.`,
-      evidence: `De ligger ${Math.round(avg)} dage i snit, mod ${Math.round(overallAvg)} for alt andet. ${entry.titles.slice(0, 2).join(', ')}${entry.titles.length > 2 ? ' og flere' : ''}.`,
+      evidence: `De ligger ${Math.round(avg)} dage i snit, mod ${Math.round(restAvg)} for alt det andet. ${entry.titles.slice(0, 2).join(', ')}${entry.titles.length > 2 ? ' og flere' : ''}.`,
       move: MOVE_FOR_VERB[verb],
       weight: 80 + Math.min(avg, 30),
     })
