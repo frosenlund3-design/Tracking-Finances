@@ -18,11 +18,13 @@ import { NodeSheet } from '@/components/NodeSheet'
 import { QuickAdd } from '@/components/QuickAdd'
 import { EnergySheet } from '@/components/EnergySheet'
 import { Celebration } from '@/components/Celebration'
+import { LockScreen } from '@/components/Lock'
 
 export default function App() {
   const ready = useStore((s) => s.ready)
   const init = useStore((s) => s.init)
   const onboarded = useStore((s) => s.profile.onboarded)
+  const authState = useStore((s) => s.authState)
   const screen = useStore((s) => s.screen)
   const overlay = useStore((s) => s.overlay)
   const closeOverlay = useStore((s) => s.closeOverlay)
@@ -38,6 +40,8 @@ export default function App() {
       </div>
     )
   }
+
+  if (authState === 'locked') return <LockScreen />
 
   if (!onboarded) return <Onboarding />
 
@@ -75,7 +79,7 @@ export default function App() {
       </Sheet>
 
       <Sheet open={overlay.kind === 'coach'} onClose={closeOverlay} title="ADHD-coach" full>
-        {overlay.kind === 'coach' && <Coach nodeId={overlay.nodeId} />}
+        {overlay.kind === 'coach' && <Coach nodeId={overlay.nodeId} ask={overlay.ask} />}
       </Sheet>
 
       <Sheet open={overlay.kind === 'node'} onClose={closeOverlay}>

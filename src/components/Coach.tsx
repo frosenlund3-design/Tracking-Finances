@@ -9,6 +9,8 @@ import { GREETINGS } from '@/lib/coach/responses'
 import { haptic } from '@/lib/haptics'
 import { parkPresets } from '@/lib/time'
 import { actionableLeaves } from '@/lib/nodes'
+import { BLOCK_ANSWERS, BLOCK_NAMED, scanAttention } from '@/lib/attention'
+import type { ProcrastinationReason } from '@/db/types'
 
 /**
  * ADHD Coach.
@@ -17,7 +19,7 @@ import { actionableLeaves } from '@/lib/nodes'
  * otherwise. It reads the real task tree, so its suggestions point at things
  * that actually exist, and every reply is 1–4 short lines.
  */
-export function Coach({ nodeId }: { nodeId?: string }) {
+export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const map = useStore((s) => s.map)
   const profile = useStore((s) => s.profile)
   const prefs = useStore((s) => s.prefs)
@@ -27,6 +29,7 @@ export function Coach({ nodeId }: { nodeId?: string }) {
   const parkNode = useStore((s) => s.parkNode)
   const toggleStep = useStore((s) => s.toggleStep)
   const setGoodEnough = useStore((s) => s.setGoodEnough)
+  const updateNode = useStore((s) => s.updateNode)
   const load = useMentalLoad()
   const closedToday = useClosedToday()
   const next = useNextTask()
@@ -41,11 +44,36 @@ export function Coach({ nodeId }: { nodeId?: string }) {
   // The task in focus can be handed in, named by the user mid-conversation,
   // or fall back to whatever the engine would suggest next.
   const [namedTaskId, setNamedTaskId] = useState<string | null>(null)
+  // While this holds a node id, the coach has asked what is in the way and is
+  // waiting for the answer. Problem finding before problem solving: the app
+  // must not guess why a person is stuck.
+  const [diagnosing, setDiagnosing] = useState<string | null>(null)
   // A task she names beats the one we happened to open with.
   const task = (namedTaskId ? map[namedTaskId] : null) ?? (nodeId ? map[nodeId] : null) ?? next?.node ?? null
   const sessionId = 'default'
 
   useEffect(() => {
+    const attention = ask ? scanAttention(map).find((a) => !nodeId || a.node.id === nodeId) : null
+
+    if (attention) {
+      // Observation, then one open question. No advice yet — advice before the
+      // reason is known is just guessing out loud.
+      setNamedTaskId(attention.node.id)
+      setDiagnosing(attention.node.id)
+      void addMessage({
+        sessionId,
+        role: 'coach',
+        text: [
+          attention.headline,
+          'Jeg gætter ikke på hvorfor.',
+          'Hvad sker der, når du kommer til den?',
+        ].join('\n'),
+      })
+      setOptions(BLOCK_ANSWERS.map((a) => a.label))
+      void updateNode(attention.node.id, { lastAskedAt: Date.now() })
+      return
+    }
+
     if (messages.length === 0) {
       const line = GREETINGS[profile.tone][Math.floor(Math.random() * GREETINGS[profile.tone].length)]
       void addMessage({ sessionId, role: 'coach', text: line })
@@ -86,6 +114,19 @@ export function Coach({ nodeId }: { nodeId?: string }) {
     if (named) setNamedTaskId(named.id)
     const focus = named ?? task
 
+    // Answering the "what happens when you get to it?" question. We record it
+    // on the task so the app stops asking and starts adapting.
+    let naming: string | null = null
+    if (diagnosing) {
+      const answer = BLOCK_ANSWERS.find((a) => a.label.toLowerCase() === trimmed.toLowerCase())
+      const reason: ProcrastinationReason | null = answer?.reason ?? null
+      if (reason) {
+        await updateNode(diagnosing, { blockReason: reason })
+        naming = BLOCK_NAMED[reason]
+      }
+      setDiagnosing(null)
+    }
+
     const reply = await askCoach({ text: trimmed, state: buildState(focus), closedToday })
     // A short beat so it does not feel like a lookup table firing back.
     await new Promise((r) => setTimeout(r, prefs.reducedStimulation ? 120 : 420))
@@ -94,7 +135,8 @@ export function Coach({ nodeId }: { nodeId?: string }) {
     await addMessage({
       sessionId,
       role: 'coach',
-      text: reply.lines.join('\n'),
+      // Name the problem first, then act on it.
+      text: [naming, ...reply.lines].filter(Boolean).join('\n'),
       options: reply.options,
       strategy: reply.strategy,
     })

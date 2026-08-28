@@ -1,10 +1,11 @@
-import { ChevronLeft, Download, Info, Share, Trash2, Upload } from 'lucide-react'
+import { ChevronLeft, Download, Info, Lock, LockOpen, Share, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useStore } from '@/store/useStore'
 import { downloadBackup, importBackup, BackupError, wipeEverything } from '@/lib/backup'
 import { hapticsSupported } from '@/lib/haptics'
 import { BRAIN_PROFILES } from '@/lib/brainProfiles'
 import type { UserProfile } from '@/db/types'
+import { CreateProfile } from './Lock'
 
 const THEMES: Array<{ id: UserProfile['theme']; label: string }> = [
   { id: 'warm', label: 'Varm' },
@@ -32,10 +33,18 @@ export function Settings() {
   const removeDemo = useStore((s) => s.removeDemoData)
   const reload = useStore((s) => s.reload)
   const clearCoach = useStore((s) => s.clearCoach)
+  const authState = useStore((s) => s.authState)
+  const authName = useStore((s) => s.authName)
+  const lockNow = useStore((s) => s.lockNow)
+  const removeLock = useStore((s) => s.removeLock)
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [confirmWipe, setConfirmWipe] = useState(false)
+  const [showCreateLock, setShowCreateLock] = useState(false)
+  const [removePw, setRemovePw] = useState('')
+  const [removing, setRemoving] = useState(false)
+  const [lockError, setLockError] = useState<string | null>(null)
 
   const hasDemo = nodes.some((n) => n.demo)
   const brain = BRAIN_PROFILES[profile.brainProfileId] ?? BRAIN_PROFILES['quiet-brain']
@@ -70,6 +79,77 @@ export function Settings() {
             <p className="text-[17px] font-semibold tracking-[-0.02em]">{brain.title}</p>
             <p className="mt-1.5 text-[14px] leading-relaxed text-muted">{brain.body[0]}</p>
           </div>
+        </Section>
+
+        <Section title="Profil og kode">
+          {authState === 'unlocked' ? (
+            <>
+              <div className="rounded-xl2 border border-line bg-surface p-5">
+                <p className="text-[15px] font-medium">{authName ? `${authName}s profil` : 'Din profil'}</p>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
+                  Loops er låst med din kode. Det du skriver — titler, småting, brain dumps og
+                  samtaler med coachen — ligger krypteret på telefonen.
+                </p>
+              </div>
+              <Row icon={<Lock size={17} />} label="Lås appen nu" onClick={lockNow} />
+              {removing ? (
+                <div className="rounded-xl2 border border-line bg-surface p-4">
+                  <p className="text-[14px] text-muted">Skriv din kode for at fjerne låsen.</p>
+                  <input
+                    type="password"
+                    value={removePw}
+                    onChange={(e) => setRemovePw(e.target.value)}
+                    placeholder="Din kode"
+                    className="mt-3 min-h-[50px] w-full rounded-xl2 border border-line bg-raised px-4 text-[16px] outline-none focus:border-ink/20"
+                  />
+                  {lockError && <p className="mt-2 text-[13px] text-warm">{lockError}</p>}
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => {
+                        setRemoving(false)
+                        setRemovePw('')
+                        setLockError(null)
+                      }}
+                      className="focus-ring min-h-[46px] flex-1 rounded-xl2 border border-line text-[14.5px]"
+                    >
+                      Behold låsen
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const res = await removeLock(removePw)
+                        if (res.ok) {
+                          setRemoving(false)
+                          setRemovePw('')
+                          setLockError(null)
+                          setMessage('Låsen er fjernet.')
+                        } else setLockError(res.error ?? 'Der skete en fejl.')
+                      }}
+                      className="focus-ring min-h-[46px] flex-1 rounded-xl2 bg-ink text-[14.5px] text-canvas"
+                    >
+                      Fjern låsen
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <Row icon={<LockOpen size={17} />} label="Fjern koden" onClick={() => setRemoving(true)} />
+              )}
+            </>
+          ) : showCreateLock ? (
+            <div className="rounded-xl2 border border-line bg-surface p-5">
+              <CreateProfile compact onDone={() => setShowCreateLock(false)} onSkip={() => setShowCreateLock(false)} />
+            </div>
+          ) : (
+            <>
+              <div className="rounded-xl2 border border-line bg-surface p-5">
+                <p className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-muted">
+                  <Info size={15} className="mt-0.5 shrink-0 text-faint" />
+                  Der er ingen kode på Loops lige nu. Du kan oprette en profil med en kode, så
+                  appen låses — og det du skriver bliver krypteret på telefonen.
+                </p>
+              </div>
+              <Row icon={<Lock size={17} />} label="Opret profil med kode" onClick={() => setShowCreateLock(true)} />
+            </>
+          )}
         </Section>
 
         <Section title="Udseende">
@@ -144,7 +224,8 @@ export function Settings() {
             <p className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-muted">
               <Info size={15} className="mt-0.5 shrink-0 text-faint" />
               Alt ligger i din browser på den her telefon. Ingen konto, ingen server, ingen sporing,
-              ingen reklamer. Tag en backup, hvis du vil kunne flytte det.
+              ingen reklamer. Tag en backup, hvis du vil kunne flytte det. Backup-filen er læsbar —
+              også hvis du har sat en kode — så gem den et sted, du ville gemme en kontoudskrift.
             </p>
           </div>
 

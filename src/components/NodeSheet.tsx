@@ -5,7 +5,7 @@ import {
 import { useState } from 'react'
 import { useStore } from '@/store/useStore'
 import { humanMinutes, parkPresets, PART_LABELS, PARTS, relativeDay, isoDate } from '@/lib/time'
-import { visibleChildren } from '@/lib/nodes'
+import { canFocus, visibleChildren } from '@/lib/nodes'
 import { haptic } from '@/lib/haptics'
 
 /**
@@ -30,6 +30,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
   const schedule = useStore((s) => s.schedule)
   const openOverlay = useStore((s) => s.openOverlay)
   const setFocus = useStore((s) => s.setFocus)
+  const focusId = useStore((s) => s.focusId)
   const close = useStore((s) => s.closeOverlay)
   const goodEnoughMode = useStore((s) => s.prefs.goodEnoughMode)
 
@@ -168,7 +169,10 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
               <button
                 key={k.id}
                 onClick={() => {
-                  setFocus(k.id)
+                  // One level per step: if the child is two levels away from
+                  // where she is standing, walk into this circle first — the
+                  // one she tapped is then right in front of her.
+                  setFocus(canFocus(map, focusId, k.id) ? k.id : node.id)
                   close()
                 }}
                 className="focus-ring flex w-full items-center justify-between rounded-xl2 border border-line bg-surface px-4 py-3.5 text-left active:scale-[0.99]"

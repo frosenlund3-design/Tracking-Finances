@@ -14,6 +14,7 @@ import type {
 import { Button } from './ui/Button'
 import { haptic } from '@/lib/haptics'
 import { BrainDumpPanel } from './BrainDump'
+import { CreateProfile } from './Lock'
 import { BRAIN_PROFILES as BRAIN } from '@/lib/brainProfiles'
 
 /**
@@ -204,7 +205,9 @@ export function Onboarding() {
 
     <Reveal key="reveal" profileId={profile.id} onNext={next} />,
 
-    <FirstDump key="dump" onDone={finish} />,
+    <FirstDump key="dump" onDone={next} />,
+
+    <CreateProfile key="lock" onDone={finish} onSkip={finish} />,
   ]
 
   return (
@@ -437,8 +440,8 @@ function FirstDump({ onDone }: { onDone: () => void }) {
         <BrainDumpPanel
           onCommitted={() => setDone(true)}
           footer={
-            <button onClick={onDone} className="focus-ring w-full py-3 text-[14.5px] text-faint">
-              {done ? 'Færdig — vis mig appen' : 'Spring over for nu'}
+            <button onClick={onDone} className="focus-ring min-h-[48px] w-full py-3 text-[14.5px] text-faint">
+              {done ? 'Videre' : 'Spring over for nu'}
             </button>
           }
           autoFinish={onDone}

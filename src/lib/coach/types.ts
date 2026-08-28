@@ -17,6 +17,7 @@ export type Intent =
   | 'cant-decide'
   | 'self-critical'
   | 'too-many-steps'
+  | 'forgetful'
   | 'affirmative'
   | 'negative'
   | 'thanks'

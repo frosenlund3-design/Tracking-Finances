@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
 import { useMemo, useRef, useState } from 'react'
 import type { LoopNode } from '@/db/types'
-import { openDescendantCount, type NodeMap } from '@/lib/nodes'
+import { depthBelow, openDescendantCount, type NodeMap } from '@/lib/nodes'
+import { centerTone, toneFor, type CircleTone } from '@/lib/colors'
 import { haptic } from '@/lib/haptics'
 
 interface Props {
@@ -17,20 +18,20 @@ interface Props {
   /** Returns true when the gesture was a pan, so the tap should be ignored. */
   wasPanning?: () => boolean
   reduced: boolean
+  dark: boolean
 }
 
-const AREA_TINT: Record<string, string> = {
-  work: 'rgb(var(--c-accent) / 0.14)',
-  home: 'rgb(var(--c-warm) / 0.16)',
-  family: 'rgb(var(--c-calm) / 0.16)',
-  personal: 'rgb(var(--c-accent) / 0.10)',
-  money: 'rgb(var(--c-warm) / 0.10)',
-  health: 'rgb(var(--c-calm) / 0.12)',
-  admin: 'rgb(var(--c-faint) / 0.14)',
-  other: 'rgb(var(--c-line) / 0.55)',
-}
-
-/** One circle. Also renders the "+N flere" bucket when `node` is null. */
+/**
+ * One circle.
+ *
+ * No outline: the shape is defined by a soft gradient fill that fades from a
+ * light tone into the base, with the shadow tinted to match. Inside sit the
+ * nested levels as progressively smaller, progressively lighter circles — so
+ * you can see how deep a thing goes before you enter it.
+ *
+ * Those inner circles are deliberately inert. You step inward one level per
+ * tap; you cannot reach past the circle you are looking at.
+ */
 export function CircleView({
   node,
   map,
@@ -43,6 +44,7 @@ export function CircleView({
   onLongPress,
   wasPanning,
   reduced,
+  dark,
 }: Props) {
   const timer = useRef<number | null>(null)
   const [pressed, setPressed] = useState(false)
@@ -50,11 +52,18 @@ export function CircleView({
   const openCount = node ? openDescendantCount(map, node.id) : 0
   const stepsDone = node?.steps.filter((s) => s.done).length ?? 0
   const stepProgress = node?.steps.length ? stepsDone / node.steps.length : 0
+  const depth = node ? depthBelow(map, node.id) : 0
+
+  const tone: CircleTone = useMemo(() => {
+    if (!node) return centerTone(dark)
+    if (isCenter) return centerTone(dark)
+    const parent = node.parentId ? map[node.parentId] : null
+    const siblingIndex = parent ? Math.max(0, parent.childIds.indexOf(node.id)) : 0
+    return toneFor(node.id, siblingIndex, node.parentId, dark)
+  }, [node, isCenter, map, dark])
 
   const label = node ? node.title : `+${overflowCount} flere`
-  const fontSize = useMemo(() => {
-    return isCenter ? 17 : r > 46 ? 14 : r > 36 ? 12.5 : 11.5
-  }, [isCenter, r])
+  const fontSize = isCenter ? 17 : r > 46 ? 14 : r > 36 ? 12.5 : 11.5
 
   const startPress = () => {
     if (!onLongPress) return
@@ -62,7 +71,7 @@ export function CircleView({
       haptic('step')
       onLongPress()
       timer.current = null
-    }, 480)
+    }, 460)
     setPressed(true)
   }
   const endPress = () => {
@@ -71,19 +80,22 @@ export function CircleView({
     setPressed(false)
   }
 
-  const tint = node ? AREA_TINT[node.area] ?? AREA_TINT.other : AREA_TINT.other
+  // Nested rings: one per level below, shrinking and lightening inward. Kept
+  // faint on purpose — they are a hint about depth, and a hint must not
+  // compete with the label sitting on top of it.
+  const nestedScales = [0.7, 0.46, 0.28].slice(0, depth)
 
   return (
     <motion.button
       layoutId={node ? `circle-${node.id}` : 'circle-overflow'}
       layout
-      initial={{ opacity: 0, scale: 0.6 }}
-      animate={{ opacity: 1, scale: pressed ? 0.95 : 1 }}
-      exit={{ opacity: 0, scale: 0.55 }}
+      initial={{ opacity: 0, scale: 0.72 }}
+      animate={{ opacity: 1, scale: pressed ? 0.94 : 1 }}
+      exit={{ opacity: 0, scale: 0.6 }}
       transition={
         reduced
-          ? { duration: 0.15 }
-          : { type: 'spring', stiffness: 260, damping: 30, mass: 0.9 }
+          ? { duration: 0.14 }
+          : { type: 'spring', stiffness: 420, damping: 36, mass: 0.7 }
       }
       onPointerDown={startPress}
       onPointerUp={endPress}
@@ -95,7 +107,7 @@ export function CircleView({
         onTap()
       }}
       onContextMenu={(e) => e.preventDefault()}
-      className="focus-ring absolute grid place-items-center rounded-full"
+      className="absolute grid place-items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-offset-4"
       style={{
         left: x,
         top: y,
@@ -103,60 +115,80 @@ export function CircleView({
         height: r * 2,
         marginLeft: -r,
         marginTop: -r,
-        background: `radial-gradient(circle at 32% 28%, rgb(var(--c-raised)), rgb(var(--c-surface)) 62%), ${tint}`,
-        backgroundBlendMode: 'multiply',
+        background: `linear-gradient(148deg, ${tone.from} 0%, ${tone.to} 100%)`,
         boxShadow: isCenter
-          ? '0 3px 10px rgb(60 46 34 / 0.07), 0 26px 60px -22px rgb(60 46 34 / 0.30)'
-          : '0 2px 6px rgb(60 46 34 / 0.05), 0 12px 30px -14px rgb(60 46 34 / 0.24)',
-        border: '1px solid rgb(var(--c-line))',
+          ? `0 2px 8px ${tone.shadow}, 0 24px 56px -20px ${tone.shadow}`
+          : `0 1px 5px ${tone.shadow}, 0 14px 32px -14px ${tone.shadow}`,
+        color: tone.text,
         touchAction: 'none',
       }}
-      aria-label={node ? `${node.title}${openCount ? `, ${openCount} åbne loops` : ''}` : `Vis ${overflowCount} flere`}
+      aria-label={
+        node
+          ? `${node.title}${openCount ? `, ${openCount} åbne loops` : ''}${depth ? `, ${depth} niveauer indeni` : ''}`
+          : `Vis ${overflowCount} flere`
+      }
     >
-      {/* Progress ring for a task that is partly done. */}
+      {/* The levels below, shown but not reachable from here. */}
+      {nestedScales.map((scale, i) => (
+        <span
+          key={i}
+          aria-hidden
+          className="pointer-events-none absolute rounded-full"
+          style={{
+            width: r * 2 * scale,
+            height: r * 2 * scale,
+            background: tone.nested[i],
+            opacity: dark ? 0.4 : 0.34,
+          }}
+        />
+      ))}
+
+      {/* Progress on a task that is partly done. */}
       {stepProgress > 0 && (
-        <svg className="absolute inset-0 -rotate-90 pointer-events-none" width={r * 2} height={r * 2}>
+        <svg className="pointer-events-none absolute inset-0 -rotate-90" width={r * 2} height={r * 2}>
           <circle
             cx={r}
             cy={r}
-            r={r - 3}
+            r={r - 2.5}
             fill="none"
-            stroke="rgb(var(--c-accent))"
-            strokeWidth={3}
+            stroke={tone.text}
+            strokeWidth={2.5}
             strokeLinecap="round"
-            strokeDasharray={`${stepProgress * 2 * Math.PI * (r - 3)} ${2 * Math.PI * (r - 3)}`}
-            opacity={0.85}
+            strokeDasharray={`${stepProgress * 2 * Math.PI * (r - 2.5)} ${2 * Math.PI * (r - 2.5)}`}
+            opacity={0.45}
           />
         </svg>
       )}
 
-      <div className="px-1.5 text-center leading-[1.15]" style={{ maxWidth: r * 1.94 }}>
-        <div
-          className="font-medium tracking-[-0.01em]"
+      <span className="relative px-1.5 text-center leading-[1.15]" style={{ maxWidth: r * 1.94 }}>
+        <span
+          className="block font-medium tracking-[-0.01em]"
           style={{
             fontSize,
             display: '-webkit-box',
             WebkitLineClamp: isCenter ? 3 : r > 32 ? 3 : 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
-            // Break between words, and only inside a word as a last resort —
-            // "Skri v…" is worse than "Skriv notat…".
             overflowWrap: 'break-word',
             hyphens: 'auto',
           }}
         >
           {label}
-        </div>
+        </span>
         {isCenter && openCount > 0 && (
-          <div className="mt-1 text-[11px] text-muted">{openCount} åbne</div>
+          <span className="mt-1 block text-[11px] opacity-60">{openCount} åbne</span>
         )}
         {!isCenter && node && openCount > 0 && r > 36 && (
-          <div className="mt-0.5 text-[10.5px] text-faint">{openCount}</div>
+          <span className="mt-0.5 block text-[10.5px] opacity-55">{openCount}</span>
         )}
-      </div>
+      </span>
 
       {node?.status === 'active' && (
-        <span className="absolute -top-0.5 right-2 h-2.5 w-2.5 rounded-full bg-calm shadow" aria-hidden />
+        <span
+          className="absolute right-3 top-2 h-2.5 w-2.5 rounded-full"
+          style={{ background: tone.text, opacity: 0.7 }}
+          aria-hidden
+        />
       )}
     </motion.button>
   )

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { db, defaultPrefs, defaultProfile, loadAll, ROOT_ID, uid } from '@/db/db'
+import { db, defaultPrefs, defaultProfile, loadAll, openNode, putNode, putNodes, ROOT_ID, uid } from '@/db/db'
 import { buildBaseTree, buildDemoTree } from '@/db/seed'
 import type {
   BrainDumpEntry,
@@ -14,7 +14,7 @@ import type {
   UserPreferences,
   UserProfile,
 } from '@/db/types'
-import { actionableLeaves, isParkedNow, makeNode, toMap, toStep, type NodeMap } from '@/lib/nodes'
+import { actionableLeaves, canFocus, isParkedNow, makeNode, toMap, toStep, type NodeMap } from '@/lib/nodes'
 import { computeMentalLoad, type MentalLoad } from '@/lib/mentalLoad'
 import { rankTasks, scoreTask, xpFor, type ScoredTask } from '@/lib/scoring'
 import { decompose } from '@/lib/decompose'
@@ -23,6 +23,9 @@ import { REWARD_XP, rewardLine } from '@/lib/rewards'
 import { haptic, setHapticsEnabled } from '@/lib/haptics'
 import { isoDate } from '@/lib/time'
 import { xpTargetFor } from '@/lib/giftcards'
+import {
+  deriveKey, isStrongEnough, isUnlocked, newSalt, openText, sameVerifier, sealText, setSessionKey, verifierFor,
+} from '@/lib/vault'
 
 export type Screen = 'home' | 'map' | 'time' | 'rewards' | 'settings'
 
@@ -32,7 +35,7 @@ export type Overlay =
   | { kind: 'whatnow' }
   | { kind: 'start'; nodeId: string }
   | { kind: 'bodydouble'; nodeId: string }
-  | { kind: 'coach'; nodeId?: string }
+  | { kind: 'coach'; nodeId?: string; ask?: boolean }
   | { kind: 'rescue' }
   | { kind: 'node'; nodeId: string }
   | { kind: 'energy' }
@@ -46,8 +49,12 @@ export interface Celebration {
   big: boolean
 }
 
+export type AuthState = 'none' | 'locked' | 'unlocked'
+
 interface State {
   ready: boolean
+  authState: AuthState
+  authName?: string
   nodes: LoopNode[]
   map: NodeMap
   profile: UserProfile
@@ -104,6 +111,11 @@ interface State {
   addCoachMessage: (m: Omit<CoachMessage, 'id' | 'createdAt'>) => Promise<CoachMessage>
   clearCoach: () => Promise<void>
 
+  createLock: (password: string, name?: string) => Promise<{ ok: boolean; error?: string }>
+  unlock: (password: string) => Promise<{ ok: boolean; error?: string }>
+  removeLock: (password: string) => Promise<{ ok: boolean; error?: string }>
+  lockNow: () => void
+
   loadDemoData: () => Promise<void>
   removeDemoData: () => Promise<void>
   reload: () => Promise<void>
@@ -120,6 +132,7 @@ function applyTheme(theme: UserProfile['theme'], reduced: boolean) {
 
 export const useStore = create<State>((set, get) => ({
   ready: false,
+  authState: 'none',
   nodes: [],
   map: {},
   profile: defaultProfile(),
@@ -138,12 +151,20 @@ export const useStore = create<State>((set, get) => ({
   daysAway: 0,
 
   async init() {
+    const authRow = await db.auth.get('auth')
+    if (authRow && !isUnlocked()) {
+      // Nothing is read until the password is entered, so no content ever
+      // reaches the screen behind the lock.
+      set({ ready: true, authState: 'locked', authName: authRow.name })
+      return
+    }
+
     let data = await loadAll()
 
     if (data.nodes.length === 0) {
       const base = buildBaseTree()
       const withDemo = import.meta.env.DEV ? buildDemoTree(base) : base
-      await db.nodes.bulkPut(withDemo)
+      await putNodes(withDemo)
       await db.profile.put(data.profile)
       await db.prefs.put(data.prefs)
       data = await loadAll()
@@ -156,7 +177,7 @@ export const useStore = create<State>((set, get) => ({
     const woken = data.nodes.filter((n) => n.status === 'parked' && (n.parkedUntil ?? 0) <= now)
     if (woken.length) {
       const updated = woken.map((n) => ({ ...n, status: 'open' as const, parkedUntil: undefined, updatedAt: now }))
-      await db.nodes.bulkPut(updated)
+      await putNodes(updated)
       data.nodes = data.nodes.map((n) => updated.find((u) => u.id === n.id) ?? n)
     }
 
@@ -167,6 +188,8 @@ export const useStore = create<State>((set, get) => ({
 
     set({
       ready: true,
+      authState: authRow ? 'unlocked' : 'none',
+      authName: authRow?.name,
       nodes: data.nodes,
       map: toMap(data.nodes),
       profile: data.profile,
@@ -187,7 +210,16 @@ export const useStore = create<State>((set, get) => ({
   setScreen: (screen) => set({ screen, overlay: { kind: 'none' } }),
   openOverlay: (overlay) => set({ overlay }),
   closeOverlay: () => set({ overlay: { kind: 'none' } }),
-  setFocus: (focusId) => set({ focusId, screen: 'map' }),
+  setFocus: (focusId) => {
+    const { map, focusId: current } = get()
+    // Stepping inward is one circle at a time. Anything further in is reached
+    // by walking, so the user always sees the level in between.
+    if (!map[focusId] || !canFocus(map, current, focusId)) {
+      set({ screen: 'map' })
+      return
+    }
+    set({ focusId, screen: 'map' })
+  },
   focusUp: () => {
     const { map, focusId } = get()
     const parent = map[focusId]?.parentId
@@ -230,7 +262,7 @@ export const useStore = create<State>((set, get) => ({
       node.mentalWeight = Math.min(5, node.mentalWeight + 1) as LoopNode['mentalWeight']
     }
     const updatedParent = { ...parent, childIds: [...parent.childIds, node.id], updatedAt: Date.now() }
-    await db.nodes.bulkPut([node, updatedParent])
+    await putNodes([node, updatedParent])
     const nodes = [...get().nodes.map((n) => (n.id === parent.id ? updatedParent : n)), node]
     set({ nodes, map: toMap(nodes) })
     return node
@@ -240,7 +272,7 @@ export const useStore = create<State>((set, get) => ({
     const current = get().map[id]
     if (!current) return
     const next = { ...current, ...patch, updatedAt: Date.now() }
-    await db.nodes.put(next)
+    await putNode(next)
     const nodes = get().nodes.map((n) => (n.id === id ? next : n))
     set({ nodes, map: toMap(nodes) })
   },
@@ -268,7 +300,7 @@ export const useStore = create<State>((set, get) => ({
       updated.push(p)
     }
     await db.nodes.bulkDelete([...doomed])
-    if (updated.length) await db.nodes.bulkPut(updated)
+    if (updated.length) await putNodes(updated)
     const nextNodes = remaining.map((n) => updated.find((u) => u.id === n.id) ?? n)
     set({ nodes: nextNodes, map: toMap(nextNodes), overlay: { kind: 'none' } })
   },
@@ -396,7 +428,7 @@ export const useStore = create<State>((set, get) => ({
     }
 
     const touchedNodes = [...touched].map((id) => nodesById[id]).filter((n) => !created.includes(n))
-    await db.nodes.bulkPut([...created, ...touchedNodes])
+    await putNodes([...created, ...touchedNodes])
 
     const entry: BrainDumpEntry = {
       id: uid('d'),
@@ -405,7 +437,7 @@ export const useStore = create<State>((set, get) => ({
       createdNodeIds: created.map((n) => n.id),
       processed: true,
     }
-    await db.dumps.put(entry)
+    await db.dumps.put({ ...entry, raw: await sealText(entry.raw) })
 
     const nextNodes = Object.values(nodesById)
     set({ nodes: nextNodes, map: toMap(nextNodes), dumps: [entry, ...get().dumps] })
@@ -467,7 +499,7 @@ export const useStore = create<State>((set, get) => ({
 
   async addCoachMessage(m) {
     const message: CoachMessage = { ...m, id: uid('m'), createdAt: Date.now() }
-    await db.coachMessages.put(message)
+    await db.coachMessages.put({ ...message, text: await sealText(message.text) })
     set({ coachMessages: [...get().coachMessages, message].slice(-200) })
     return message
   },
@@ -477,11 +509,83 @@ export const useStore = create<State>((set, get) => ({
     set({ coachMessages: [] })
   },
 
+  async createLock(password, name) {
+    if (!isStrongEnough(password)) return { ok: false, error: 'Koden opfylder ikke kravene endnu.' }
+    const salt = newSalt()
+    const key = await deriveKey(password, salt)
+    const verifier = await verifierFor(key)
+
+    setSessionKey(key)
+    // Re-write everything through the encryption boundary. Existing rows are
+    // plaintext, and sealText is a no-op on anything already sealed.
+    const [nodes, dumps, messages, completions] = await Promise.all([
+      db.nodes.toArray(), db.dumps.toArray(), db.coachMessages.toArray(), db.completions.toArray(),
+    ])
+    await putNodes(nodes)
+    await db.dumps.bulkPut(await Promise.all(dumps.map(async (d) => ({ ...d, raw: await sealText(d.raw) }))))
+    await db.coachMessages.bulkPut(await Promise.all(messages.map(async (m) => ({ ...m, text: await sealText(m.text) }))))
+    await db.completions.bulkPut(await Promise.all(completions.map(async (c) => ({ ...c, title: await sealText(c.title) }))))
+
+    await db.auth.put({ id: 'auth', name: name?.trim() || undefined, salt, iterations: 250_000, verifier, createdAt: Date.now() })
+    set({ authState: 'unlocked', authName: name?.trim() || undefined })
+    return { ok: true }
+  },
+
+  async unlock(password) {
+    const row = await db.auth.get('auth')
+    if (!row) return { ok: false, error: 'Der er ingen kode på den her telefon.' }
+    const key = await deriveKey(password, row.salt, row.iterations)
+    if (!sameVerifier(await verifierFor(key), row.verifier)) {
+      return { ok: false, error: 'Koden passer ikke. Prøv igen.' }
+    }
+    setSessionKey(key)
+    await get().init()
+    return { ok: true }
+  },
+
+  async removeLock(password) {
+    const row = await db.auth.get('auth')
+    if (!row) return { ok: true }
+    const key = await deriveKey(password, row.salt, row.iterations)
+    if (!sameVerifier(await verifierFor(key), row.verifier)) {
+      return { ok: false, error: 'Koden passer ikke.' }
+    }
+
+    // Decrypt with the key, then write back in the clear.
+    const [nodes, dumps, messages, completions] = await Promise.all([
+      db.nodes.toArray(), db.dumps.toArray(), db.coachMessages.toArray(), db.completions.toArray(),
+    ])
+    const plainNodes = await Promise.all(nodes.map((n) => openNode(n, key)))
+    const plainDumps = await Promise.all(dumps.map(async (d) => ({ ...d, raw: await openText(d.raw, key) })))
+    const plainMessages = await Promise.all(messages.map(async (m) => ({ ...m, text: await openText(m.text, key) })))
+    const plainCompletions = await Promise.all(completions.map(async (c) => ({ ...c, title: await openText(c.title, key) })))
+
+    setSessionKey(null)
+    await db.nodes.bulkPut(plainNodes)
+    await db.dumps.bulkPut(plainDumps)
+    await db.coachMessages.bulkPut(plainMessages)
+    await db.completions.bulkPut(plainCompletions)
+    await db.auth.delete('auth')
+
+    set({ authState: 'none', authName: undefined })
+    await get().reload()
+    return { ok: true }
+  },
+
+  lockNow() {
+    setSessionKey(null)
+    set({
+      authState: 'locked',
+      nodes: [], map: {}, completions: [], rewards: [], dumps: [], claimed: [], coachMessages: [],
+      overlay: { kind: 'none' }, screen: 'home', focusId: ROOT_ID,
+    })
+  },
+
   async loadDemoData() {
     const existing = get().nodes
     if (existing.some((n) => n.demo)) return
     const all = buildDemoTree(existing)
-    await db.nodes.bulkPut(all)
+    await putNodes(all)
     set({ nodes: all, map: toMap(all) })
   },
 
@@ -493,7 +597,7 @@ export const useStore = create<State>((set, get) => ({
       .filter((n) => !demoIds.has(n.id))
       .map((n) => ({ ...n, childIds: n.childIds.filter((c) => !demoIds.has(c)) }))
     await db.nodes.bulkDelete([...demoIds])
-    await db.nodes.bulkPut(remaining)
+    await putNodes(remaining)
     set({ nodes: remaining, map: toMap(remaining), focusId: ROOT_ID })
   },
 
@@ -567,8 +671,8 @@ async function closeLoop(
     minutes: node.estimatedMinutes,
   }
 
-  await db.nodes.bulkPut(closing)
-  await db.completions.put(completion)
+  await putNodes(closing)
+  await db.completions.put({ ...completion, title: await sealText(completion.title) })
 
   const nodes = state.nodes.map((n) => closing.find((c) => c.id === n.id) ?? n)
 
@@ -657,3 +761,12 @@ export function useAvailableXP(): number {
   const prefs = useStore((s) => s.prefs)
   return Math.max(0, prefs.totalXP - prefs.spentXP)
 }
+
+// A handle for end-to-end tests to drive the store directly. Read-only usage;
+// the app itself never touches this.
+declare global {
+  interface Window {
+    __loopsStore?: typeof useStore
+  }
+}
+if (typeof window !== 'undefined') window.__loopsStore = useStore

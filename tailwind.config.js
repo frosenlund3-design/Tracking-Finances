@@ -17,8 +17,14 @@ export default {
         calm: 'rgb(var(--c-calm) / <alpha-value>)',
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
-        display: ['SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'Inter', 'system-ui', 'sans-serif'],
+        sans: [
+          '-apple-system', 'BlinkMacSystemFont', 'SF Pro Text',
+          'Inter Variable', 'Inter', 'Segoe UI', 'system-ui', 'sans-serif',
+        ],
+        display: [
+          'SF Pro Display', '-apple-system', 'BlinkMacSystemFont',
+          'Inter Variable', 'Inter', 'system-ui', 'sans-serif',
+        ],
       },
       boxShadow: {
         soft: '0 1px 2px rgb(60 46 34 / 0.04), 0 6px 20px -8px rgb(60 46 34 / 0.10)',

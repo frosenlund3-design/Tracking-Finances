@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import type {
+  AuthRecord,
   BrainDumpEntry,
   ClaimedReward,
   CoachMessage,
@@ -10,6 +11,7 @@ import type {
   UserPreferences,
   UserProfile,
 } from './types'
+import { openText, sealText } from '@/lib/vault'
 
 /**
  * Everything lives in the browser. No server, no account, no sync.
@@ -25,6 +27,7 @@ export class LoopsDB extends Dexie {
   claimed!: Table<ClaimedReward, string>
   profile!: Table<UserProfile, string>
   prefs!: Table<UserPreferences, string>
+  auth!: Table<AuthRecord, string>
 
   constructor() {
     super('loops')
@@ -38,6 +41,20 @@ export class LoopsDB extends Dexie {
       claimed: 'id, claimedAt',
       profile: 'id',
       prefs: 'id',
+    })
+    // v2 adds the local profile lock. Nothing existing is migrated: the app
+    // works exactly the same until a password is actually set.
+    this.version(2).stores({
+      nodes: 'id, parentId, status, area, scheduledDate, updatedAt',
+      dumps: 'id, createdAt, processed',
+      coachMessages: 'id, sessionId, createdAt',
+      coachSessions: 'id, startedAt',
+      completions: 'id, nodeId, completedAt',
+      rewards: 'id, createdAt, kind',
+      claimed: 'id, claimedAt',
+      profile: 'id',
+      prefs: 'id',
+      auth: 'id',
     })
   }
 }
@@ -85,6 +102,42 @@ export const defaultPrefs = (): UserPreferences => ({
   energySetAt: 0,
 })
 
+/**
+ * Encryption boundary.
+ *
+ * Only free text is sealed — the words she wrote. Structure (ids, parents,
+ * status, timestamps) stays in the clear so Dexie's indexes keep working and
+ * so the app can still count her loops before it has the key.
+ */
+export async function sealNode(node: LoopNode): Promise<LoopNode> {
+  return {
+    ...node,
+    title: await sealText(node.title),
+    description: node.description ? await sealText(node.description) : node.description,
+    goodEnoughNote: node.goodEnoughNote ? await sealText(node.goodEnoughNote) : node.goodEnoughNote,
+    steps: await Promise.all(node.steps.map(async (s) => ({ ...s, title: await sealText(s.title) }))),
+  }
+}
+
+export async function openNode(node: LoopNode, key?: CryptoKey | null): Promise<LoopNode> {
+  return {
+    ...node,
+    title: await openText(node.title, key),
+    description: node.description ? await openText(node.description, key) : node.description,
+    goodEnoughNote: node.goodEnoughNote ? await openText(node.goodEnoughNote, key) : node.goodEnoughNote,
+    steps: await Promise.all(node.steps.map(async (s) => ({ ...s, title: await openText(s.title, key) }))),
+  }
+}
+
+/** Writes nodes through the encryption boundary. Every write goes through here. */
+export async function putNodes(nodes: LoopNode[]): Promise<void> {
+  await db.nodes.bulkPut(await Promise.all(nodes.map(sealNode)))
+}
+
+export async function putNode(node: LoopNode): Promise<void> {
+  await db.nodes.put(await sealNode(node))
+}
+
 /** Reads the whole database into memory. It is small by design (personal scale). */
 export async function loadAll() {
   const [nodes, profileRow, prefsRow, completions, rewards, dumps, claimed, coachMessages] =
@@ -100,13 +153,13 @@ export async function loadAll() {
     ])
 
   return {
-    nodes,
+    nodes: await Promise.all(nodes.map((n) => openNode(n))),
     profile: profileRow ?? defaultProfile(),
     prefs: prefsRow ?? defaultPrefs(),
-    completions,
+    completions: await Promise.all(completions.map(async (c) => ({ ...c, title: await openText(c.title) }))),
     rewards,
-    dumps,
+    dumps: await Promise.all(dumps.map(async (d) => ({ ...d, raw: await openText(d.raw) }))),
     claimed,
-    coachMessages,
+    coachMessages: await Promise.all(coachMessages.map(async (m) => ({ ...m, text: await openText(m.text) }))),
   }
 }

@@ -75,7 +75,7 @@ export function BrainDumpPanel({ onCommitted, footer, autoFinish }: Props) {
             </Button>
             {autoFinish && (
               <Button full onClick={autoFinish}>
-                Vis mig cirklerne
+                Videre
               </Button>
             )}
           </div>

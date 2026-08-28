@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { ROOT_ID } from '@/db/db'
 import { useStore } from '@/store/useStore'
 import { layoutRadial, maxVisibleFor } from '@/lib/layout'
-import { pathOf, visibleChildren } from '@/lib/nodes'
+import { canFocus, pathOf, visibleChildren } from '@/lib/nodes'
 import { CircleView } from './CircleView'
 import { Sheet } from './ui/Sheet'
 import { haptic } from '@/lib/haptics'
@@ -29,6 +29,7 @@ export function CircleUniverse() {
   const openOverlay = useStore((s) => s.openOverlay)
   const density = useStore((s) => s.profile.density)
   const reduced = useStore((s) => s.prefs.reducedStimulation)
+  const dark = useStore((s) => s.profile.theme === 'dusk')
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -165,7 +166,8 @@ export function CircleUniverse() {
               <span key={n.id} className="flex shrink-0 items-center gap-1">
                 {i > 0 && <span className="opacity-50">›</span>}
                 <button
-                  onClick={() => setFocus(n.id)}
+                  onClick={() => canFocus(map, focusId, n.id) && setFocus(n.id)}
+                  disabled={!canFocus(map, focusId, n.id)}
                   className={`focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full px-2 ${
                     i === trail.length - 1 ? 'text-muted font-medium' : 'hover:text-muted'
                   }`}
@@ -202,6 +204,7 @@ export function CircleUniverse() {
                 r={layout.center.r}
                 isCenter
                 reduced={reduced}
+                dark={dark}
                 wasPanning={() => panned.current}
                 onTap={() => layout.center.node && openOverlay({ kind: 'node', nodeId: layout.center.id })}
                 onLongPress={() => layout.center.node && openOverlay({ kind: 'node', nodeId: layout.center.id })}
@@ -216,6 +219,7 @@ export function CircleUniverse() {
                   r={p.r}
                   overflowCount={p.overflow?.length}
                   reduced={reduced}
+                  dark={dark}
                   wasPanning={() => panned.current}
                   onTap={() => {
                     if (!p.node) {

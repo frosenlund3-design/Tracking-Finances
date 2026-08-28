@@ -1,4 +1,6 @@
-import { db } from '@/db/db'
+import { db, openNode, sealNode } from '@/db/db'
+import { openText, sealText } from '@/lib/vault'
+import type { BrainDumpEntry, CoachMessage, Completion, LoopNode } from '@/db/types'
 
 export interface BackupFile {
   app: 'loops'
@@ -17,6 +19,15 @@ export interface BackupFile {
   }
 }
 
+/**
+ * Backups are exported in the clear, even when the profile lock is on.
+ *
+ * A backup that only opens with a password you might forget is not a backup.
+ * The file is readable, which the UI says plainly — so she knows to keep it
+ * somewhere she'd keep a bank statement. The lock record itself is never
+ * exported: restoring gives back the content, and she sets a new code if she
+ * wants one.
+ */
 export async function exportBackup(): Promise<BackupFile> {
   const [nodes, dumps, coachMessages, coachSessions, completions, rewards, claimed, profile, prefs] =
     await Promise.all([
@@ -35,7 +46,17 @@ export async function exportBackup(): Promise<BackupFile> {
     app: 'loops',
     version: 1,
     exportedAt: new Date().toISOString(),
-    data: { nodes, dumps, coachMessages, coachSessions, completions, rewards, claimed, profile, prefs },
+    data: {
+      nodes: await Promise.all(nodes.map((n) => openNode(n))),
+      dumps: await Promise.all(dumps.map(async (d) => ({ ...d, raw: await openText(d.raw) }))),
+      coachMessages: await Promise.all(coachMessages.map(async (m) => ({ ...m, text: await openText(m.text) }))),
+      coachSessions,
+      completions: await Promise.all(completions.map(async (c) => ({ ...c, title: await openText(c.title) }))),
+      rewards,
+      claimed,
+      profile,
+      prefs,
+    },
   }
 }
 
@@ -67,6 +88,12 @@ export async function importBackup(json: string): Promise<{ nodes: number }> {
   }
 
   const d = parsed.data
+  // Imported content arrives in the clear; re-seal it if a lock is active.
+  const nodes = await Promise.all((d.nodes as LoopNode[]).map(sealNode))
+  const dumps = await Promise.all(((d.dumps ?? []) as BrainDumpEntry[]).map(async (x) => ({ ...x, raw: await sealText(x.raw) })))
+  const messages = await Promise.all(((d.coachMessages ?? []) as CoachMessage[]).map(async (x) => ({ ...x, text: await sealText(x.text) })))
+  const completions = await Promise.all(((d.completions ?? []) as Completion[]).map(async (x) => ({ ...x, title: await sealText(x.title) })))
+
   await db.transaction(
     'rw',
     [db.nodes, db.dumps, db.coachMessages, db.coachSessions, db.completions, db.rewards, db.claimed, db.profile, db.prefs],
@@ -76,11 +103,11 @@ export async function importBackup(json: string): Promise<{ nodes: number }> {
         db.completions.clear(), db.rewards.clear(), db.claimed.clear(), db.profile.clear(), db.prefs.clear(),
       ])
       await Promise.all([
-        db.nodes.bulkAdd(d.nodes as never[]),
-        db.dumps.bulkAdd((d.dumps ?? []) as never[]),
-        db.coachMessages.bulkAdd((d.coachMessages ?? []) as never[]),
+        db.nodes.bulkAdd(nodes),
+        db.dumps.bulkAdd(dumps),
+        db.coachMessages.bulkAdd(messages),
         db.coachSessions.bulkAdd((d.coachSessions ?? []) as never[]),
-        db.completions.bulkAdd((d.completions ?? []) as never[]),
+        db.completions.bulkAdd(completions),
         db.rewards.bulkAdd((d.rewards ?? []) as never[]),
         db.claimed.bulkAdd((d.claimed ?? []) as never[]),
         db.profile.bulkAdd((d.profile ?? []) as never[]),

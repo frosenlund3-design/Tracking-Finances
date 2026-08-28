@@ -64,6 +64,14 @@ export interface LoopNode {
   color?: string
   /** "Godt nok" target — completing at this level counts as a win. */
   goodEnoughNote?: string
+  /**
+   * What the user said is actually in the way, when the coach asked.
+   * Named by her, never inferred — the point of asking is that the app should
+   * not guess why a person is stuck.
+   */
+  blockReason?: ProcrastinationReason
+  /** When the coach last raised this task, so it does not nag. */
+  lastAskedAt?: number
 }
 
 export interface MicroStep {
@@ -208,4 +216,19 @@ export interface ClaimedReward {
   amountDKK: number
   xpSpent: number
   claimedAt: number
+}
+
+/**
+ * The local profile lock. There is no account and no server — this record only
+ * proves that a password matches, and never stores anything that could decrypt
+ * her data on its own.
+ */
+export interface AuthRecord {
+  id: 'auth'
+  name?: string
+  salt: string
+  iterations: number
+  /** SHA-256 of the derived key, not the key. */
+  verifier: string
+  createdAt: number
 }

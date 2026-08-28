@@ -152,3 +152,33 @@ export function areaOf(map: NodeMap, node: LoopNode): LifeArea {
   }
   return 'other'
 }
+
+/** How many levels of open loops sit beneath a node, capped for display. */
+export function depthBelow(map: NodeMap, id: string, cap = 3, now = Date.now()): number {
+  let depth = 0
+  let frontier = visibleChildren(map, id, now)
+  while (frontier.length && depth < cap) {
+    depth++
+    frontier = frontier.flatMap((n) => visibleChildren(map, n.id, now))
+  }
+  return depth
+}
+
+/**
+ * Navigation rule: you step inward one circle at a time.
+ *
+ * Allowed: stepping out to an ancestor, stepping in to a direct child, and
+ * moving between the worlds at the top level. Not allowed: jumping from "Mit
+ * liv" straight to a task three levels down — that skips the context that
+ * makes the map make sense, and skipping it is how a map turns back into a
+ * list.
+ */
+export function canFocus(map: NodeMap, from: string, to: string): boolean {
+  if (from === to) return true
+  const target = map[to]
+  if (!target) return false
+  // A world is the top level, so entering one is never "skipping".
+  if (target.parentId === null || map[target.parentId]?.parentId === null) return true
+  if (target.parentId === from) return true
+  return ancestorsOf(map, from).some((a) => a.id === to)
+}
