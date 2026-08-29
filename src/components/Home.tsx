@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { AlarmClock, Battery, CalendarClock, Check, ChevronRight, Gift, Moon, NotebookPen, Plus, Settings as SettingsIcon, Waves } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { useStore, useClosedToday, useMentalLoad, useNextTask, useParked, useAvailableXP } from '@/store/useStore'
+import { useEffect, useMemo, useState } from 'react'
+import { useStore, useClosedToday, useFocus, useMentalLoad, useParked, useAvailableXP } from '@/store/useStore'
 import { greeting, relativeDay, isoDate } from '@/lib/time'
 import { streakLine, REWARD_XP, levelFor } from '@/lib/rewards'
 import { visibleChildren } from '@/lib/nodes'
@@ -30,7 +30,9 @@ import { useCalibration } from '@/store/useStore'
  */
 export function Home() {
   const load = useMentalLoad()
-  const next = useNextTask()
+  const focus = useFocus()
+  const next = focus.now
+  const ensureFocus = useStore((s) => s.ensureFocus)
   const openOverlay = useStore((s) => s.openOverlay)
   const setScreen = useStore((s) => s.setScreen)
   const setFocus = useStore((s) => s.setFocus)
@@ -46,6 +48,12 @@ export function Home() {
   const wantMoreToday = useStore((s) => s.wantMoreToday)
 
   const [confirmDone, setConfirmDone] = useState(false)
+
+  // Fix today's three, once. Everything after this reads the stored list, so
+  // the day screen and the what-now sheet cannot disagree about what matters.
+  useEffect(() => {
+    void ensureFocus()
+  }, [ensureFocus])
   const cal = useCalibration()
   const enough = enoughState(prefs, closedToday, load.percent, map)
   const appointments = useMemo(() => appointmentsToday(map), [map])
@@ -206,6 +214,13 @@ export function Home() {
             {next.node.dueAt && (
               <p className="mt-1.5 text-[13.5px] font-medium opacity-80">{whenLabel(next.node)}</p>
             )}
+
+            {/*
+              Why this one and not one of the other nineteen. Without it the
+              card is an instruction from nowhere, and an instruction from
+              nowhere is the thing she described as random.
+            */}
+            {focus.why && <p className="mt-3 text-[13.5px] leading-relaxed opacity-70">{focus.why}</p>}
 
             <button
               onClick={() => openOverlay({ kind: 'start', nodeId: next.node.id })}

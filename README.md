@@ -703,6 +703,86 @@ indlysende. `lib/coach/adapter.ts` er sømmen: implementér `CoachAdapter`, den
 får både profil, observationer og samtalehistorik med, og en rigtig model kan
 kobles på uden at UI'et ændres. Appen er fuldt funktionel uden.
 
+### `lib/habits.ts`: vaner, hørt og genkendt
+
+To ting, som er den samme ting set fra hver sin side.
+
+Den ene er at læse en rutine ud af almindeligt talt dansk. Hun dikterede hele
+sin hverdag i ét stræk, uden punktummer, og coachen svarede med bogholderi om
+en helt anden opgave, fordi noget længere nede i systemet så ordene "hver dag"
+midt i seks hundrede tegn og handlede på den stump. Nu bliver beskeden skåret op
+ved de steder, en person faktisk holder pause, når ingen sætter punktummer: "og
+så", "og ja så", og et nyt "jeg et-eller-andet-er". Kadence og "gør jeg det
+allerede" bliver læst i det stykke, rutinen står i, ikke i hele beskeden. Det er
+forskellen på at forstå hende og på at gøre hele hendes liv til hver tredje dag.
+
+Ordforrådet er bevidst endeligt. Dikteret dansk kan ikke parses rent, men
+hverdagsrutiner er et lille, lukket, virkeligt ordforråd: skraldet,
+opvaskemaskinen, gulvet, pillerne. Den genkender dem, den kender, og tier om
+resten.
+
+Det vigtigste design er, at det hun **allerede** gør, og det hun **gerne vil**
+i gang med, bliver holdt adskilt og behandlet modsat. En rutine hun holder, må
+ikke blive til en linje på en liste: lige nu lykkes hun med at tørre bordet af,
+og i det sekund det kan stå uafkrydset, har hun fået en ny måde at fejle på ved
+noget, der virker. Til gengæld er de præcis dét, en ADHD-dag har mindst af: et
+fast punkt, der kommer af sig selv, uden at nogen skal beslutte noget. Så de
+bliver til ankre, og kun det hun bad om, bliver til loops.
+
+Den anden side er at spotte, at noget, der allerede ligger i træet, er en vane.
+"Tøm opvaskemaskinen" som engangsopgave er en fælde begge veje: krydser man den
+af, er det løgn, for den er tilbage i aften, og lader man være, bliver den
+liggende øverst og lærer hende, at listen ikke er til at stole på.
+
+### `lib/focus.ts`: hvorfor lige den opgave
+
+"Jeg føler det er ret random hvilken task den putter ind som den jeg skal lave
+nu." Det var det. Scoringen lagde otte tal sammen til ét ud af hundrede og
+sorterede på det, hvilket virker, når komponenterne er uenige, og fejler helt,
+når de ikke er: tyve loops uden frist lander inden for få point af hinanden, den
+øverste skifter, når klokken passerer en time, og der findes ikke noget svar på
+"hvorfor lige den". En rangering, man ikke kan udspørge, er ikke til at skelne
+fra en lodtrækning.
+
+Tre ændringer, i rækkefølge efter hvor meget de betyder.
+
+**Lag før point.** Rækkefølgen afgøres først af en kategori, og kun inden for
+kategorien af score. En rigtig frist slår alt. Noget påbegyndt slår noget urørt.
+Det gør rækkefølgen forklarlig i én sætning og stabil, fordi en opgave ikke
+driver mellem lag, når klokken flytter sig.
+
+**Listen er tre ting.** At have lagt det hele ind var det rigtige at gøre og
+skal ikke straffes med en længere liste at kigge på. De tre bliver valgt én gang
+og bliver stående dagen ud, og resten er reelt ude af syne i stedet for sorteret
+længere ned.
+
+**Vaner er ikke opgaver.** Seks daglige husholdningsloops i samme pulje som
+"ring til kommunen" skubber det, der betyder noget, af pladsen og får listen til
+at se bundløs ud.
+
+Og så står der, hvorfor. Den vigtigste sætning i hele filen er den sidste: når
+intet reelt skiller de øverste fra hinanden, siger den dét, i stedet for at
+finde på en grund. At få at vide af et værktøj, at der ikke er et rigtigt svar,
+er det, der gør, at man kan vælge en og komme i gang. En opdigtet begrundelse
+gør, at man i stedet begynder at skændes med appen.
+
+### Start Mode: uret starter forfra, totalen samler sig
+
+Uret på skærmen måler det trin, der står foran hende, og går tilbage til nul,
+hver gang hun trykker "gjort, næste". Det er ikke kosmetik. Et tal, der klatrer
+gennem fem trin, laver "næste, næste, næste" om til et regnskab over, hvor lang
+tid det her tager, og et regnskab over hvor lang tid det tager er præcis det,
+der får hende til at stoppe. Sekunderne er ikke væk, de bliver lagt til side.
+
+Til sidst får de deres egen skærm. Totalen for hele opgaven, alle trin talt med,
+ved siden af det, hun havde sat af. Tidsblindhed bliver ikke løst ved at få den
+forklaret; den bliver slidt ned af at se de to tal ved siden af hinanden ofte
+nok. Appen kommenterer ikke, hvem der havde ret. Den viser begge og holder mund.
+
+Det er det ene store øjeblik i appen. Alt andet er bevidst stille, fordi fest
+hver gang holder op med at betyde noget, men at have lukket en opgave med fem
+trin i er ikke hver gang.
+
 ---
 
 ## Hvad appen ikke gør

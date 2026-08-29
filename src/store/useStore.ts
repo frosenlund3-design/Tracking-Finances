@@ -20,8 +20,10 @@ import type {
 import { actionableLeaves, areaOf, canFocus, isParkedNow, makeNode, toMap, toStep, type NodeMap } from '@/lib/nodes'
 import { computeMentalLoad, type MentalLoad } from '@/lib/mentalLoad'
 import { rankTasks, scoreTask, xpFor, type ScoredTask } from '@/lib/scoring'
+import { buildFocus, SHORTLIST_SIZE, type Focus } from '@/lib/focus'
 import { decompose, type Granularity } from '@/lib/decompose'
 import type { ParsedLoop } from '@/lib/brainDump'
+import type { HabitMention } from '@/lib/habits'
 import { REWARD_XP, rewardLine } from '@/lib/rewards'
 import { haptic, setHapticsEnabled } from '@/lib/haptics'
 import { isoDate, parseIso } from '@/lib/time'
@@ -102,11 +104,13 @@ interface State {
   setEnergy: (energy: EnergyLevel) => Promise<void>
 
   addNode: (input: { title: string; parentId: string; minutes?: number; autoBreak?: boolean }) => Promise<LoopNode>
+  addHabits: (habits: HabitMention[], cue?: string | null) => Promise<LoopNode[]>
+  ensureFocus: () => Promise<void>
   updateNode: (id: string, patch: Partial<LoopNode>) => Promise<void>
   moveNode: (id: string, newParentId: string) => Promise<boolean>
   renameNode: (id: string, title: string) => Promise<void>
   deleteNode: (id: string) => Promise<void>
-  completeNode: (id: string, via: Completion['via']) => Promise<void>
+  completeNode: (id: string, via: Completion['via'], opts?: { actualMinutes?: number }) => Promise<void>
   dropNode: (id: string) => Promise<void>
   delegateNode: (id: string) => Promise<void>
   startNode: (id: string) => Promise<void>
@@ -333,6 +337,93 @@ export const useStore = create<State>((set, get) => ({
     return node
   },
 
+  /**
+   * Turn routines she named into loops that come back.
+   *
+   * Three things are deliberate here.
+   *
+   * Every one gets scheduledDate = today. Without a date, closing a recurring
+   * loop reopens it on the spot, so ticking "Tøm skraldespanden" would hand it
+   * straight back. With one, closing it moves it to the next occurrence and it
+   * is genuinely gone for the day, which is the entire promise.
+   *
+   * They get no auto-decomposition. Steps on "Red sengen" is the app being
+   * silly at somebody who has done it ten thousand times, and it is the kind of
+   * thing that makes a tool feel like it thinks you are stupid.
+   *
+   * They get the cue if there is one, so the plan reads "når jeg har tørret
+   * køkkenbordet af, tager jeg min medicin" rather than naming a time.
+   */
+  async addHabits(habits, cue) {
+    if (!habits.length) return []
+    const { map, nodes: existing } = get()
+    const areas = existing.filter((n) => n.isArea && n.id !== ROOT_ID && n.status !== 'done')
+    const today = isoDate(new Date())
+
+    const made: LoopNode[] = []
+    const parentPatch = new Map<string, LoopNode>()
+
+    for (const h of habits) {
+      const home = areas.find((a) => a.area === h.area) ?? map[ROOT_ID]
+      const node = makeNode({
+        title: h.title,
+        parentId: home.id,
+        area: h.area,
+        estimatedMinutes: h.minutes,
+        mentalWeight: 1,
+        energyRequired: h.minutes <= 5 ? 10 : 30,
+      })
+      node.repeat = h.cadence.unit
+      node.repeatEvery = h.cadence.every
+      node.scheduledDate = today
+      // The cue only makes sense on something that happens every time the cue
+      // does. A weekly loop hung on a daily anchor fires on the six wrong days.
+      if (cue && h.cadence.unit === 'day' && h.cadence.every === 1) node.cue = cue
+      made.push(node)
+
+      const current = parentPatch.get(home.id) ?? home
+      parentPatch.set(home.id, { ...current, childIds: [...current.childIds, node.id], updatedAt: Date.now() })
+    }
+
+    const parents = [...parentPatch.values()]
+    await putNodes([...made, ...parents])
+    const nodes = [...existing.map((n) => parentPatch.get(n.id) ?? n), ...made]
+    set({ nodes, map: toMap(nodes) })
+    return made
+  },
+
+  /**
+   * Fix today's shortlist, once, and leave it alone.
+   *
+   * Called when the day screen opens. If the stored list is from today it is
+   * kept exactly as it is, minus anything closed since; only a new day, or an
+   * empty list, picks fresh. That is the whole fix for "det er ret random
+   * hvilken task den putter ind": nothing reshuffles between two glances at the
+   * screen, so the order can be argued with instead of just endured.
+   */
+  async ensureFocus() {
+    const state = get()
+    const today = isoDate(new Date())
+    const focus = buildFocus({
+      map: state.map,
+      ctx: {
+        energy: state.prefs.currentEnergy,
+        now: new Date(),
+        profile: state.profile,
+        goodEnoughMode: state.prefs.goodEnoughMode,
+      },
+      prefs: state.prefs,
+      skipped: state.skipped,
+    })
+    const ids = focus.shortlist.slice(0, SHORTLIST_SIZE).map((t) => t.node.id)
+    const same =
+      state.prefs.focusDate === today &&
+      (state.prefs.focusIds ?? []).length === ids.length &&
+      (state.prefs.focusIds ?? []).every((id, i) => id === ids[i])
+    if (same) return
+    await get().savePrefs({ focusDate: today, focusIds: ids })
+  },
+
   async updateNode(id, patch) {
     const current = get().map[id]
     if (!current) return
@@ -404,8 +495,8 @@ export const useStore = create<State>((set, get) => ({
     set({ nodes: nextNodes, map: toMap(nextNodes), overlay: { kind: 'none' } })
   },
 
-  async completeNode(id, via) {
-    await closeLoop(get, set, id, 'done', via)
+  async completeNode(id, via, opts) {
+    await closeLoop(get, set, id, 'done', via, opts?.actualMinutes)
   },
 
   async dropNode(id) {
@@ -595,6 +686,7 @@ export const useStore = create<State>((set, get) => ({
       node.goodEnoughNote = item.goodEnough
       node.stepsAutoGenerated = item.steps.length > 0
       node.repeat = item.repeat
+      node.repeatEvery = item.repeatEvery
       if (item.due) {
         node.dueAt = item.due.at
         node.dueKind = item.due.kind
@@ -963,19 +1055,20 @@ function measuredMinutes(node: LoopNode, now: number): number | undefined {
  * month. And always at least tomorrow, so closing something twice in one day
  * does not leave it sitting there apparently due again this afternoon.
  */
-function nextOccurrence(from: Date, repeat: 'day' | 'week' | 'month'): Date {
+function nextOccurrence(from: Date, repeat: 'day' | 'week' | 'month', every = 1): Date {
+  const step = Math.max(1, Math.round(every))
   const d = new Date(from)
   const tomorrow = new Date()
   tomorrow.setHours(0, 0, 0, 0)
   tomorrow.setDate(tomorrow.getDate() + 1)
   let guard = 0
   do {
-    if (repeat === 'day') d.setDate(d.getDate() + 1)
-    else if (repeat === 'week') d.setDate(d.getDate() + 7)
+    if (repeat === 'day') d.setDate(d.getDate() + step)
+    else if (repeat === 'week') d.setDate(d.getDate() + 7 * step)
     else {
       const day = d.getDate()
       d.setDate(1)
-      d.setMonth(d.getMonth() + 1)
+      d.setMonth(d.getMonth() + step)
       // The 31st in a 30-day month lands on the last day of that month rather
       // than sliding into the next one.
       const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
@@ -991,6 +1084,15 @@ async function closeLoop(
   id: string,
   kind: Completion['kind'],
   via: Completion['via'],
+  /**
+   * Measured time, when the caller actually timed it.
+   *
+   * Start Mode adds up the seconds spent on each step, which is a truer number
+   * than "startedAt until now": that one keeps counting while the phone is in
+   * a pocket, and one forgotten task left open over lunch would poison the
+   * calibration that every duration in the app is put through.
+   */
+  measured?: number,
 ): Promise<void> {
   const state = get()
   const node = state.map[id]
@@ -1024,9 +1126,9 @@ async function closeLoop(
       startedAt: undefined,
       avoidanceCount: 0,
       steps: node.steps.map((st) => ({ ...st, done: false, captured: undefined })),
-      dueAt: node.dueAt ? nextOccurrence(new Date(node.dueAt), node.repeat).getTime() : undefined,
+      dueAt: node.dueAt ? nextOccurrence(new Date(node.dueAt), node.repeat, node.repeatEvery).getTime() : undefined,
       scheduledDate: node.scheduledDate
-        ? isoDate(nextOccurrence(parseIso(node.scheduledDate), node.repeat))
+        ? isoDate(nextOccurrence(parseIso(node.scheduledDate), node.repeat, node.repeatEvery))
         : undefined,
       updatedAt: now,
     })
@@ -1061,7 +1163,7 @@ async function closeLoop(
     xp,
     via,
     minutes: node.estimatedMinutes,
-    actualMinutes: measuredMinutes(node, now),
+    actualMinutes: measured ?? measuredMinutes(node, now),
     area: areaOf(state.map, node),
     wasAvoided: node.avoidanceCount >= 2,
     valueDKK: node.valueDKK,
@@ -1134,11 +1236,33 @@ export function useRanked(): ScoredTask[] {
   })
 }
 
-export function useNextTask(): ScoredTask | null {
-  const ranked = useRanked()
+/**
+ * The day's shortlist, the one thing to do now, and why that one.
+ *
+ * Everything the day screen and the what-now sheet lead with comes from here,
+ * so they cannot disagree with each other about what matters, which they used
+ * to whenever a render landed on a different minute.
+ */
+export function useFocus(): Focus {
+  const map = useStore((s) => s.map)
+  const prefs = useStore((s) => s.prefs)
+  const profile = useStore((s) => s.profile)
   const skipped = useStore((s) => s.skipped)
-  const fresh = ranked.filter((t) => !skipped.includes(t.node.id))
-  return fresh[0] ?? ranked[0] ?? null
+  return buildFocus({
+    map,
+    ctx: {
+      energy: prefs.currentEnergy,
+      now: new Date(),
+      profile,
+      goodEnoughMode: prefs.goodEnoughMode,
+    },
+    prefs,
+    skipped,
+  })
+}
+
+export function useNextTask(): ScoredTask | null {
+  return useFocus().now
 }
 
 export function useParked(): LoopNode[] {

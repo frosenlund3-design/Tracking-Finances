@@ -18,6 +18,10 @@ import { matchTriggers } from '../src/lib/coach/triggers'
 import { observe } from '../src/lib/coach/memory'
 import { chooseOpening, type OpeningContext } from '../src/lib/coach/opening'
 import { understand, namedTopic } from '../src/lib/coach/understand'
+import { cadenceIn, cadenceLabel, readHabits, spotHabits } from '../src/lib/habits'
+import { buildFocus, tierOf } from '../src/lib/focus'
+import { scoreTask } from '../src/lib/scoring'
+import { toMap } from '../src/lib/nodes'
 import type { Completion } from '../src/db/types'
 import type { LoopNode } from '../src/db/types'
 
@@ -328,6 +332,134 @@ console.log('\ncoachen læser hele beskeden')
   check('almindelige opgaver er stadig opgaver',
     !understand('Jeg skal huske at ringe til tandlægen').isRequest &&
       !!detectCaptures('Jeg skal huske at ringe til tandlægen', {})?.items.length)
+}
+
+/* ------------------------------------------------------------------ *
+ * Vaner.
+ *
+ * The message below is verbatim what she dictated, transcription errors and
+ * all. The coach's answer to it was bookkeeping about an unrelated task,
+ * because something downstream matched the words "hver dag" in the middle of
+ * six hundred characters. Every assertion here is that failure, pinned down.
+ * ------------------------------------------------------------------ */
+
+console.log('\ncoachen forstår en rutine, sagt i én køre')
+{
+  const DUMP =
+    'Jeg har nogle vaner til hverdag men for eksempel sådan at jeg tørrer køkkenbordet af hver dag ' +
+    'jeg putter mit pant i pant posen jeg tømmer mine skraldepose både mad skraldespanden og restaffald ' +
+    'overflade af og så støvsuger jeg og så vil jeg også godt have en maling vaske gulv hver tredjedagen ' +
+    'og ja så skal være bedre til at sådan både tømme og fylde opvaskemaskinen og Restart forskellige ting ' +
+    'og så skal det faktisk også være en del af en vane at pille altså sertralin jeg tager 50 mg . ' +
+    'Undskyld hvis du ikke forstod noget af det jeg lige sagde jeg mente bare at jeg tager piller hver dag eller bare en'
+
+  const r = readHabits(DUMP)
+  const doing = (r?.doing ?? []).map((h) => h.title)
+  const wanted = (r?.wanted ?? []).map((h) => h.title)
+
+  check('den hører at det handler om vaner', r?.aboutHabits === true)
+  check('den hører det hun allerede gør',
+    doing.includes('Tør køkkenbordet af') && doing.includes('Støvsug'), doing.join(', '))
+  check('og holder det adskilt fra det hun gerne vil i gang med',
+    wanted.includes('Vask gulv') && wanted.includes('Tag medicin') && !doing.includes('Tag medicin'),
+    wanted.join(', '))
+  check('"både tømme og fylde opvaskemaskinen" er én vane, ikke to',
+    wanted.includes('Tøm og fyld opvaskemaskinen') &&
+      !wanted.includes('Tøm opvaskemaskinen') && !wanted.includes('Fyld opvaskemaskinen'),
+    wanted.join(', '))
+  check('"hver tredjedagen" bliver hver tredje dag, ikke hver dag',
+    r?.wanted.find((h) => h.title === 'Vask gulv')?.cadence.every === 3)
+  check('og den kadence smitter ikke af på resten',
+    r?.wanted.every((h) => h.title === 'Vask gulv' || h.cadence.every === 1) === true,
+    (r?.wanted ?? []).map((h) => `${h.title}=${cadenceLabel(h.cadence)}`).join(', '))
+  check('den hører undskyldningen', r?.apologised === true)
+
+  // The actual bug: a fragment of this message setting a repeat on whatever
+  // task happened to be in focus, and being announced as if she had asked.
+  check('agenten rører ikke en urelateret opgave',
+    handleAgentRequest({ text: DUMP, task: TASK, namedTask: true }) === null,
+    JSON.stringify(handleAgentRequest({ text: DUMP, task: TASK, namedTask: true })?.effect))
+  check('og den bliver ikke til en opgave om at have vaner',
+    !detectCaptures(DUMP, {})?.items.some((i) => /vane/i.test(i.title)))
+
+  check('"hver dag" er stadig en gentagelse i en kort besked',
+    handleAgentRequest({ text: 'Den skal være hver dag', task: TASK })?.effect?.kind === 'repeat')
+
+  check('kadence uden ordenstal', cadenceIn('hver uge')?.unit === 'week')
+  check('kadence med tal', cadenceIn('hver 4. dag')?.every === 4)
+  check('ingen kadence er ingen kadence', cadenceIn('jeg skal ringe til lægen') === null)
+}
+
+console.log('\nvaner der ligger på listen som opgaver')
+{
+  const chore = (title: string): LoopNode => ({ ...TASK, id: title, title })
+  const found = spotHabits([chore('Tøm opvaskemaskinen'), chore('Ring til kommunen'), chore('Vask gulv hver tredje dag')])
+  const titles = found.map((h) => h.node.title)
+  check('en opvaskemaskine er en vane', titles.includes('Tøm opvaskemaskinen'), titles.join(', '))
+  check('et opkald til kommunen er ikke', !titles.includes('Ring til kommunen'))
+  check('og hendes egen "hver tredje dag" bliver læst som den er',
+    found.find((h) => h.node.title.startsWith('Vask gulv'))?.cadence.every === 3)
+  check('en opgave der allerede gentager sig bliver ikke foreslået igen',
+    spotHabits([{ ...chore('Tøm opvaskemaskinen'), repeat: 'day' }]).length === 0)
+}
+
+/* ------------------------------------------------------------------ *
+ * Hvorfor lige den opgave.
+ *
+ * "jeg føler det er ret random hvilken task den putter ind som den jeg skal
+ * lave nu". It was: twenty loops with no deadline scored within a few points
+ * of each other and the top one moved with the clock.
+ * ------------------------------------------------------------------ */
+
+console.log('\nrækkefølgen er til at forklare')
+{
+  const CTX = {
+    energy: 30 as const,
+    now: NOW,
+    profile: { energyPeak: 'varies' as const, procrastinationReasons: [] },
+    goodEnoughMode: false,
+  }
+  const loop = (id: string, patch: Partial<LoopNode> = {}): LoopNode => ({
+    ...TASK, id, title: id, parentId: 'root', childIds: [], steps: [], ...patch,
+  })
+  const root: LoopNode = { ...TASK, id: 'root', title: 'Mit liv', parentId: null, isArea: true, childIds: [], steps: [] }
+
+  const due = loop('Betal husleje', { dueAt: NOW.getTime() + 3 * 3_600_000 })
+  const started = loop('Ryd skrivebordet', { status: 'active', startedAt: NOW.getTime() })
+  const idle = loop('Find forsikringspapirer')
+  const habit = loop('Tøm skraldespanden', { repeat: 'day' })
+  const future = loop('Vask gulv', { repeat: 'day', repeatEvery: 3, scheduledDate: '2026-09-01' })
+  const kids = [due, started, idle, habit, future]
+  const map = toMap([{ ...root, childIds: kids.map((k) => k.id) }, ...kids])
+
+  check('en rigtig frist ligger i sit eget lag',
+    tierOf(scoreTask(due, map, CTX), CTX) === 'must')
+  check('noget påbegyndt ligger over noget urørt',
+    tierOf(scoreTask(started, map, CTX), CTX) === 'started' &&
+      tierOf(scoreTask(idle, map, CTX), CTX) === 'rest')
+
+  const focus = buildFocus({ map, ctx: CTX, prefs: {} })
+  check('den øverste er den med fristen', focus.now?.node.id === 'Betal husleje', focus.now?.node.title)
+  check('og der står hvorfor', /frist/i.test(focus.why), focus.why)
+  check('listen er tre ting, ikke hele bunken', focus.shortlist.length <= 3, String(focus.shortlist.length))
+  check('vaner ligger for sig selv', focus.routines.map((t) => t.node.id).join(',') === 'Tøm skraldespanden',
+    focus.routines.map((t) => t.node.id).join(','))
+  check('og en vane, der først er i morgen, er slet ikke med',
+    ![...focus.shortlist, ...focus.routines, ...focus.rest].some((t) => t.node.id === 'Vask gulv'))
+
+  // The whole point: the same data gives the same list, twice running.
+  const again = buildFocus({ map, ctx: { ...CTX, now: new Date(NOW.getTime() + 2 * 3_600_000) }, prefs: {} })
+  check('to timer senere er det stadig den samme',
+    again.now?.node.id === focus.now?.node.id, again.now?.node.title)
+
+  // And a list she was given this morning is not quietly replaced at noon.
+  const kept = buildFocus({
+    map, ctx: CTX,
+    prefs: { focusDate: '2026-08-28', focusIds: ['Find forsikringspapirer'] },
+  })
+  check('den liste hun fik i morges bliver stående',
+    kept.shortlist.some((t) => t.node.id === 'Find forsikringspapirer'),
+    kept.shortlist.map((t) => t.node.id).join(', '))
 }
 
 console.log(failures ? `\n${failures} FAILED\n` : '\nalt passerer\n')

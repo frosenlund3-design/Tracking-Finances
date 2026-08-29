@@ -13,7 +13,8 @@ import { useCalibration } from '@/store/useStore'
 import { canFocus, visibleChildren } from '@/lib/nodes'
 import { haptic } from '@/lib/haptics'
 import { addToCalendar } from '@/lib/calendar'
-import { CUE_SUGGESTIONS, cueSentence, looksLikeATime } from '@/lib/cues'
+import { cueOptions, cueSentence, looksLikeATime } from '@/lib/cues'
+import { cadenceLabel } from '@/lib/habits'
 import { DEFAULT_GRANULARITY, GRANULARITIES, GRANULARITY_LABELS, type Granularity } from '@/lib/decompose'
 
 /**
@@ -23,11 +24,22 @@ import { DEFAULT_GRANULARITY, GRANULARITIES, GRANULARITY_LABELS, type Granularit
  * loop. Parking, dropping and delegating are first-class, equally sized
  * choices, deciding "this isn't important" also gives you your head back.
  */
-const REPEATS: Array<{ id: LoopNode['repeat']; label: string }> = [
-  { id: undefined, label: 'Kun én gang' },
-  { id: 'day', label: 'Hver dag' },
-  { id: 'week', label: 'Hver uge' },
-  { id: 'month', label: 'Hver måned' },
+/**
+ * How often it comes back.
+ *
+ * "Hver anden dag" and "hver tredje dag" are here because real routines are
+ * not all daily or weekly. She washes the floor every third day, and rounding
+ * that to one of the three neat options would make the app wrong about her
+ * life in a way she notices the first time it asks on the wrong morning.
+ */
+const REPEATS: Array<{ id: LoopNode['repeat']; every: number; label: string }> = [
+  { id: undefined, every: 1, label: 'Kun én gang' },
+  { id: 'day', every: 1, label: 'Hver dag' },
+  { id: 'day', every: 2, label: 'Hver anden dag' },
+  { id: 'day', every: 3, label: 'Hver tredje dag' },
+  { id: 'week', every: 1, label: 'Hver uge' },
+  { id: 'week', every: 2, label: 'Hver anden uge' },
+  { id: 'month', every: 1, label: 'Hver måned' },
 ]
 
 export const REPEAT_LABEL: Record<'day' | 'week' | 'month', string> = {
@@ -38,6 +50,7 @@ export const REPEAT_LABEL: Record<'day' | 'week' | 'month', string> = {
 
 export function NodeSheet({ nodeId }: { nodeId: string }) {
   const node = useStore((s) => s.map[nodeId])
+  const profile = useStore((s) => s.profile)
   const map = useStore((s) => s.map)
   const complete = useStore((s) => s.completeNode)
   const drop = useStore((s) => s.dropNode)
@@ -170,7 +183,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
       {node.repeat && (
         <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-canvas px-3 py-1.5 text-[13px] text-muted">
           <Repeat size={13} />
-          Kommer igen {REPEAT_LABEL[node.repeat]}
+          Kommer igen {cadenceLabel({ unit: node.repeat, every: node.repeatEvery ?? 1 })}
         </p>
       )}
 
@@ -396,10 +409,12 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
                     key={r.label}
                     onClick={async () => {
                       haptic('tap')
-                      await updateNode(node.id, { repeat: r.id })
+                      await updateNode(node.id, { repeat: r.id, repeatEvery: r.id ? r.every : undefined })
                     }}
                     className={`focus-ring min-h-[44px] rounded-full border px-4 text-[14px] active:scale-95 ${
-                      node.repeat === r.id ? 'border-ink/25 bg-accent-soft font-medium' : 'border-line bg-raised text-muted'
+                      node.repeat === r.id && (node.repeatEvery ?? 1) === r.every
+                        ? 'border-ink/25 bg-accent-soft font-medium'
+                        : 'border-line bg-raised text-muted'
                     }`}
                   >
                     {r.label}
@@ -427,7 +442,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
                 beslutning mere, du skal huske at tage. En kedel sætter sig selv over.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {CUE_SUGGESTIONS.slice(0, 6).map((c) => (
+                {cueOptions(profile.self?.routines).slice(0, 6).map((c) => (
                   <button
                     key={c}
                     onClick={async () => {

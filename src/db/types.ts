@@ -51,6 +51,15 @@ export interface LoopNode {
    * generating guilt, and guilt is the thing that stops her opening the app.
    */
   repeat?: 'day' | 'week' | 'month'
+  /**
+   * Every n-th of that unit. 3 with repeat 'day' is "hver tredje dag".
+   *
+   * Real routines are not all daily or weekly. She washes the floor every
+   * third day, and rounding that to "hver uge" or "hver dag" would make the
+   * app wrong about her life in a way she would notice immediately. Absent or
+   * 1 means every time, which is what every existing loop already is.
+   */
+  repeatEvery?: number
 
   /**
    * Something she already does, that this loop hangs on.
@@ -280,6 +289,19 @@ export interface SelfDescription {
    * and pushing on one is how an app loses somebody permanently.
    */
   triggers: string[]
+  /**
+   * The fixed points she already hits every day, in her own words.
+   *
+   * "Når jeg har tørret køkkenbordet af." These are never tasks and never
+   * appear on a list: she is already doing them, and turning something she
+   * succeeds at into something tickable only creates a way to fail at it.
+   *
+   * What they are for is the opposite. A day with ADHD has almost nothing in
+   * it that arrives without a decision, and these do. So they are the places a
+   * new habit gets attached, instead of a time of day, which is one more
+   * decision to remember to make.
+   */
+  routines?: string[]
   /** Anything else she wants the coach to know. */
   freeText?: string
   /** How much she already knows, changes how basic the coach is allowed to be. */
@@ -353,6 +375,18 @@ export interface UserPreferences {
    */
   extraToday?: number
   extraTodayDate?: string
+  /**
+   * Today's shortlist, and the day it belongs to.
+   *
+   * The list is chosen once and then kept. Recomputing it on every render is
+   * what made the app feel like it was picking at random: twenty loops with no
+   * deadline score within a few points of each other, so the top one changed
+   * when the clock crossed an hour or the energy slider moved, and there was
+   * never an answer to "why that one". A list that holds still can be
+   * disagreed with; one that moves cannot even be read.
+   */
+  focusDate?: string
+  focusIds?: string[]
   /** Mental load at the first opening of the day, for "det faldt X%". */
   loadSnapshot?: number
   loadSnapshotDate?: string

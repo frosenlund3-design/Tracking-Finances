@@ -21,6 +21,8 @@ import { answerMeta } from '@/lib/coach/meta'
 import { FIRST_MOVE, prioritise, rightNow, summarise, triage } from '@/lib/coach/help'
 import { landlordRefused, landlordTemplate, moneyAnswer, rentAnswer } from '@/lib/coach/crisis'
 import { alreadyLine, captureOffer, detectCaptures, manyOffer } from '@/lib/coach/capture'
+import { anchorFrom, anchorPhrase, cadenceLabel, readHabits, spotHabits, type HabitMention } from '@/lib/habits'
+import { routineReply } from '@/lib/coach/routines'
 import type { ParsedLoop } from '@/lib/brainDump'
 import type { ProcrastinationReason } from '@/db/types'
 
@@ -63,6 +65,8 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const unparkNode = useStore((s) => s.unparkNode)
   const addNote = useStore((s) => s.addNote)
   const commitBrainDump = useStore((s) => s.commitBrainDump)
+  const addHabits = useStore((s) => s.addHabits)
+  const saveProfile = useStore((s) => s.saveProfile)
   const load = useMentalLoad()
   const closedToday = useClosedToday()
   const next = useNextTask()
@@ -80,6 +84,16 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   const [queue, setQueue] = useState<ParsedLoop[]>([])
   /** Whether the batch being worked through was a single thing. */
   const handledOne = useRef(false)
+  /**
+   * Routines she just described, waiting on her word.
+   *
+   * Kept apart from `queue`, which is for one-off tasks. A routine is not a
+   * task and must not be filed as one, so it cannot share the path that files
+   * things.
+   */
+  const [habitOffer, setHabitOffer] = useState<{ create: HabitMention[]; anchors: HabitMention[]; cue: string | null } | null>(null)
+  /** When she asked to pick only some of them, the ones on the table. */
+  const [pendingHabits, setPendingHabits] = useState<HabitMention[]>([])
   /** The rest of a multi-part request, so "og hvad så med økonomien" works. */
   const [pendingAsks, setPendingAsks] = useState<AskTopic[]>([])
   /** The current message, readable from the ask handler. */
@@ -291,6 +305,55 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
   }
 
   /**
+   * Keep the fixed points she already hits, without ever making them tasks.
+   *
+   * This is the whole reason routines are handled separately. She is currently
+   * succeeding at wiping the counter every day. Put it on a list and there is
+   * now a way to fail at it, and there will be a morning it sits there
+   * unticked telling her she is behind on something she is not behind on.
+   */
+  const saveRoutines = async (anchors: HabitMention[]) => {
+    if (!anchors.length) return
+    const phrases = anchors.filter((h) => h.anchor).map(anchorPhrase)
+    const self = profile.self
+    const existing = self?.routines ?? []
+    const merged = [...existing]
+    for (const phrase of phrases) {
+      if (!merged.some((m) => m.toLowerCase() === phrase.toLowerCase())) merged.push(phrase)
+    }
+    await saveProfile({
+      self: {
+        diagnoses: self?.diagnoses ?? [],
+        challenges: self?.challenges ?? [],
+        triggers: self?.triggers ?? [],
+        familiarity: self?.familiarity ?? 'some',
+        freeText: self?.freeText,
+        ...self,
+        routines: merged,
+      },
+    })
+  }
+
+  /** Create the routines she said yes to, and say exactly what happened. */
+  const commitHabits = async (create: HabitMention[], anchors: HabitMention[], cue: string | null) => {
+    await saveRoutines(anchors)
+    const made = await addHabits(create, cue)
+    if (!made.length) {
+      await say(['Der var ikke noget at lægge ind.'], ['Hvad skal jeg lave?'])
+      return
+    }
+    const lines = [
+      made.length === 1 ? 'Lagt ind.' : `${made.length} lagt ind.`,
+      made.map((n) => `${n.title} · ${cadenceLabel({ unit: n.repeat ?? 'day', every: n.repeatEvery ?? 1 })}`).join('\n'),
+      cue ? `De hænger på "${cue.toLowerCase()}".` : '',
+      // Said out loud because it is the thing that makes a recurring task
+      // survivable. Every habit app she has quit kept score of the misses.
+      'De hober sig ikke op. Springer du en over, findes den bare næste gang, og der er ingen optælling af de sprungne.',
+    ].filter(Boolean)
+    await say(lines, ['Vis dem', 'Hvad skal jeg lave nu?'])
+  }
+
+  /**
    * Answer what she asked for, in the order she asked.
    *
    * Several things in one message is the normal case, not the exception. She
@@ -472,6 +535,62 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
       if (handled) return
     }
 
+    // 0.7. She is answering an offer to set up routines.
+    //
+    // Before the destructive-confirm and the queue, because those both read a
+    // bare "ja" and would happily claim this one.
+    if (habitOffer && !blockAnswer) {
+      const offer = habitOffer
+      const all = /\bl[æa]g (?:den|dem|de \d+) ind|alle sammen|alle tre|ja tak|^ja\b/i.test(trimmed) || yes
+      const some = /\bkun nogle|nogle af dem|v[æa]lge|udv[æa]lg|en ad gangen\b/i.test(trimmed)
+      const anchorsOnly = /\bfaste punkter|gem dem\b/i.test(trimmed)
+
+      if (anchorsOnly || (no && offer.anchors.length)) {
+        setHabitOffer(null)
+        await saveRoutines(offer.anchors)
+        await say(
+          [
+            'Gemt som dine faste punkter.',
+            'Nu er de der, når noget nyt skal hænges på noget. Du får dem aldrig som opgaver.',
+          ],
+          ['Hvad skal jeg lave?', 'Jeg vil have noget nyt ind'],
+        )
+        return
+      }
+      if (some) {
+        setHabitOffer(null)
+        await say(
+          ['Sig hvilke, så tager jeg kun dem.', offer.create.map((h) => h.title).join(', ') + '.'],
+          offer.create.map((h) => h.title),
+        )
+        setPendingHabits(offer.create)
+        return
+      }
+      if (no) {
+        setHabitOffer(null)
+        await say(['Så lader vi det ligge.', 'Det du allerede gør, kører videre uanset hvad jeg gemmer.'], [
+          'Hvad skal jeg lave?',
+        ])
+        return
+      }
+      if (all) {
+        setHabitOffer(null)
+        await commitHabits(offer.create, offer.anchors, offer.cue)
+        return
+      }
+    }
+
+    // She named one of the routines from the offer.
+    if (pendingHabits.length && !blockAnswer) {
+      const picked = pendingHabits.filter((h) => trimmed.toLowerCase().includes(h.title.toLowerCase()))
+      if (picked.length) {
+        setPendingHabits([])
+        await commitHabits(picked, [], anchorFrom(picked))
+        return
+      }
+      setPendingHabits([])
+    }
+
     // 1. Something destructive is waiting on her word.
     if (pending && !blockAnswer) {
       const effect = pending
@@ -509,6 +628,53 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
       setQueue([])
     }
 
+    // 2.4. Turning loops that are really routines into ones that come back.
+    //
+    // Offered from the overview, where the app can see them, but never applied
+    // on its own: it is pattern-matching on a word, and she is the one who
+    // knows whether "vask gulv" is a habit or a one-off before guests arrive.
+    if (/\bg[øo]r vanerne til gentagelser|lav dem om til vaner|g[øo]r dem til gentagelser\b/i.test(trimmed)) {
+      const found = spotHabits(actionableLeaves(map))
+      if (!found.length) {
+        await say(['Jeg kan ikke se nogen på listen, der ligner en vane lige nu.'], ['Hvad skal jeg lave?'])
+        return
+      }
+      for (const h of found) {
+        await updateNode(h.node.id, {
+          repeat: h.cadence.unit,
+          repeatEvery: h.cadence.every,
+          scheduledDate: h.node.scheduledDate ?? isoDate(new Date()),
+        })
+      }
+      await say(
+        [
+          `${found.length === 1 ? 'Den' : `De ${found.length}`} kommer igen af sig selv nu:`,
+          found.map((h) => `${h.node.title} · ${cadenceLabel(h.cadence)}`).join('\n'),
+          'De hober sig ikke op, og der bliver ikke talt på de sprungne. Passer en af dem ikke, så sig til.',
+        ],
+        ['Den passer ikke', 'Hvad skal jeg lave nu?'],
+      )
+      return
+    }
+
+    // 2.5. She is describing her routines.
+    //
+    // This has to sit above the agent. The reply that made her say the coach
+    // understood nothing came from the agent seeing "hver dag" inside six
+    // hundred characters about her everyday life and setting a daily repeat on
+    // an unrelated task. A message about routines is answered as a message
+    // about routines, and never reaches a branch that matches fragments.
+    const habits = blockAnswer ? null : readHabits(trimmed)
+    if (habits && (habits.doing.length || habits.wanted.length)) {
+      setQueue([])
+      setPending(null)
+      const reply = routineReply(habits)
+      setHabitOffer({ create: reply.create, anchors: reply.anchors, cue: anchorFrom(reply.anchors) })
+      await new Promise((r) => setTimeout(r, prefs.reducedStimulation ? 100 : 320))
+      await say(reply.lines, reply.options)
+      return
+    }
+
     // 3. An explicit request to change something wins over advice.
     //
     // With one exception. "Hvad nu hvis de bliver sure på mig?" is shaped like
@@ -519,7 +685,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     const liveTrigger = matchTriggers(trimmed, profile.self?.triggers).some(
       (h) => !usedTriggers.current.includes(h.trigger),
     )
-    const agent = blockAnswer ? null : handleAgentRequest({ text: trimmed, task: focus, circles, namedTask: !!named || !!nodeId })
+    const agent = blockAnswer ? null : handleAgentRequest({ text: trimmed, task: focus, circles, namedTask: !!named || !!nodeId, routines: profile.self?.routines })
     if (agent && !(liveTrigger && !agent.effect)) {
       if (agent.effect && agent.confirm) setPending(agent.effect)
       else if (agent.effect) await applyEffect(agent.effect)

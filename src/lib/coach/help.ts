@@ -18,12 +18,16 @@ import { rankTasks, type ScoreContext } from '@/lib/scoring'
 import { necessaryToday, whenLabel } from '@/lib/deadlines'
 import { humanMinutes } from '@/lib/time'
 import { firstActionFor } from '@/lib/firstAction'
+import { spotHabits } from '@/lib/habits'
+import { habitsInListLine } from './routines'
 
 export interface HelpAnswer {
   lines: string[]
   options: string[]
   /** A loop the reply is about, so a follow-up knows what "den" means. */
   focusId?: string
+  /** Loops on the list that are really routines, so the caller can offer to fix them. */
+  habitIds?: string[]
 }
 
 /**
@@ -103,15 +107,28 @@ export function summarise(map: NodeMap, now = new Date()): HelpAnswer {
   const quick = open.filter((n) => n.estimatedMinutes <= 5).length
   const heavy = open.filter((n) => n.estimatedMinutes >= 45).length
 
+  // Routines sitting on the list pretending to be tasks.
+  //
+  // Worth saying before anything about order or size, because it changes what
+  // the number at the top means. A list of twenty where six come back tomorrow
+  // is not a list of twenty things to get through, and looking at it as if it
+  // were is exactly what makes it feel bottomless.
+  const habits = spotHabits(open)
+  const habitLine = habitsInListLine(habits.slice(0, 4).map((h) => h.node.title))
+
   return {
     lines: [
       `Du har ${open.length} åbne loops. Sådan fordeler de sig:`,
       ...sorted.map(([world, list]) => `${world}: ${list.length}`),
+      habitLine ?? '',
       quick ? `${quick} af dem tager under fem minutter.` : '',
       heavy ? `${heavy} er store nok til, at de nok skal deles op.` : '',
       'Skal jeg sætte dem i rækkefølge, eller skal vi smide nogle ud?',
     ].filter(Boolean),
-    options: ['Sæt dem i rækkefølge', 'Hjælp mig med at smide nogle ud', 'Bare vælg én til mig'],
+    habitIds: habits.map((h) => h.node.id),
+    options: habitLine
+      ? ['Gør vanerne til gentagelser', 'Sæt dem i rækkefølge', 'Bare vælg én til mig']
+      : ['Sæt dem i rækkefølge', 'Hjælp mig med at smide nogle ud', 'Bare vælg én til mig'],
   }
 }
 

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, HandHelping, Pause, Timer } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { haptic } from '@/lib/haptics'
@@ -9,6 +9,7 @@ import { estimateStepSeconds, humanSeconds } from '@/lib/firstAction'
 import { useCalibration } from '@/store/useStore'
 import { Button } from './ui/Button'
 import { MicButton } from './ui/MicButton'
+import { TaskFinished, type FinishSummary } from './TaskFinished'
 
 /**
  * Start Mode, the anti-procrastination screen.
@@ -30,20 +31,48 @@ export function StartMode({ nodeId }: { nodeId: string }) {
   const openOverlay = useStore((s) => s.openOverlay)
   const goodEnoughMode = useStore((s) => s.prefs.goodEnoughMode)
   const tone = useStore((s) => s.profile.tone)
+  const dismissCelebration = useStore((s) => s.dismissCelebration)
 
   const cal = useCalibration()
+  /**
+   * The clock on screen, which measures the step in front of her and nothing
+   * else.
+   *
+   * It goes back to zero every time she finishes a step. That is not a cosmetic
+   * choice. A number that keeps climbing across five steps turns "næste, næste,
+   * næste" into a running account of how long this is taking, and a running
+   * account of how long something is taking is the thing that makes her stop.
+   * Each step gets a clean clock, small enough to be obviously survivable.
+   */
   const [elapsed, setElapsed] = useState(0)
+  /**
+   * The seconds already spent on finished steps.
+   *
+   * Kept in a ref and deliberately never rendered while she is working. It
+   * exists so the total can be told at the end, once it is a number about
+   * something she finished rather than something she is still inside.
+   */
+  const banked = useRef(0)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [stuck, setStuck] = useState(false)
   const [timerEnd, setTimerEnd] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
   const [now, setNow] = useState(Date.now())
+  /** Set the moment the whole task closes, and it takes over the screen. */
+  const [finished, setFinished] = useState<FinishSummary | null>(null)
 
   useEffect(() => {
     // The visible clock is the point: it is how she finds out for herself that
     // "2 min" really was two minutes. Trust in the number has to be earned.
+    if (finished) return
     const tick = window.setInterval(() => setElapsed((e) => e + 1), 1000)
     return () => window.clearInterval(tick)
+  }, [nodeId, finished])
+
+  // A new task means a new total, not a continuation of the last one.
+  useEffect(() => {
+    banked.current = 0
+    setElapsed(0)
   }, [nodeId])
 
   useEffect(() => {
@@ -91,6 +120,29 @@ export function StartMode({ nodeId }: { nodeId: string }) {
   // hook order between renders and crash React.
   if (!node) return null
 
+  /** Close the whole thing, with the time it really took, and mark the moment. */
+  const finishTask = async (totalSeconds: number) => {
+    const minutes = Math.round((totalSeconds / 60) * 10) / 10
+    const summary: Omit<FinishSummary, 'xp'> = {
+      title: node.title,
+      totalSeconds,
+      steps: steps.length,
+      estimatedMinutes: node.estimatedMinutes,
+      repeat: node.repeat,
+      repeatEvery: node.repeatEvery,
+    }
+    // Only pass a measured time we can stand behind. Under five seconds means
+    // she ticked something already done, and feeding that into the calibration
+    // would teach the app that her tasks take no time at all.
+    await complete(node.id, 'start-mode', totalSeconds >= 5 ? { actualMinutes: minutes } : undefined)
+    // One ending, not two. The little toast fires from the store on every
+    // close; here it would sit on top of the screen that is already saying the
+    // same thing, louder and better.
+    dismissCelebration()
+    setFinished({ ...summary, xp: useStore.getState().completions[0]?.xp ?? 0 })
+    haptic('success')
+  }
+
   const finishStep = async () => {
     if (currentStep) {
       if (currentStep.captureLabel && draft.trim()) {
@@ -99,12 +151,16 @@ export function StartMode({ nodeId }: { nodeId: string }) {
       await toggleStep(node.id, currentStep.id)
       const willBeLast = steps.filter((s) => !s.done).length === 1
       if (willBeLast) {
-        await complete(node.id, 'start-mode')
-        close()
+        await finishTask(banked.current + elapsed)
+        return
       }
+      // On to the next one with a clean clock. The seconds are not lost, they
+      // are put away until the end.
+      banked.current += elapsed
+      setElapsed(0)
+      haptic('tap')
     } else {
-      await complete(node.id, 'start-mode')
-      close()
+      await finishTask(banked.current + elapsed)
     }
   }
 
@@ -115,6 +171,8 @@ export function StartMode({ nodeId }: { nodeId: string }) {
     { label: 'Sæt 10 minutter på', action: () => setTimerEnd(Date.now() + 10 * 60 * 1000) },
     { label: 'Snak med coachen', action: () => openOverlay({ kind: 'coach', nodeId: node.id }) },
   ]
+
+  if (finished) return <TaskFinished summary={finished} onDone={close} />
 
   return (
     <div className="flex h-full flex-col px-6 pb-6 pt-2">
@@ -283,8 +341,7 @@ export function StartMode({ nodeId }: { nodeId: string }) {
           <button
             onClick={async () => {
               await award('good-enough', { nodeId: node.id })
-              await complete(node.id, 'start-mode')
-              close()
+              await finishTask(banked.current + elapsed)
             }}
             className="focus-ring min-h-[48px] w-full rounded-xl2 bg-accent-soft text-[15px] font-medium active:scale-[0.99]"
           >

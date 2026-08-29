@@ -50,3 +50,17 @@ export function cueSentence(cue: string, action: string): string {
   const lower = a.charAt(0).toLowerCase() + a.slice(1)
   return `${c}, ${lower}.`
 }
+
+/**
+ * The cues to offer her, hers first.
+ *
+ * A generic anchor is a guess about her day; one she told the app about is a
+ * fact. "Når jeg har sat kaffe over" is useless to somebody who does not drink
+ * coffee, and being offered it is a small signal that nothing she said was
+ * kept.
+ */
+export function cueOptions(own?: string[]): string[] {
+  const mine = (own ?? []).map((c) => c.trim()).filter(Boolean)
+  const rest = CUE_SUGGESTIONS.filter((c) => !mine.some((m) => m.toLowerCase() === c.toLowerCase()))
+  return [...mine, ...rest]
+}

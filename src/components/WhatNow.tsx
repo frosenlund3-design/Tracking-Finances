@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion'
-import { Battery, Play, RefreshCw } from 'lucide-react'
-import { useState } from 'react'
-import { useStore, useRanked } from '@/store/useStore'
+import { Battery, Play, RefreshCw, RotateCw } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useStore, useFocus } from '@/store/useStore'
 import { scoreLabel } from '@/lib/scoring'
+import { cadenceLabel } from '@/lib/habits'
 import { humanMinutes } from '@/lib/time'
 import { calibratedMinutes } from '@/lib/calibration'
 import { useCalibration } from '@/store/useStore'
@@ -13,24 +14,33 @@ import type { EnergyLevel } from '@/db/types'
 /**
  * "Hvad skal jeg gøre nu?"
  *
- * Shows ONE task. The ranked list exists underneath, but it is folded away,
- * the whole point is that she does not have to prioritise fifty things.
+ * Shows ONE task, and now also says why that one. The reason is not decoration:
+ * a ranking that cannot be interrogated is indistinguishable from a random
+ * draw, and being handed one by an app is what makes a person stop trusting it
+ * and start arguing with it instead of doing anything.
  *
- * The points shown are the same number the engine ranked on, so the advice is
- * transparent instead of magic.
+ * Under the one task sits today's shortlist, which is three things and stays
+ * three things all day. Under that, routines, in their own group, because a
+ * loop that comes back tomorrow is not the same kind of object as a phone call
+ * she has been avoiding for three weeks, and putting them in one list makes the
+ * list look bottomless.
  */
 export function WhatNow() {
-  const ranked = useRanked()
-  const skipped = useStore((s) => s.skipped)
+  const focus = useFocus()
+  const ensureFocus = useStore((s) => s.ensureFocus)
   const postpone = useStore((s) => s.postponeNode)
   const openOverlay = useStore((s) => s.openOverlay)
   const energy = useStore((s) => s.prefs.currentEnergy)
   const setEnergy = useStore((s) => s.setEnergy)
-  const [showList, setShowList] = useState(false)
+  const [showRest, setShowRest] = useState(false)
   const cal = useCalibration()
 
-  const fresh = ranked.filter((t) => !skipped.includes(t.node.id))
-  const pick = fresh[0] ?? ranked[0] ?? null
+  useEffect(() => {
+    void ensureFocus()
+  }, [ensureFocus])
+
+  const pick = focus.now
+  const others = focus.shortlist.filter((t) => t.node.id !== pick?.node.id)
 
   if (!pick) {
     return (
@@ -84,15 +94,12 @@ export function WhatNow() {
           {pick.score} point · {scoreLabel(pick.score)}
         </div>
 
-        {pick.reasons.length > 0 && (
-          <ul className="mt-4 space-y-1">
-            {pick.reasons.map((r) => (
-              <li key={r} className="text-[14px] text-muted">
-                {r}
-              </li>
-            ))}
-          </ul>
-        )}
+        {/*
+          The sentence that was missing. Everything else on this card is a
+          number; this is the only part she can disagree with, and being able
+          to disagree is what makes the number worth anything.
+        */}
+        <p className="mx-auto mt-4 max-w-[19rem] text-[14px] leading-relaxed text-muted">{focus.why}</p>
 
         <div className="mt-6 space-y-2.5">
           <Button full onClick={() => openOverlay({ kind: 'start', nodeId: pick.node.id })}>
@@ -107,36 +114,94 @@ export function WhatNow() {
             Giv mig en anden
           </button>
         </div>
-
-        <p className="mt-4 text-[12.5px] text-faint">Okay. Kun den her.</p>
       </motion.div>
 
-      <button
-        onClick={() => setShowList((v) => !v)}
-        className="focus-ring mt-5 w-full py-3 text-[13.5px] text-faint"
-      >
-        {showList ? 'Skjul listen igen' : `Vis alle ${ranked.length} muligheder`}
-      </button>
-
-      {showList && (
-        <div className="space-y-2">
-          {ranked.slice(0, 25).map((t) => (
-            <button
-              key={t.node.id}
-              onClick={() => openOverlay({ kind: 'start', nodeId: t.node.id })}
-              className="focus-ring flex w-full items-center gap-3 rounded-xl2 border border-line bg-surface px-4 py-3.5 text-left active:scale-[0.99]"
-            >
-              <span className="w-11 shrink-0 text-[12.5px] font-medium text-faint">{t.score}p</span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px]">{t.node.title}</span>
-                <span className="block text-[12px] text-faint">
-                  {humanMinutes(calibratedMinutes(t.node.estimatedMinutes, cal))}
-                  {t.node.dueAt ? ` · ${whenLabel(t.node)}` : ''}
+      {others.length > 0 && (
+        <div className="mt-6">
+          <p className="px-1 text-[12px] uppercase tracking-[0.14em] text-faint">
+            Og ellers i dag
+          </p>
+          <div className="mt-2.5 space-y-2">
+            {others.map((t) => (
+              <button
+                key={t.node.id}
+                onClick={() => openOverlay({ kind: 'start', nodeId: t.node.id })}
+                className="focus-ring flex w-full items-center gap-3 rounded-xl2 border border-line bg-surface px-4 py-3.5 text-left active:scale-[0.99]"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px]">{t.node.title}</span>
+                  <span className="block text-[12px] text-faint">
+                    {humanMinutes(calibratedMinutes(t.node.estimatedMinutes, cal))}
+                    {t.node.dueAt ? ` · ${whenLabel(t.node)}` : ''}
+                  </span>
                 </span>
-              </span>
-            </button>
-          ))}
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 px-1 text-[12.5px] leading-relaxed text-faint">
+            Tre ting. De bliver stående dagen ud, så listen ikke ser anderledes ud, hver gang du kigger.
+          </p>
         </div>
+      )}
+
+      {focus.routines.length > 0 && (
+        <div className="mt-6">
+          <p className="px-1 text-[12px] uppercase tracking-[0.14em] text-faint">
+            Vaner i dag
+          </p>
+          <div className="mt-2.5 space-y-2">
+            {focus.routines.map((t) => (
+              <button
+                key={t.node.id}
+                onClick={() => openOverlay({ kind: 'start', nodeId: t.node.id })}
+                className="focus-ring flex w-full items-center gap-3 rounded-xl2 border border-line bg-surface/60 px-4 py-3 text-left active:scale-[0.99]"
+              >
+                <RotateCw size={14} className="shrink-0 text-faint" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14.5px]">{t.node.title}</span>
+                  <span className="block text-[12px] text-faint">
+                    {cadenceLabel({ unit: t.node.repeat ?? 'day', every: t.node.repeatEvery ?? 1 })}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 px-1 text-[12.5px] leading-relaxed text-faint">
+            De tæller ikke med i de tre. De kommer igen af sig selv, og der bliver ikke talt på dem, du
+            springer over.
+          </p>
+        </div>
+      )}
+
+      {focus.rest.length > 0 && (
+        <>
+          <button
+            onClick={() => setShowRest((v) => !v)}
+            className="focus-ring mt-5 w-full py-3 text-[13.5px] text-faint"
+          >
+            {showRest ? 'Skjul resten igen' : `Resten ligger her (${focus.rest.length})`}
+          </button>
+          {showRest && (
+            <div className="space-y-2">
+              {focus.rest.slice(0, 25).map((t) => (
+                <button
+                  key={t.node.id}
+                  onClick={() => openOverlay({ kind: 'start', nodeId: t.node.id })}
+                  className="focus-ring flex w-full items-center gap-3 rounded-xl2 border border-line bg-surface px-4 py-3.5 text-left active:scale-[0.99]"
+                >
+                  <span className="w-11 shrink-0 text-[12.5px] font-medium text-faint">{t.score}p</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px]">{t.node.title}</span>
+                    <span className="block text-[12px] text-faint">
+                      {humanMinutes(calibratedMinutes(t.node.estimatedMinutes, cal))}
+                      {t.node.dueAt ? ` · ${whenLabel(t.node)}` : ''}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

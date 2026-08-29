@@ -23,7 +23,7 @@ import { analyse, toImperativeSentence } from '@/lib/language'
 import { understand } from './understand'
 import { cleanFragment } from '@/lib/brainDump'
 import { knowHowFor } from '@/lib/knowhow'
-import { CUE_SUGGESTIONS, cueSentence, looksLikeATime } from '@/lib/cues'
+import { cueOptions, cueSentence, looksLikeATime } from '@/lib/cues'
 import { addDays, humanMinutes, isoDate, PART_LABELS } from '@/lib/time'
 import { whenLabel } from '@/lib/deadlines'
 
@@ -65,6 +65,8 @@ export interface AgentInput {
    * about a loop she never mentioned reads as not listening.
    */
   namedTask?: boolean
+  /** The fixed points she has told the app she already hits, so cues are hers. */
+  routines?: string[]
   now?: Date
 }
 
@@ -229,10 +231,31 @@ function capitalise(s: string): string {
 
 const NEEDS_TASK = 'Sig hvilken opgave, så gør jeg det. Skriv bare et par ord fra titlen.'
 
-export function handleAgentRequest({ text, task, circles = [], namedTask = false, now = new Date() }: AgentInput): AgentResult | null {
+/**
+ * A message long enough to be a story is not a command.
+ *
+ * The bug this exists for: she dictated her entire everyday routine in one
+ * breath, six hundred characters of it, and the words "hver dag" landed in the
+ * middle. The recurrence branch below matched that fragment and set a daily
+ * repeat on a completely unrelated task that happened to be in focus, then
+ * announced it. Nothing in the message was about that task.
+ *
+ * The branches at risk are the ones that match a bare adverbial rather than an
+ * imperative: "hver dag", "i morgen", "ti minutter", "når jeg". Those phrases
+ * occur in any sentence anybody says about their life. The imperative branches
+ * ("del den op", "parkér den", "slet den") name their object and are safe.
+ */
+const NARRATIVE_LENGTH = 140
+
+/** She is pointing at something, rather than just using the words. */
+const REFERS_TO_TASK = /\b(den|dem|denne|den her|den der|opgaven|opgave[rn]?)\b/i
+
+export function handleAgentRequest({ text, task, circles = [], namedTask = false, routines = [], now = new Date() }: AgentInput): AgentResult | null {
   const t = text.trim()
   if (!t) return null
   const lower = t.toLowerCase()
+  const narrative = t.length > NARRATIVE_LENGTH
+  const aboutThisTask = namedTask || REFERS_TO_TASK.test(t)
 
   /* --- detail level ------------------------------------------------ */
   if (/\b(flere trin|flere steps|del den (?:mere|yderligere)|mindre bidder|endnu mindre|for store trin|st[øo]rre skridt end jeg kan)\b/i.test(lower)) {
@@ -346,7 +369,7 @@ export function handleAgentRequest({ text, task, circles = [], namedTask = false
 
   /* --- it comes back ------------------------------------------------- */
   const rep = lower.match(/\b(?:hver|hver eneste|en gang om|en gang hver|gentag(?:er)? (?:sig )?hver)\s+(dag|uge|m[åa]ned)\b|\b(dagligt|ugentligt|m[åa]nedligt)\b/i)
-  if (rep && task) {
+  if (rep && task && !narrative && aboutThisTask) {
     const word = (rep[1] ?? rep[2] ?? '').toLowerCase()
     const repeat: LoopNode['repeat'] =
       /dag/.test(word) ? 'day' : /uge/.test(word) ? 'week' : 'month'
@@ -370,7 +393,7 @@ export function handleAgentRequest({ text, task, circles = [], namedTask = false
 
   /* --- hang it on something she already does ------------------------- */
   const hang = t.match(/\b(?:h[æa]ng den p[åa]|kobl den (?:til|p[åa])|min plan er|n[åa]r jeg har|n[åa]r jeg)\s+(.{3,60})$/i)
-  if (hang && task && /\b(h[æa]ng|kobl|plan|n[åa]r jeg)\b/i.test(lower)) {
+  if (hang && task && !narrative && /\b(h[æa]ng|kobl|plan|n[åa]r jeg)\b/i.test(lower)) {
     const raw = hang[0].toLowerCase().startsWith('når jeg') ? hang[0] : hang[1]
     const cue = capitalise(raw.replace(/[.!?]+$/, '').trim())
     if (looksLikeATime(cue)) {
@@ -379,7 +402,7 @@ export function handleAgentRequest({ text, task, circles = [], namedTask = false
           'Det ligner et klokkeslæt, og et klokkeslæt er én beslutning mere, du skal huske at tage.',
           'Hæng den på noget, der sker af sig selv i stedet. Kaffen, tandbørsten, døren når du kommer hjem.',
         ],
-        options: CUE_SUGGESTIONS.slice(0, 3).map((c) => `Hæng den på ${c.toLowerCase()}`),
+        options: cueOptions(routines).slice(0, 3).map((c) => `Hæng den på ${c.toLowerCase()}`),
       }
     }
     return {
@@ -396,7 +419,7 @@ export function handleAgentRequest({ text, task, circles = [], namedTask = false
         'En påmindelse skal du selv møde. En vane møder dig.',
         'Hvad af det her rammer du hver dag?',
       ],
-      options: CUE_SUGGESTIONS.slice(0, 3).map((c) => `Hæng den på ${c.toLowerCase()}`),
+      options: cueOptions(routines).slice(0, 3).map((c) => `Hæng den på ${c.toLowerCase()}`),
     }
   }
 

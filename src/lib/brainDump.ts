@@ -12,6 +12,7 @@
  */
 
 import type { EnergyLevel, LifeArea, MentalWeight, TimePart, Urgency } from '@/db/types'
+import { cadenceIn } from './habits'
 import { decompose, DEFAULT_GRANULARITY, type Granularity } from './decompose'
 import { analyse, BROKEN, hasAction, toImperativeSentence } from './language'
 
@@ -63,6 +64,8 @@ export interface ParsedLoop {
   placed: boolean
   /** "Betal husleje hver måned" comes back on its own. */
   repeat?: 'day' | 'week' | 'month'
+  /** Every n-th of that unit: 3 with 'day' is "hver tredje dag". */
+  repeatEvery?: number
 }
 
 interface Rule {
@@ -179,18 +182,16 @@ export interface Classification {
 export const CERTAIN = 0.75
 
 /**
- * Things that come back. Written the way people write them down, which is
- * almost never with the word "gentag".
+ * Things that come back.
+ *
+ * Read by the same function the coach uses, so "hver tredje dag" written into
+ * a brain dump means the same thing as "hver tredje dag" said out loud. Two
+ * readers for one phrase is two things to keep in step, and they never stay in
+ * step.
  */
-const REPEATS: Array<[RegExp, 'day' | 'week' | 'month']> = [
-  [/\b(?:hver|hver eneste)\s+dag\b|\bdagligt\b|\bhverdag\b/i, 'day'],
-  [/\b(?:hver|hver eneste)\s+uge\b|\bugentligt\b|\bhver\s+(?:mandag|tirsdag|onsdag|torsdag|fredag|l[øo]rdag|s[øo]ndag)\b/i, 'week'],
-  [/\b(?:hver|hver eneste)\s+m[åa]ned\b|\bm[åa]nedligt\b|\bden 1\.? i hver m[åa]ned\b/i, 'month'],
-]
-
-function detectRepeat(text: string): 'day' | 'week' | 'month' | undefined {
-  for (const [re, every] of REPEATS) if (re.test(text)) return every
-  return undefined
+function detectRepeat(text: string): { repeat: 'day' | 'week' | 'month'; every: number } | undefined {
+  const c = cadenceIn(text)
+  return c ? { repeat: c.unit, every: c.every } : undefined
 }
 
 /**
@@ -604,7 +605,7 @@ function detectSchedule(text: string, now = new Date()): { date?: string; part?:
  * makes the card noisy.
  */
 const TIME_PHRASES =
-  /\s*\b(?:p[åa]\s+)?(?:i\s*dag|i\s*morgen|i\s*overmorgen|i\s*aften|i\s*weekenden|denne\s+uge|n[æa]ste\s+uge|s[øo]ndag|mandag|tirsdag|onsdag|torsdag|fredag|l[øo]rdag|om\s+morgenen|om\s+eftermiddagen|om\s+aftenen|senest|hurtigst\s+muligt|kl(?:\.|okken)?\s*\d{1,2}(?:[.:]\d{2})?|(?:den\s+)?\d{1,2}\s+(?:januar|februar|marts|april|maj|juni|juli|august|september|oktober|november|december)|hver\s+(?:dag|uge|m[åa]ned|mandag|tirsdag|onsdag|torsdag|fredag|l[øo]rdag|s[øo]ndag)|dagligt|ugentligt|m[åa]nedligt)\b\s*/gi
+  /\s*\b(?:p[åa]\s+)?(?:i\s*dag|i\s*morgen|i\s*overmorgen|i\s*aften|i\s*weekenden|denne\s+uge|n[æa]ste\s+uge|s[øo]ndag|mandag|tirsdag|onsdag|torsdag|fredag|l[øo]rdag|om\s+morgenen|om\s+eftermiddagen|om\s+aftenen|senest|hurtigst\s+muligt|kl(?:\.|okken)?\s*\d{1,2}(?:[.:]\d{2})?|(?:den\s+)?\d{1,2}\s+(?:januar|februar|marts|april|maj|juni|juli|august|september|oktober|november|december)|(?:den\s+)?\d{1,2}\.?\s+i\s+hver\s+m[åa]ned|hver\s+(?:(?:anden|andet|tredje|fjerde|femte|sjette|syvende|ottende|tiende|fjortende|\d{1,2}\.?)\s*)?(?:dagen|dag|ugen|uge|m[åa]neden|m[åa]ned|mandag|tirsdag|onsdag|torsdag|fredag|l[øo]rdag|s[øo]ndag)|dagligt|ugentligt|m[åa]nedligt)\b\s*/gi
 
 /**
  * Words left hanging when the time phrase they introduced is removed.
@@ -702,8 +703,8 @@ export function parseBrainDump(raw: string, options: Date | ParseOptions = {}): 
     const rule = matchRule(segment, title)
     const schedule = detectSchedule(segment, now)
     const due = detectDue(segment, schedule.date, now)
-    const repeat = detectRepeat(segment)
-    const finalTitle = schedule.date || schedule.part || repeat ? stripTimePhrases(title) : title
+    const recurrence = detectRepeat(segment)
+    const finalTitle = schedule.date || schedule.part || recurrence ? stripTimePhrases(title) : title
 
     // Break down the *cleaned* title. Running it on the raw one produced steps
     // like "Find elregningen senest frem" and "Find Tandlæge torsdag kl 14s
@@ -739,7 +740,8 @@ export function parseBrainDump(raw: string, options: Date | ParseOptions = {}): 
       // doubtful would teach her to ignore the flag that actually matters.
       confidence: classification.confidence,
       placed: rule ? (rule.confidence ?? 0.85) >= 0.75 : false,
-      repeat,
+      repeat: recurrence?.repeat,
+      repeatEvery: recurrence?.every,
     })
   }
 
