@@ -1,0 +1,487 @@
+/* Én skærm, ét felt at skrive i. Alt andet er tavst med vilje. */
+
+:root {
+  --bg: #ffffff;
+  --bg-soft: #f4f5f7;
+  --ink: #14171c;
+  --ink-soft: #61666f;
+  --line: #e4e6ea;
+  --accent: #1f6feb;
+  --accent-ink: #ffffff;
+  --bubble: #f4f5f7;
+  --warn: #b4532a;
+  --ok: #1f7a4d;
+  --radius: 18px;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1116;
+    --bg-soft: #171b22;
+    --ink: #e9ecf1;
+    --ink-soft: #99a1ad;
+    --line: #242a33;
+    --accent: #4c8dff;
+    --accent-ink: #06121f;
+    --bubble: #171b22;
+    --warn: #e5a06a;
+    --ok: #62c795;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Skal stå her: uden den vinder .gate/.app's egen display over hidden,
+   og login-skærmen bliver liggende usynligt oven på chatten. */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------ login */
+
+.gate {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.gate-card {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+
+.gate-mark {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 4px;
+  border-radius: 16px;
+  background: linear-gradient(140deg, var(--accent), #7b5cff);
+}
+
+.gate-card h1 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+}
+
+.gate-card p {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+input[type="password"] {
+  width: 100%;
+  padding: 14px 16px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+input[type="password"]:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.primary {
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.primary:disabled {
+  opacity: 0.6;
+}
+
+.error {
+  margin: 0;
+  color: var(--warn);
+  font-size: 14px;
+}
+
+/* -------------------------------------------------------------------- app */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(10px, env(safe-area-inset-top)) 14px 10px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+}
+
+.dot.on {
+  background: var(--ok);
+}
+
+.dot.partial {
+  background: var(--warn);
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+.icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1;
+}
+
+.icon:hover {
+  background: var(--bg-soft);
+}
+
+.icon[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* ----------------------------------------------------------------- tråden */
+
+.thread {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.thread > * {
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+
+.welcome {
+  margin-top: 12vh;
+  text-align: center;
+}
+
+.welcome h2 {
+  margin: 0 0 6px;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.chip {
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.chip:hover {
+  background: var(--bg-soft);
+}
+
+.msg {
+  display: flex;
+}
+
+.msg.user {
+  justify-content: flex-end;
+}
+
+.msg.user .body {
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 11px 15px;
+  border-radius: var(--radius) var(--radius) 4px var(--radius);
+  max-width: 85%;
+  white-space: pre-wrap;
+}
+
+.msg.bot .body {
+  max-width: 100%;
+}
+
+.body > :first-child {
+  margin-top: 0;
+}
+
+.body > :last-child {
+  margin-bottom: 0;
+}
+
+.body p {
+  margin: 0 0 10px;
+}
+
+.body ul,
+.body ol {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+
+.body li {
+  margin-bottom: 4px;
+}
+
+.body h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+}
+
+.body code {
+  background: var(--bubble);
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+
+.body pre {
+  background: var(--bubble);
+  padding: 12px 14px;
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.body pre code {
+  background: none;
+  padding: 0;
+}
+
+.body a {
+  color: var(--accent);
+}
+
+.table-scroll {
+  overflow-x: auto;
+  margin-bottom: 10px;
+}
+
+.body table {
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 100%;
+}
+
+.body th,
+.body td {
+  border-bottom: 1px solid var(--line);
+  padding: 7px 12px 7px 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.body th {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+/* Statuslinjer mens der slås op */
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.status.write {
+  color: var(--warn);
+}
+
+/* Opslag i træk skal læses som én blok, ikke som fem beskeder. */
+.status + .status {
+  margin-top: -10px;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--line);
+  border-top-color: var(--ink-soft);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex: none;
+}
+
+.status.done .spinner {
+  border: 2px solid transparent;
+  animation: none;
+}
+
+.status.done::before {
+  content: "✓";
+  color: var(--ok);
+}
+
+.status.done .spinner {
+  display: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+.bubble-error {
+  color: var(--warn);
+  font-size: 15px;
+}
+
+/* --------------------------------------------------------------- skrivefelt */
+
+.composer-wrap {
+  border-top: 1px solid var(--line);
+  padding: 10px 16px max(10px, env(safe-area-inset-bottom));
+  background: var(--bg);
+}
+
+.composer {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 6px 6px 6px 14px;
+}
+
+.composer:focus-within {
+  border-color: var(--accent);
+}
+
+#input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  resize: none;
+  padding: 9px 0;
+  max-height: 160px;
+  outline: none;
+}
+
+.mic[aria-pressed="true"] {
+  background: var(--warn);
+  color: #fff;
+}
+
+.send {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 50%;
+  font-size: 19px;
+}
+
+.send:disabled {
+  opacity: 0.4;
+}
+
+.send:hover {
+  background: var(--accent);
+}
+
+.listening,
+.hint {
+  width: min(760px, 100%);
+  margin: 0 auto 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  text-align: center;
+}

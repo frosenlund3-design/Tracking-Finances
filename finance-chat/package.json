@@ -1,0 +1,21 @@
+{
+  "name": "finance-chat",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "En chat der kan se din Stripe og din GoHighLevel/Agencyflow.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "icons": "node scripts/gen-icons.mjs",
+    "check": "node scripts/check.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
+    "express": "^5.2.1",
+    "stripe": "^22.6.0"
+  }
+}

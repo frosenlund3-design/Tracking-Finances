@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Overblik">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3f7df5" />
+      <stop offset="1" stop-color="#7b5cff" />
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="96" height="96" rx="22" fill="url(#g)" />
+  <path
+    fill="#ffffff"
+    d="M35 26h30a11 11 0 0 1 11 11v16a11 11 0 0 1-11 11H35a11 11 0 0 1-11-11V37a11 11 0 0 1 11-11z"
+  />
+  <path fill="#ffffff" d="M34 58h13L29 75z" />
+  <g fill="#5b74f7">
+    <circle cx="37" cy="45" r="4" />
+    <circle cx="50" cy="45" r="4" />
+    <circle cx="63" cy="45" r="4" />
+  </g>
+</svg>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <title>Overblik</title>
+    <meta name="description" content="Chat med din Stripe og din GoHighLevel." />
+    <meta name="theme-color" content="#0e1116" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Overblik" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <!-- Login -->
+    <div class="gate" id="gate" hidden>
+      <form class="gate-card" id="loginForm" autocomplete="on">
+        <div class="gate-mark" aria-hidden="true"></div>
+        <h1>Overblik</h1>
+        <p class="muted">Log ind for at se dine kunder og betalinger.</p>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          placeholder="Adgangskode"
+          autocomplete="current-password"
+          required
+        />
+        <button type="submit" class="primary" id="loginButton">Log ind</button>
+        <p class="error" id="loginError" hidden></p>
+      </form>
+    </div>
+
+    <!-- Chatten -->
+    <div class="app" id="app" hidden>
+      <header class="topbar">
+        <div class="brand">
+          <span class="dot" id="statusDot"></span>
+          <span class="brand-name" id="brandName">Overblik</span>
+        </div>
+        <div class="actions">
+          <button class="icon" id="speakToggle" type="button" title="Læs svar højt" aria-pressed="false">
+            <span aria-hidden="true">🔈</span><span class="sr">Læs svar højt</span>
+          </button>
+          <button class="icon" id="newChat" type="button" title="Ny samtale">
+            <span aria-hidden="true">＋</span><span class="sr">Ny samtale</span>
+          </button>
+          <button class="icon" id="logout" type="button" title="Log ud">
+            <span aria-hidden="true">⏻</span><span class="sr">Log ud</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="thread" id="thread">
+        <div class="welcome" id="welcome">
+          <h2>Hvad vil du vide?</h2>
+          <p class="muted" id="welcomeSources">Spørg om en kunde, en betaling eller et overblik.</p>
+          <div class="chips" id="suggestions"></div>
+        </div>
+      </main>
+
+      <div class="composer-wrap">
+        <p class="listening" id="listening" hidden>Lytter …</p>
+        <form class="composer" id="composer">
+          <textarea
+            id="input"
+            rows="1"
+            placeholder="Skriv eller tal …"
+            enterkeyhint="send"
+            autocomplete="off"
+          ></textarea>
+          <button type="button" class="icon mic" id="mic" title="Tal i stedet for at skrive">
+            <span aria-hidden="true">🎙</span><span class="sr">Tal</span>
+          </button>
+          <button type="submit" class="icon send" id="send" title="Send">
+            <span aria-hidden="true">↑</span><span class="sr">Send</span>
+          </button>
+        </form>
+        <p class="hint" id="installHint" hidden>
+          Tip: tryk på Del-ikonet og «Føj til hjemmeskærm», så ligger den som en app.
+        </p>
+      </div>
+    </div>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

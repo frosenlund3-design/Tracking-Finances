@@ -4,3 +4,8 @@ dev-dist
 .DS_Store
 *.local
 .vite
+
+# Hemmeligheder må aldrig med op
+.env
+.env.*
+!.env.example

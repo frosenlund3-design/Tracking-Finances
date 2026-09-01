@@ -6,6 +6,11 @@ En organiseringsapp bygget til ADHD-hjerner. Ingen kalender, ingen lang to-do-li
 Alt kører lokalt i browseren. Ingen konto, ingen server, ingen betalte API'er,
 ingen sporing. Appen kan installeres på hjemmeskærmen og virker uden internet.
 
+> **Der ligger to apps i dette repo.** Denne README handler om Loops.
+> Mappen [`finance-chat/`](finance-chat/README.md) er en helt separat app: en
+> chat der kan se din Stripe og din GoHighLevel/Agencyflow. De to deler intet
+> ud over repoet.
+
 ---
 
 ## Sådan sender du den videre
