@@ -78,7 +78,7 @@ export function Notes() {
                   {host && (
                     <button
                       onClick={() => openOverlay({ kind: 'node', nodeId: host.id })}
-                      className="focus-ring mt-1 flex min-h-[28px] items-center text-[12.5px] text-faint"
+                      className="focus-ring mt-1 flex min-h-[44px] items-center text-[12.5px] text-faint"
                     >
                       Hører til: {host.title}
                     </button>
@@ -102,7 +102,7 @@ export function Notes() {
                   await deleteNote(n.id)
                   openOverlay({ kind: 'node', nodeId: node.id })
                 }}
-                className="focus-ring mt-2 flex min-h-[40px] items-center gap-1.5 text-[13px] text-muted"
+                className="focus-ring mt-2 flex min-h-[44px] items-center gap-1.5 text-[13px] text-muted"
               >
                 <Plus size={13} />
                 Der gemmer sig en opgave i den

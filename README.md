@@ -829,6 +829,33 @@ ikke en opgave. Der er ingen første handling i "Fars fødselsdag", man møder o
 Så appen siger det, i stedet for at dele den i fem dele eller lade knappen sidde
 og gøre ingenting.
 
+### Knapperne
+
+Hver enkelt knap på hver enkelt skærm er blevet trykket på i en rigtig browser,
+415 af dem på 15 skærme, og for hver af dem er der målt, om noget faktisk
+ændrede sig: i data, i teksten, i det der er markeret. Det fandt tre ting.
+
+**Send og Tilføj var tændt, når feltet var tomt.** De gjorde ingenting, og en
+knap, der ser tændt ud og ikke gør noget, læses som en app, der er i stykker,
+ikke som et felt, der er tomt. De er slukkede nu, indtil der er noget at sende.
+
+**"Gem backup som fil" sagde ingenting.** En download er usynlig på en telefon,
+så knappen så ud til ikke at virke og blev trykket igen. Nu står der, hvad der
+skete.
+
+**"Ryd samtalen med coachen" spurgte ikke.** Den sletter alle gemte samtaler,
+og de har navne og kan genoptages nu. Ét tryk var for billigt til det.
+
+Og 37 tryk-mål var under 44px, de fleste på 42. Det er ikke en detalje på en
+telefon: et tryk, der rammer forbi, læses som at appen ikke reagerer, så man
+trykker igen, ofte på noget ved siden af. Grebet til at trække et ark ned var
+sluppet ned på 26px, og siden det er den eneste måde at lukke et ark med
+fingeren, var det det værste af dem. `npm run check` måler det nu, ligesom
+tankestregerne, i stedet for at det skal huskes.
+
+Resten af de knapper, der "ikke gjorde noget", gjorde det rigtige: fanen man
+allerede står på, og den mulighed der allerede er valgt.
+
 ---
 
 ## Hvad appen ikke gør

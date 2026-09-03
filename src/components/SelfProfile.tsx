@@ -266,7 +266,7 @@ function ChipRow({
         <button
           key={o}
           onClick={() => onToggle(o)}
-          className={`focus-ring min-h-[42px] rounded-full border px-4 text-[14px] active:scale-95 ${
+          className={`focus-ring min-h-[44px] rounded-full border px-4 text-[14px] active:scale-95 ${
             has(o) ? 'border-ink/25 bg-accent-soft font-medium' : 'border-line bg-surface text-muted'
           }`}
         >
@@ -294,7 +294,7 @@ function Custom({
       {extra.map((v) => (
         <span
           key={v}
-          className="flex min-h-[42px] items-center gap-2 rounded-full border border-ink/25 bg-accent-soft px-4 text-[14px] font-medium"
+          className="flex min-h-[44px] items-center gap-2 rounded-full border border-ink/25 bg-accent-soft px-4 text-[14px] font-medium"
         >
           {v}
           <button onClick={() => onRemove(v)} aria-label={`Fjern ${v}`} className="focus-ring text-muted">
@@ -336,10 +336,14 @@ function FreeAdd({
         placeholder={placeholder}
         className="focus-ring min-h-[46px] flex-1 rounded-xl2 border border-line bg-surface px-4 text-[15px] placeholder:text-faint"
       />
+      {/* Lit only when there is something to add, so it never looks broken. */}
       <button
         type="submit"
         aria-label="Tilføj"
-        className="focus-ring flex min-h-[46px] w-[46px] items-center justify-center rounded-xl2 border border-line bg-surface text-muted active:scale-95"
+        disabled={!text.trim()}
+        className={`focus-ring flex min-h-[46px] w-[46px] items-center justify-center rounded-xl2 border transition ${
+          text.trim() ? 'border-ink/25 bg-accent-soft text-ink active:scale-95' : 'border-line bg-surface text-faint/60'
+        }`}
       >
         <Plus size={18} />
       </button>

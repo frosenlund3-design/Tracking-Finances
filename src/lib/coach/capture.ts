@@ -60,7 +60,7 @@ const ALREADY_DONE =
  * alone and answered as what it is.
  */
 const NEGATED =
-  /\b(?:har|er|f[åa]r|kan|vil|nåede|fik|orkede) (?:bare |lige |simpelthen |overhovedet )?ikke\b|\bikke (?:f[åa]et|lavet|n[åa]et|gjort|kunnet|orket)\b|\baldrig\b/i
+  /\b(?:har|er|f[åa]r|kan|vil|nåede|fik|orkede) (?:bare |lige |simpelthen |overhovedet )?ikke\b|\bikke (?:f[åa]et|lavet|n[åa]et|gjort|kunnet|orket)\b|\baldrig\b|\bikke (?:bare |lige |simpelthen |overhovedet )?(?:t[øo]r|orker|magter|gider|overskuer|kan overskue|har lyst)\b/i
 
 /**
  * Does this message carry things she has to do?

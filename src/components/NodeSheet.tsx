@@ -172,7 +172,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
               haptic('tap')
               addToCalendar(node)
             }}
-            className="focus-ring inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[13px] text-muted active:scale-95"
+            className="focus-ring inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[13px] text-muted active:scale-95"
           >
             <CalendarPlus size={13} />
             Læg i min kalender
@@ -476,7 +476,12 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
                 />
                 <button
                   type="submit"
-                  className="focus-ring min-h-[46px] rounded-xl2 border border-line bg-raised px-4 text-[14px] text-muted active:scale-95"
+                  disabled={!cueDraft.trim()}
+                  className={`focus-ring min-h-[46px] rounded-xl2 border px-4 text-[14px] transition ${
+                    cueDraft.trim()
+                      ? 'border-ink/25 bg-accent-soft text-ink active:scale-95'
+                      : 'border-line bg-raised text-faint/60'
+                  }`}
                 >
                   Gem
                 </button>

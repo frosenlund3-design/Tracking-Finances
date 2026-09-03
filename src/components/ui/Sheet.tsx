@@ -96,8 +96,10 @@ export function Sheet({ open, onClose, children, title, full, hideClose }: Props
             <div
               onPointerDown={(e) => dragControls.start(e)}
               // A generous target: the handle is 6px tall, and this is the
-              // whole strip around it.
-              className="shrink-0 touch-none pt-3 pb-1 flex min-h-[26px] items-center justify-center cursor-grab active:cursor-grabbing"
+              // whole strip around it. Since dragging was restricted to the
+              // handle, this strip is the only way to pull a sheet closed, so
+              // it gets the full 44px a thumb needs rather than the 26 it had.
+              className="shrink-0 touch-none pt-3 pb-2 flex min-h-[44px] items-center justify-center cursor-grab active:cursor-grabbing"
             >
               <div className="h-1.5 w-11 rounded-full bg-line" />
             </div>

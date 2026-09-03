@@ -44,6 +44,7 @@ export function Settings() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [confirmWipe, setConfirmWipe] = useState(false)
+  const [confirmClearCoach, setConfirmClearCoach] = useState(false)
   const [showCreateLock, setShowCreateLock] = useState(false)
   const [removePw, setRemovePw] = useState('')
   const [removing, setRemoving] = useState(false)
@@ -265,7 +266,22 @@ export function Settings() {
             </p>
           </div>
 
-          <Row icon={<Download size={17} />} label="Gem backup som fil" onClick={() => void downloadBackup()} />
+          {/*
+            A download gives no visible sign on a phone, so without a line here
+            the button looks like it did nothing and gets pressed again.
+          */}
+          <Row
+            icon={<Download size={17} />}
+            label="Gem backup som fil"
+            onClick={async () => {
+              try {
+                await downloadBackup()
+                setMessage('Backup gemt. Kig i dine Overførsler.')
+              } catch {
+                setMessage('Backup blev ikke gemt. Prøv igen, eller giv browseren lov til at hente filer.')
+              }
+            }}
+          />
           <Row icon={<Upload size={17} />} label="Hent backup ind igen" onClick={() => fileRef.current?.click()} />
           <input
             ref={fileRef}
@@ -285,7 +301,41 @@ export function Settings() {
             label={hasDemo ? 'Fjern eksempel-data' : 'Indlæs eksempel-data'}
             onClick={() => void (hasDemo ? removeDemo() : loadDemo())}
           />
-          <Row icon={<Trash2 size={17} />} label="Ryd samtalen med coachen" onClick={() => void clearCoach()} />
+          {/*
+            This deletes every saved conversation, and they are named and
+            resumable now. One tap with no question was too cheap for that.
+          */}
+          {confirmClearCoach ? (
+            <div className="mt-2 rounded-xl2 border border-line bg-surface p-4">
+              <p className="text-[14px] leading-relaxed text-muted">
+                Sletter alle dine samtaler med coachen. Opgaver og point rører den ikke.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => setConfirmClearCoach(false)}
+                  className="focus-ring min-h-[46px] flex-1 rounded-xl2 border border-line text-[14.5px]"
+                >
+                  Behold
+                </button>
+                <button
+                  onClick={async () => {
+                    await clearCoach()
+                    setConfirmClearCoach(false)
+                    setMessage('Samtalerne er slettet.')
+                  }}
+                  className="focus-ring min-h-[46px] flex-1 rounded-xl2 bg-ink text-[14.5px] text-canvas"
+                >
+                  Slet dem
+                </button>
+              </div>
+            </div>
+          ) : (
+            <Row
+              icon={<Trash2 size={17} />}
+              label="Ryd samtalen med coachen"
+              onClick={() => setConfirmClearCoach(true)}
+            />
+          )}
 
           {confirmWipe ? (
             <div className="mt-2 rounded-xl2 border border-line bg-surface p-4">

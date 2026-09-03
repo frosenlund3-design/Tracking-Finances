@@ -258,7 +258,7 @@ function ParsedRow({
             </p>
             <button
               onClick={() => onKind('task')}
-              className="focus-ring mt-2 flex min-h-[40px] items-center gap-1.5 text-[13px] font-medium text-muted"
+              className="focus-ring mt-2 flex min-h-[44px] items-center gap-1.5 text-[13px] font-medium text-muted"
             >
               Nej, det er en opgave
             </button>
@@ -334,7 +334,7 @@ function ParsedRow({
 
           <button
             onClick={() => onKind('note')}
-            className="focus-ring mt-2 flex min-h-[40px] items-center gap-1.5 text-[13px] text-faint"
+            className="focus-ring mt-2 flex min-h-[44px] items-center gap-1.5 text-[13px] text-faint"
           >
             <NotebookPen size={13} />
             Det er ikke en opgave, gem som note

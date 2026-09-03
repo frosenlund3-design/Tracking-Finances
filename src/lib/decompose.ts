@@ -892,11 +892,6 @@ function shapeFor(a: Analysis): Step[] | null {
 }
 
 /**
- * The fallback, for tasks that name no recognised verb. It is deliberately
- * about deciding what the thing even is, because a task you cannot name is
- * a task you cannot start, and that is the actual blocker.
- */
-/**
  * The fallback for a task that names a wish rather than an action.
  *
  * The unhelpful move here is to hand back the same vagueness in list form.
@@ -956,7 +951,7 @@ const DECIDE: (a: Analysis) => Step[] = (a) => {
  * Verbs that name an intention rather than an action. They pass every "is this
  * a task?" test and then leave you standing exactly where you started.
  */
-const VAGUE_VERBS = new Set(['ordn', 'lav', 'gør', 'få', 'klar', 'tag', 'se', 'styr', 'håndter'])
+const VAGUE_VERBS = new Set(['ordn', 'gør', 'få', 'klar', 'styr', 'håndter'])
 
 /**
  * Nouns that are as unspecific as the verb in front of them.

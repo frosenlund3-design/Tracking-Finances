@@ -695,9 +695,14 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
     }
 
     // 4. Something she has to do, said out loud in passing.
-    // Asking for help is not a task to be filed. This is the flag that stops
-    // "jeg har brug for hjælp til at sortere mine taks" becoming a to-do.
-    const captured = blockAnswer || said.isRequest ? null : detectCaptures(trimmed, map)
+    //
+    // Three things must not be filed as tasks. A request for help, which is
+    // what `isRequest` is for. An answer to the coach's own question. And
+    // anything that touches a live trigger: "har en bunke regninger jeg ikke
+    // tør kigge på" is her telling the coach where it hurts, and answering it
+    // with "skal jeg lægge den ind?" is the app filing the feeling as a chore.
+    const captured =
+      blockAnswer || said.isRequest || liveTrigger ? null : detectCaptures(trimmed, map)
     if (captured) {
       await new Promise((r) => setTimeout(r, prefs.reducedStimulation ? 100 : 320))
       const known = alreadyLine(captured.already)
@@ -907,7 +912,7 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
                       {m.evidence && <p className="mt-1.5 pl-6 text-[12.5px] text-faint">{m.evidence}</p>}
                       <button
                         onClick={() => void dismissMemory(m.id)}
-                        className="focus-ring mt-1.5 flex min-h-[36px] items-center pl-6 text-[12.5px] text-faint"
+                        className="focus-ring mt-1.5 flex min-h-[44px] items-center pl-6 text-[12.5px] text-faint"
                       >
                         Det passer ikke på mig
                       </button>
@@ -1000,10 +1005,18 @@ export function Coach({ nodeId, ask }: { nodeId?: string; ask?: boolean }) {
           className="min-h-[50px] min-w-0 flex-1 rounded-xl2 border border-line bg-surface px-4 text-[16px] outline-none placeholder:text-faint focus:border-ink/20"
         />
         <MicButton onText={setInput} existing={input} label="Fortæl coachen hvad der sker" />
+        {/*
+          Disabled while the field is empty. It used to be fully lit and simply
+          do nothing when pressed, which reads as the app being broken rather
+          than as the field being empty.
+        */}
         <button
           type="submit"
           aria-label="Send"
-          className="focus-ring grid h-[50px] w-[50px] shrink-0 place-items-center rounded-xl2 bg-ink text-canvas active:scale-95"
+          disabled={!input.trim()}
+          className={`focus-ring grid h-[50px] w-[50px] shrink-0 place-items-center rounded-xl2 transition ${
+            input.trim() ? 'bg-ink text-canvas active:scale-95' : 'bg-line/60 text-faint'
+          }`}
         >
           <Send size={18} />
         </button>
