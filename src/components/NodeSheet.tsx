@@ -534,7 +534,14 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
               <p className="mt-3 text-[12.5px] leading-relaxed text-faint">
                 {splitFailed
                   ? 'Den her ligner en aftale mere end en opgave. Der er ikke noget at dele op, du skal møde op. Skriv selv et trin, hvis der er noget, der skal gøres inden.'
-                  : 'Du kan skifte frem og tilbage. Trin du allerede har sat flueben ved, bliver stående.'}
+                  : granularity > node.steps.length && node.steps.length > 0
+                    ? /*
+                        Otherwise the two finest settings produce the same list
+                        and the button looks broken. It is not: the task simply
+                        does not have more parts than that.
+                      */
+                      `Den her kan ikke deles finere end ${node.steps.length} trin. Der er ikke flere dele i den.`
+                    : 'Du kan skifte frem og tilbage. Trin du allerede har sat flueben ved, bliver stående.'}
               </p>
             </div>
           </motion.div>
