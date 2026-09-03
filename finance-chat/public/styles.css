@@ -421,6 +421,66 @@ input[type="password"]:focus {
   font-size: 15px;
 }
 
+/* Bekræftelsen før noget bliver skrevet. Den skal være svær at overse og
+   umulig at trykke igennem ved et uheld, så den ligger som et kort med sin
+   egen kant og to tydeligt forskellige knapper. */
+
+.confirm {
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: var(--bg-soft);
+}
+
+.confirm-title {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.confirm-what {
+  margin: 0 0 6px;
+  color: var(--warn);
+  font-size: 14px;
+}
+
+.confirm dl {
+  display: grid;
+  grid-template-columns: minmax(80px, auto) 1fr;
+  gap: 4px 14px;
+  margin: 0 0 14px;
+  font-size: 14px;
+}
+
+.confirm dt {
+  color: var(--ink-soft);
+}
+
+.confirm dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.confirm-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.confirm-buttons .primary {
+  padding: 10px 18px;
+  border-radius: 12px;
+}
+
+.confirm-buttons .chip {
+  padding: 10px 18px;
+}
+
+.confirm-chosen {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
 /* --------------------------------------------------------------- skrivefelt */
 
 .composer-wrap {

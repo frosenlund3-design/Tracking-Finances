@@ -4,9 +4,14 @@
  * Læsning: kontakter, deres felter, noter, opgaver, aftaler, salgsmuligheder,
  * fakturaer, betalinger og kontrakter/dokumenter.
  *
- * Skrivning: kun det der lægger noget *til*: en note, en opgave, et tag,
- * eller rettelse af felter på en kontakt. Der er ingen sletning nogen steder i
- * filen, og skrivning kan slås helt fra med GHL_ALLOW_WRITES=false.
+ * Skrivning: fire ting, og ikke flere. Note, opgave og tag lægger kun noget
+ * til. `updateContact` er den ene undtagelse: den *overskriver* de felter den
+ * får, så den er også den der skal ses godt efter i bekræftelsen. Der slettes
+ * aldrig noget, og skrivning kan slås helt fra med GHL_ALLOW_WRITES=false.
+ *
+ * Ingen af dem kører af sig selv. Serveren standser hver skrivning og beder om
+ * et ja fra brugeren først, fordi teksten der ligger i noter og felter er
+ * skrevet af folk udefra og derfor kan forsøge at bede modellen om noget.
  */
 import { config, hasGhl } from '../config.js'
 import { compact, truncate, clamp } from '../util.js'
@@ -19,7 +24,7 @@ const notConfigured = {
 }
 
 /** Ét sted hvor alle HTTP-kald til GoHighLevel foregår. */
-async function request(method, path, { query, body } = {}) {
+async function request(method, path, { query, body, version } = {}) {
   const url = new URL(path, config.ghlBaseUrl)
   for (const [key, value] of Object.entries(query || {})) {
     if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, value)
@@ -27,7 +32,7 @@ async function request(method, path, { query, body } = {}) {
 
   const headers = {
     Authorization: `Bearer ${config.ghlToken}`,
-    Version: API_VERSION,
+    Version: version || API_VERSION,
     Accept: 'application/json',
   }
   if (body) headers['Content-Type'] = 'application/json'
@@ -155,37 +160,52 @@ const shapeTask = (t) =>
 
 /* ------------------------------------------------------------- funktioner */
 
+/**
+ * Kontaktsøgning findes i tre udgaver ude i naturen, og hvilken en der virker
+ * afhænger af hvor gammel kontoen er. Vi prøver den nyeste først og falder
+ * nedad, i stedet for at gætte på én og fejle for halvdelen af brugerne.
+ */
+function searchAttempts(q, max) {
+  const body = { locationId: config.ghlLocationId, page: 1, pageLimit: max, query: q }
+  return [
+    { method: 'POST', path: '/contacts/search', body },
+    { method: 'POST', path: '/contacts/search', body, version: 'v3' },
+    // Forældet, men stadig i drift på ældre konti.
+    {
+      method: 'GET',
+      path: '/contacts/',
+      query: { locationId: config.ghlLocationId, query: q, limit: max },
+    },
+  ]
+}
+
 export async function searchContacts({ query, limit }) {
   if (!hasGhl()) return notConfigured
   const max = clamp(limit, 1, 50, 10)
   const q = String(query || '').trim()
   if (!q) return { ok: false, fejl: 'Skriv et navn, en e-mail eller et telefonnummer at søge på.' }
 
-  const result = await request('GET', '/contacts/', {
-    query: { locationId: config.ghlLocationId, query: q, limit: max },
-  })
-
-  if (!result.ok) {
-    // Nyere konti bruger søge-endpointet i stedet.
-    const fallback = await request('POST', '/contacts/search', {
-      body: { locationId: config.ghlLocationId, pageLimit: max, page: 1, query: q },
-    })
-    if (!fallback.ok) return fallback
-    const contacts = fallback.data?.contacts || []
+  let lastError = null
+  for (const attempt of searchAttempts(q, max)) {
+    const result = await request(attempt.method, attempt.path, attempt)
+    if (!result.ok) {
+      lastError = result
+      continue
+    }
+    const contacts = result.data?.contacts || []
     return {
       ok: true,
       antal: contacts.length,
       kontakter: await Promise.all(contacts.map((c) => shapeContact(c))),
+      bemaerkning: contacts.length
+        ? undefined
+        : 'Ingen kontakter i GoHighLevel matchede søgningen.',
     }
   }
 
-  const contacts = result.data?.contacts || []
-  return {
-    ok: true,
-    antal: contacts.length,
-    kontakter: await Promise.all(contacts.map((c) => shapeContact(c))),
-    bemaerkning: contacts.length ? undefined : 'Ingen kontakter i GoHighLevel matchede søgningen.',
-  }
+  return (
+    lastError || { ok: false, fejl: 'Kunne ikke søge efter kontakter i GoHighLevel.' }
+  )
 }
 
 export async function getContact({ contact_id }) {
@@ -588,8 +608,12 @@ const writeTools = [
       required: ['contact_id', 'note'],
     },
     run: addNote,
-    label: 'Skriver noten i GoHighLevel',
+    label: 'Skriver en note på en kontakt',
     writes: true,
+    describe: (i) => [
+      ['Kontakt', i.contact_id],
+      ['Noten der skrives', i.note],
+    ],
   },
   {
     name: 'ghl_create_task',
@@ -605,13 +629,19 @@ const writeTools = [
       required: ['contact_id', 'title'],
     },
     run: createTask,
-    label: 'Opretter opgaven i GoHighLevel',
+    label: 'Opretter en opgave på en kontakt',
     writes: true,
+    describe: (i) => [
+      ['Kontakt', i.contact_id],
+      ['Opgave', i.title],
+      ['Beskrivelse', i.description],
+      ['Forfalder', i.due_date],
+    ],
   },
   {
     name: 'ghl_update_contact',
     description:
-      'Retter oplysninger på en kontakt: navn, e-mail, telefon eller brugerdefinerede felter. Brug ghl_get_contact først, så du kender de præcise feltnavne. Sletter aldrig noget.',
+      'Retter oplysninger på en kontakt: navn, e-mail, telefon eller brugerdefinerede felter. Angivne felter bliver overskrevet, så udfyld kun det der skal ændres. Brug ghl_get_contact først, så du kender de præcise feltnavne. Sletter aldrig en kontakt.',
     input_schema: {
       type: 'object',
       properties: {
@@ -630,8 +660,16 @@ const writeTools = [
       required: ['contact_id'],
     },
     run: updateContact,
-    label: 'Opdaterer kontakten i GoHighLevel',
+    label: 'Overskriver felter på en kontakt',
     writes: true,
+    describe: (i) => [
+      ['Kontakt', i.contact_id],
+      ['Fornavn', i.first_name],
+      ['Efternavn', i.last_name],
+      ['E-mail', i.email],
+      ['Telefon', i.phone],
+      ...Object.entries(i.fields || {}),
+    ],
   },
   {
     name: 'ghl_add_tags',
@@ -645,8 +683,12 @@ const writeTools = [
       required: ['contact_id', 'tags'],
     },
     run: addTags,
-    label: 'Sætter tags i GoHighLevel',
+    label: 'Sætter tags på en kontakt',
     writes: true,
+    describe: (i) => [
+      ['Kontakt', i.contact_id],
+      ['Tags', Array.isArray(i.tags) ? i.tags.join(', ') : i.tags],
+    ],
   },
 ]
 

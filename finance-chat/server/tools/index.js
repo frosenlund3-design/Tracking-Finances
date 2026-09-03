@@ -19,6 +19,19 @@ export const toolWrites = (name) => Boolean(byName.get(name)?.writes)
 export const availableToolNames = all.map((t) => t.name)
 
 /**
+ * Hvad en skrivning konkret vil gøre, skrevet så et menneske kan sige ja eller
+ * nej til det. Det er den tekst brugeren får at se, før noget bliver skrevet.
+ */
+export function describeWrite(name, input) {
+  const tool = byName.get(name)
+  const rows = tool?.describe ? tool.describe(input || {}) : []
+  return {
+    titel: tool?.label || name,
+    felter: rows.filter(([, value]) => value !== undefined && value !== null && value !== ''),
+  }
+}
+
+/**
  * Kører ét værktøj. Kaster aldrig: en fejl bliver til tekst, som modellen kan
  * læse og forklare i chatten i stedet for at samtalen dør.
  */

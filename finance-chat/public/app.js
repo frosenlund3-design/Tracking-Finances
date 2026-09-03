@@ -259,23 +259,99 @@ function addStatus(label, isWrite) {
   return { row, text }
 }
 
+/**
+ * Kortet der spørger, før noget bliver skrevet i GoHighLevel.
+ *
+ * Det viser præcis hvad der vil blive skrevet og på hvem. Uden et ja herfra
+ * bliver ingen skrivning udført, og det gælder også hvis modellen selv synes
+ * den skal, fordi der stod noget i en note.
+ */
+function addConfirm(writes) {
+  const card = document.createElement('div')
+  card.className = 'confirm'
+
+  const heading = document.createElement('p')
+  heading.className = 'confirm-title'
+  heading.textContent =
+    writes.length > 1
+      ? `Skal jeg skrive de her ${writes.length} ting i GoHighLevel?`
+      : 'Skal jeg skrive det her i GoHighLevel?'
+  card.append(heading)
+
+  for (const write of writes) {
+    const what = document.createElement('p')
+    what.className = 'confirm-what'
+    what.textContent = write.titel
+    card.append(what)
+
+    const list = document.createElement('dl')
+    for (const [key, value] of write.felter) {
+      const term = document.createElement('dt')
+      term.textContent = key
+      const detail = document.createElement('dd')
+      detail.textContent = value
+      list.append(term, detail)
+    }
+    card.append(list)
+  }
+
+  const buttons = document.createElement('div')
+  buttons.className = 'confirm-buttons'
+  const yes = document.createElement('button')
+  yes.type = 'button'
+  yes.className = 'primary'
+  yes.textContent = 'Ja, skriv det'
+  const no = document.createElement('button')
+  no.type = 'button'
+  no.className = 'chip'
+  no.textContent = 'Nej, lad være'
+
+  const answer = (approve) => {
+    yes.disabled = true
+    no.disabled = true
+    const chosen = document.createElement('p')
+    chosen.className = 'confirm-chosen'
+    chosen.textContent = approve ? 'Du sagde ja.' : 'Du sagde nej. Der blev ikke skrevet noget.'
+    buttons.replaceWith(chosen)
+    converse('/api/confirm', { approve })
+  }
+
+  yes.addEventListener('click', () => answer(true))
+  no.addEventListener('click', () => answer(false))
+  buttons.append(yes, no)
+  card.append(buttons)
+
+  thread.append(card)
+  scrollDown(true)
+}
+
 /* ----------------------------------------------------------------- chat */
 
-async function submit() {
+function submit() {
   const text = input.value.trim()
   if (!text || state.sending) return
 
-  state.sending = true
-  sendButton.disabled = true
   input.value = ''
   autosize()
   addMessage('user', text)
+  converse('/api/chat', { message: text })
+}
+
+/**
+ * Ét svar fra serveren, læst mens det bliver skrevet. Bruges både til et nyt
+ * spørgsmål og til at fortsætte efter et ja eller nej.
+ */
+async function converse(url, payload) {
+  if (state.sending) return
+  state.sending = true
+  sendButton.disabled = true
 
   const statuses = new Map()
   let answer = ''
   let body = null
   let pending = false
   let failed = false
+  let waiting = false // svaret er standset og venter på et ja eller nej
 
   const paint = () => {
     pending = false
@@ -285,10 +361,10 @@ async function submit() {
   }
 
   try {
-    const response = await fetch('/api/chat', {
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text }),
+      body: JSON.stringify(payload),
     })
 
     if (response.status === 401) {
@@ -343,6 +419,12 @@ async function submit() {
             status.row.classList.add('done')
             status.text.textContent = status.text.textContent.replace(/ …$/, '')
           }
+        } else if (event.type === 'confirm') {
+          statuses.get('__thinking')?.row.remove()
+          statuses.delete('__thinking')
+          if (answer) paint()
+          waiting = true
+          addConfirm(event.writes)
         } else if (event.type === 'error') {
           failed = true
           addMessage('bot', `⚠️ ${event.message}`)
@@ -352,19 +434,25 @@ async function submit() {
 
     statuses.get('__thinking')?.row.remove()
     if (answer) paint()
-    else if (!failed) addMessage('bot', 'Jeg fik ikke noget svar tilbage. Prøv at spørge igen.')
+    else if (!failed && !waiting) {
+      addMessage('bot', 'Jeg fik ikke noget svar tilbage. Prøv at spørge igen.')
+    }
 
-    if (answer && speakOn()) {
+    // Under en bekræftelse læses intet højt: brugeren skal se kortet, ikke
+    // høre halvdelen af et svar mens hun beslutter sig.
+    if (answer && !waiting && speakOn()) {
       speak(speakable(answer), { thenListen: state.lastInputWasVoice })
     }
   } catch {
     failed = true
     addMessage('bot', '⚠️ Forbindelsen blev afbrudt. Prøv igen.')
   } finally {
-    state.lastInputWasVoice = false
+    if (!waiting) {
+      state.lastInputWasVoice = false
+      input.focus()
+    }
     state.sending = false
     sendButton.disabled = false
-    input.focus()
   }
 }
 

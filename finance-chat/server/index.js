@@ -19,8 +19,15 @@ import {
   noteFailedLogin,
   clearLoginAttempts,
 } from './auth.js'
-import { getMessages, saveMessages, resetConversation } from './sessions.js'
-import { runChat, describeError } from './claude.js'
+import {
+  getMessages,
+  saveMessages,
+  resetConversation,
+  setPending,
+  takePending,
+  clearPending,
+} from './sessions.js'
+import { runChat, resumeChat, describeError } from './claude.js'
 import { availableToolNames } from './tools/index.js'
 
 const { errors, warnings } = checkConfig()
@@ -32,7 +39,7 @@ if (errors.length) {
 }
 
 const app = express()
-app.set('trust proxy', 1)
+if (config.trustProxy) app.set('trust proxy', 1)
 app.disable('x-powered-by')
 app.use(express.json({ limit: '32kb' }))
 
@@ -131,26 +138,17 @@ app.post('/api/reset', requireAuth, (req, res) => {
   res.json({ ok: true })
 })
 
-app.post('/api/chat', requireAuth, async (req, res) => {
-  const text = String(req.body?.message ?? '').trim()
-  if (!text) {
-    res.status(400).json({ error: 'Skriv en besked først.' })
-    return
-  }
-  if (text.length > 4000) {
-    res.status(400).json({ error: 'Beskeden er for lang. Del den op.' })
-    return
-  }
-  if (tooManyMessages(req.sessionId)) {
-    res.status(429).json({ error: 'Du har skrevet mange beskeder lige nu. Vent et par minutter.' })
-    return
-  }
-  if (busy.has(req.sessionId)) {
-    res.status(409).json({ error: 'Der er allerede et svar på vej.' })
-    return
-  }
-
-  busy.add(req.sessionId)
+/**
+ * Kører ét svar og sender det løbende til browseren.
+ *
+ * Ender svaret med at ville skrive noget i GoHighLevel, standser det i stedet,
+ * og det der skal til for at fortsætte gemmes til brugeren har sagt ja eller
+ * nej. Historikken gemmes først når turen er helt færdig, så en ubesvaret
+ * bekræftelse aldrig bliver hængende i samtalen.
+ */
+async function streamAnswer(req, res, work) {
+  const sessionId = req.sessionId
+  busy.add(sessionId)
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
@@ -172,14 +170,14 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   res.on('close', () => controller.abort())
 
   try {
-    const updated = await runChat({
-      history: getMessages(req.sessionId),
-      userText: text,
-      emit,
-      signal: controller.signal,
-    })
-    saveMessages(req.sessionId, updated)
-    emit('done', {})
+    const result = await work(emit, controller.signal)
+    if (result.status === 'paused') {
+      setPending(sessionId, { messages: result.messages, pending: result.pending })
+    } else {
+      clearPending(sessionId)
+      saveMessages(sessionId, result.messages)
+    }
+    emit('done', { venter: result.status === 'paused' })
   } catch (error) {
     if (!controller.signal.aborted) {
       console.error('Chat-fejl:', error?.message || error)
@@ -187,9 +185,60 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     }
   } finally {
     clearInterval(heartbeat)
-    busy.delete(req.sessionId)
+    busy.delete(sessionId)
     if (!res.writableEnded) res.end()
   }
+}
+
+app.post('/api/chat', requireAuth, async (req, res) => {
+  const text = String(req.body?.message ?? '').trim()
+  if (!text) {
+    res.status(400).json({ error: 'Skriv en besked først.' })
+    return
+  }
+  if (text.length > 4000) {
+    res.status(400).json({ error: 'Beskeden er for lang. Del den op.' })
+    return
+  }
+  if (tooManyMessages(req.sessionId)) {
+    res.status(429).json({ error: 'Du har skrevet mange beskeder lige nu. Vent et par minutter.' })
+    return
+  }
+  if (busy.has(req.sessionId)) {
+    res.status(409).json({ error: 'Der er allerede et svar på vej.' })
+    return
+  }
+
+  // Et nyt spørgsmål annullerer en bekræftelse der aldrig blev besvaret.
+  clearPending(req.sessionId)
+
+  await streamAnswer(req, res, (emit, signal) =>
+    runChat({ history: getMessages(req.sessionId), userText: text, emit, signal }),
+  )
+})
+
+/**
+ * Ja eller nej til de skrivninger der venter. Det er det eneste sted i
+ * programmet hvor et skrive-værktøj bliver kørt.
+ */
+app.post('/api/confirm', requireAuth, async (req, res) => {
+  if (busy.has(req.sessionId)) {
+    res.status(409).json({ error: 'Der er allerede et svar på vej.' })
+    return
+  }
+
+  const approved = req.body?.approve === true
+  const paused = takePending(req.sessionId)
+  if (!paused) {
+    res.status(409).json({
+      error: 'Der er ikke længere noget der venter på et svar. Stil spørgsmålet igen.',
+    })
+    return
+  }
+
+  await streamAnswer(req, res, (emit, signal) =>
+    resumeChat({ paused, approved, emit, signal }),
+  )
 })
 
 /* ------------------------------------------------------------------ siden */

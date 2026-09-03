@@ -25,6 +25,33 @@ export function saveMessages(sessionId, messages) {
 
 export function resetConversation(sessionId) {
   conversations.delete(sessionId)
+  pending.delete(sessionId)
+}
+
+/**
+ * En skrivning der venter på et ja.
+ *
+ * Når chatten vil skrive noget i GoHighLevel, bliver den standset her, indtil
+ * brugeren har set præcis hvad der skrives og trykket ja. Alt der skal til for
+ * at fortsætte samtalen bagefter, ligger i denne pakke.
+ */
+const pending = new Map()
+const PENDING_MAX_AGE_MS = 15 * 60 * 1000
+
+export function setPending(sessionId, data) {
+  pending.set(sessionId, { ...data, at: Date.now() })
+}
+
+export function takePending(sessionId) {
+  const entry = pending.get(sessionId)
+  pending.delete(sessionId)
+  if (!entry) return null
+  if (Date.now() - entry.at > PENDING_MAX_AGE_MS) return null
+  return entry
+}
+
+export function clearPending(sessionId) {
+  pending.delete(sessionId)
 }
 
 /**
@@ -47,5 +74,8 @@ setInterval(() => {
   const now = Date.now()
   for (const [id, entry] of conversations) {
     if (now - entry.updatedAt > MAX_AGE_MS) conversations.delete(id)
+  }
+  for (const [id, entry] of pending) {
+    if (now - entry.at > PENDING_MAX_AGE_MS) pending.delete(id)
   }
 }, 30 * 60 * 1000).unref()

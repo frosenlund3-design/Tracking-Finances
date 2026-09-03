@@ -45,6 +45,13 @@ export const config = {
   port: Number(env('PORT', '8080')),
   isProduction: env('NODE_ENV') === 'production',
 
+  /**
+   * Slå kun til hvis der står præcis én proxy foran, og den selv skriver
+   * X-Forwarded-For. Ellers kan en besøgende selv sætte headeren og dermed
+   * få en frisk kvote forsøg hver gang han gætter på adgangskoden.
+   */
+  trustProxy: env('TRUST_PROXY').toLowerCase() === 'true',
+
   /** Adgangskoden til appen. Uden den starter serveren ikke. */
   appPassword: env('APP_PASSWORD'),
 
@@ -110,6 +117,10 @@ export function checkConfig() {
   if (config.sessionSecretWasGenerated) {
     warnings.push(
       'SESSION_SECRET mangler. Der bruges en tilfældig nøgle, så du bliver logget ud hver gang serveren genstarter.',
+    )
+  } else if (config.sessionSecret.length < 32) {
+    warnings.push(
+      'SESSION_SECRET er kort. Brug mindst 32 tegn, ellers er login-cookien lettere at forfalske.',
     )
   }
 
