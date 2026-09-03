@@ -218,6 +218,10 @@ const DATED =
  * the guess is always right, it is that a wrong guess is always visible and
  * always one tap from fixed.
  */
+/** A Danish yes/no question: a finite verb, then who it is aimed at. */
+const YES_NO_QUESTION =
+  /^(?:har|havde|er|var|kan|kunne|skal|skulle|vil|ville|m[åa]|ved|kender|husker|gider|synes|tror|bliver|blev)\s+(?:du|I|vi|de|der|han|hun|man|det|den)\b/i
+
 export function classifySegment(fragment: string): Classification {
   const cleaned = cleanFragment(fragment)
   if (!cleaned) return { kind: 'note', confidence: 1 }
@@ -228,6 +232,15 @@ export function classifySegment(fragment: string): Classification {
 
   // --- unambiguous notes ---------------------------------------------------
   if (/\?\s*$/.test(fragment.trim())) return { kind: 'note', confidence: 0.95 }
+  // A yes/no question with a question word inside it: "har du set hvor mine
+  // nøgler er". The splitter often eats the question mark, so it cannot be the
+  // only signal, and any verb anywhere in the sentence would otherwise make it
+  // a task. Deliberately narrow: "kan du huske at ringe til tandlægen" has no
+  // embedded question word and stays a task, because written to yourself in a
+  // brain dump that is exactly what it is.
+  if (YES_NO_QUESTION.test(cleaned) && /\b(hvor|hvorn[åa]r|hvordan|hvorfor|hvad|hvem|hvilke[nt]?|om)\b/i.test(cleaned)) {
+    return { kind: 'note', confidence: 0.9 }
+  }
   if (/^(?:hvordan|hvorn[åa]r|hvorfor|hvad|hvem|hvor)\b/i.test(cleaned) && !hasAction(cleaned)) {
     return { kind: 'note', confidence: 0.9 }
   }
@@ -647,7 +660,12 @@ function estimateWeight(minutes: number, stepCount: number, vague: boolean): Men
   if (minutes > 10) w = 2
   if (minutes > 30) w = 3
   if (minutes > 60) w = 4
-  if (stepCount >= 5) w = Math.min(5, w + 1) as MentalWeight
+  // Step count used to add a point, on the reasoning that a task we bothered
+  // to break down is a heavy one. That stopped being true the day every task
+  // got a breakdown: a five-step chain is now the normal case, so the bonus
+  // fired on everything and quietly inflated the mental load number for a
+  // two-minute bill. Only an unusually long chain still says anything.
+  if (stepCount >= 9) w = Math.min(5, w + 1) as MentalWeight
   if (vague) w = Math.min(5, w + 1) as MentalWeight
   return w as MentalWeight
 }

@@ -783,6 +783,52 @@ Det er det ene store øjeblik i appen. Alt andet er bevidst stille, fordi fest
 hver gang holder op med at betyde noget, men at have lukket en opgave med fem
 trin i er ikke hver gang.
 
+### `lib/decompose.ts`: hver opgave kan deles op
+
+En tredjedel af helt almindelige danske opgaver fik ingen trin overhovedet.
+Ikke fordi de var svære, men fordi udsagnsordet var ægte og bare ikke havde en
+håndskrevet kæde. Fra hendes side er det en knap, der ikke gør noget, og det er
+det eneste, der er værre end generiske trin.
+
+At skrive en kæde for hvert udsagnsord på dansk er heller ikke svaret. Der
+findes kun en håndfuld reelt forskellige **former** for arbejde, og formen er
+det, der afgør, hvor en opgave går i stå. Så hvert udsagnsord hører til én, og
+formen bærer netop det stillads, den form har brug for:
+
+- **Kontakt.** Muren er sætningen, ikke opkaldet. Beslut hvad du vil have ud af
+  det først, så er det at tale den nemme del.
+- **Online.** Muren er login og ikke at vide, hvilken side. Find dem først, så
+  er det tre klik.
+- **Fysisk.** Ingen defineret slutning, så en timer giver den en. Aldrig "lav
+  det hele".
+- **Ærinde.** Det dyre er overgangen ud ad døren, så den bliver hængt på en
+  tur, der alligevel skulle ske.
+- **Producere.** Muren er det blanke papir. En bevidst dårlig første udgave, ét
+  gennemsyn, færdig. Mekanismen her er perfektionisme, ikke dovenskab.
+- **Sortere.** Muren er at beslutte, igen og igen, for hver eneste ting. Så
+  reglen bliver besluttet én gang, forfra, og resten er bare hænder.
+
+Hvert forløb starter med noget fysisk, der er lille nok til, at det ville føles
+fjollet at lade være, og slutter med noget, der lukker sløjfen, så det er
+tydeligt, hvornår man må stoppe.
+
+Ovenpå ligger de kæder, hvor virkeligheden har helt bestemte trin, som er værd
+at kende: skat.dk, synet, pakken på posthuset, lægen. Og de steder, hvor ét
+udsagnsord dækker to forskellige job, forgrener de sig på, hvad hun laver:
+"forbered oplægget" og "klargør bilen til vinter" er samme ord og ikke det
+samme arbejde.
+
+To ting bliver der holdt særligt øje med, fordi begge to læses øjeblikkeligt
+som at appen ikke har forstået sætningen. Grammatikken: trinnene har nu både
+bydeform og navnemåde for hvert udsagnsord, så der ikke står "hvor man meld dig
+fra nyhedsbrevet". Og at trinnet nævner **tingen**, ikke udsagnsordet: "Reparer
+cyklen" gav engang "skriv i én linje hvad Reparer gør".
+
+Der er præcis ét tilfælde tilbage uden trin, og det er med vilje. En aftale er
+ikke en opgave. Der er ingen første handling i "Fars fødselsdag", man møder op.
+Så appen siger det, i stedet for at dele den i fem dele eller lade knappen sidde
+og gøre ingenting.
+
 ---
 
 ## Hvad appen ikke gør

@@ -10,7 +10,7 @@
  * Run with: npm run check
  */
 import { cleanFragment, parseBrainDump, CERTAIN } from '../src/lib/brainDump'
-import { decompose } from '../src/lib/decompose'
+import { decompose, looksLikeAnAppointment } from '../src/lib/decompose'
 import { analyse, toImperativeSentence } from '../src/lib/language'
 import { handleAgentRequest } from '../src/lib/coach/agent'
 import { detectCaptures } from '../src/lib/coach/capture'
@@ -460,6 +460,87 @@ console.log('\nrækkefølgen er til at forklare')
   check('den liste hun fik i morges bliver stående',
     kept.shortlist.some((t) => t.node.id === 'Find forsikringspapirer'),
     kept.shortlist.map((t) => t.node.id).join(', '))
+}
+
+/* ------------------------------------------------------------------ *
+ * Hver opgave kan deles op.
+ *
+ * A third of ordinary Danish tasks used to get no steps at all, because the
+ * verb was real and simply had no chain written for it. From her side that is
+ * a button that does nothing, which is the one thing worse than generic steps.
+ * ------------------------------------------------------------------ */
+
+console.log('\nalt kan deles op')
+{
+  const EVERYDAY = [
+    'Ring til tandlægen', 'Betal elregningen', 'Køb vaskemiddel', 'Støvsug stuen',
+    'Tøm opvaskemaskinen', 'Vask tøj', 'Skriv til udlejer', 'Aflever pakken',
+    'Find forsikringspapirer', 'Sorter posten', 'Klip neglene', 'Vand blomsterne',
+    'Gå en tur', 'Tag medicin', 'Afmeld nyhedsbrevet', 'Opret en NemKonto',
+    'Overfør penge til opsparing', 'Hæv kontanter', 'Sælg cyklen på DBA',
+    'Saml den nye reol', 'Mal soveværelset', 'Reparer cyklen', 'Forbered oplægget',
+    'Øv præsentationen', 'Rette CV', 'Planlægge sommerferien', 'Slette gamle billeder',
+    'Rydde ud i tøjet', 'Sortere billeder', 'Hjælp Sofie med lektier', 'Klippe hækken',
+    'Bage en kage til Idas fødselsdag', 'Lav mad til i aften', 'Lave madplan',
+    'Klargør bilen til vinter', 'Bliv bedre til at lave mad', 'Tale med min mor om jul',
+  ]
+  const empty = EVERYDAY.filter((t) => !decompose(t)?.steps.length)
+  check('hver eneste hverdagsopgave får trin', empty.length === 0, empty.join(', '))
+
+  // The chain has to be about her task, not about a category it resembles.
+  const steps = (t: string) => decompose(t, { granularity: 5 })?.steps ?? []
+  check('en vane bliver hængt på noget, ikke på et klokkeslæt',
+    steps('Tag medicin').some((x) => /h[æa]ng den p[åa]/i.test(x)), steps('Tag medicin').join(' | '))
+  check('at bage handler om opskriften, ikke om en grim første udgave',
+    steps('Bage en kage til Idas fødselsdag').some((x) => /opskrift/i.test(x)))
+  check('at hjælpe nogen får en aftalt slutning',
+    steps('Hjælp Sofie med lektier').some((x) => /hvor lang tid/i.test(x)))
+  check('en reparation spørger hvem der fikser den, ikke hvordan',
+    steps('Reparer cyklen').some((x) => /kan du selv/i.test(x)))
+  check('og den navngiver tingen, ikke udsagnsordet',
+    steps('Reparer cyklen')[0]?.includes('cyklen') === true, steps('Reparer cyklen')[0])
+  check('at planlægge er beslutninger, ikke bunker',
+    steps('Planlægge sommerferien').some((x) => /besluttes/i.test(x)))
+  check('at rydde ud taber ikke sin forholdsord',
+    !steps('Rydde ud i tøjet').some((x) => /ud af i /i.test(x)), steps('Rydde ud i tøjet')[0])
+
+  // Grammar. A broken sentence in a step is the clearest possible signal that
+  // nobody wrote this for her.
+  const all = EVERYDAY.flatMap((t) => decompose(t, { granularity: 20 })?.steps ?? [])
+  const broken = all.filter((x) => /\bfor at (?:meld|overf[øo]r|ret|klip|slet)(?![a-zæøå])/i.test(x) || /hvor man (?:meld|ret|overf[øo]r)\b/i.test(x))
+  check('ingen trin med knækket grammatik', broken.length === 0, broken.slice(0, 2).join(' | '))
+
+  // Every chain must open with something she can physically do.
+  const firsts = EVERYDAY.map((t) => decompose(t, { granularity: 5 })?.steps[0] ?? '')
+  check('hvert forløb starter med noget konkret',
+    firsts.every((f) => f.length > 0 && /^[A-ZÆØÅ]/.test(f)), firsts.filter((f) => !/^[A-ZÆØÅ]/.test(f)).join(' | '))
+
+  // The one thing that genuinely cannot be split.
+  check('en aftale bliver genkendt som en aftale', looksLikeAnAppointment('Fars fødselsdag'))
+  check('og får ingen trin', decompose('Fars fødselsdag') === null)
+  check('men en rigtig opgave er ikke en aftale', !looksLikeAnAppointment('Ring til tandlægen'))
+
+  // Shapes that were landing in the wrong kind of work entirely.
+  check('at lede efter noget er ikke at sortere det',
+    steps('Find forsikringspapirer').some((x) => /sandsynligvis er/i.test(x)), steps('Find forsikringspapirer')[0])
+  check('kontanter kommer fra en automat, ikke fra MitID',
+    !steps('Hæv kontanter').some((x) => /MitID/i.test(x)), steps('Hæv kontanter')[0])
+  check('at sælge noget er ikke et ærinde',
+    steps('Sælg cyklen på DBA').some((x) => /billeder/i.test(x)), steps('Sælg cyklen på DBA')[0])
+  check('at øve sig er gentagelse, ikke et førsteudkast',
+    steps('Øv præsentationen').some((x) => /igen, tre gange/i.test(x)))
+  check('en lille opgave får ikke ti minutters stillads',
+    steps('Vand blomsterne').length <= 3, steps('Vand blomsterne').join(' | '))
+  check('og den bruger bydeform, ikke navnemåde',
+    steps('Vand blomsterne').includes('Vand blomsterne'), steps('Vand blomsterne').join(' | '))
+  check('tillægsordet mister ikke sin artikel',
+    steps('Saml den nye reol')[0]?.includes('den nye reol') === true, steps('Saml den nye reol')[0])
+
+  // The vague chain is for tasks that really are vague, and nothing else.
+  check('"ordn mit rod" er uklar', decompose('Ordn mit rod')?.recognised === 'uklar')
+  check('"tag medicin" er ikke', decompose('Tag medicin')?.recognised !== 'uklar')
+  check('et spørgsmål er stadig en note',
+    one('Har du set hvor mine nøgler er')?.kind === 'note')
 }
 
 console.log(failures ? `\n${failures} FAILED\n` : '\nalt passerer\n')

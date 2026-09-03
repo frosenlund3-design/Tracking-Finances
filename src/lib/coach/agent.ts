@@ -288,12 +288,15 @@ export function handleAgentRequest({ text, task, circles = [], namedTask = false
     if (!task) return { lines: [NEEDS_TASK] }
     const d = decompose(task.title, { granularity: 5 })
     if (!d) {
+      // The only thing left that produces no steps is an appointment, and for
+      // one of those "der er ikke noget at dele op" is the correct answer, not
+      // an apology for not being clever enough.
       return {
         lines: [
-          'Den her kan jeg ikke dele fornuftigt op, og så vil jeg hellere sige det.',
-          'Skriv den om, så den starter med noget du gør: "ring til", "find", "betal". Så kan jeg.',
+          `"${task.title}" er en aftale, ikke en opgave. Der er ikke noget at dele op, du skal møde op.`,
+          'Hvis der er noget, der skal gøres inden, så sig hvad, så lægger jeg det ind som sin egen ting.',
         ],
-        options: ['Hjælp mig med at skrive den om'],
+        options: ['Der er noget inden', 'Læg den i kalenderen', 'Okay'],
       }
     }
     return {

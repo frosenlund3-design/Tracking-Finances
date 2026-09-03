@@ -60,6 +60,8 @@ export function StartMode({ nodeId }: { nodeId: string }) {
   const [now, setNow] = useState(Date.now())
   /** Set the moment the whole task closes, and it takes over the screen. */
   const [finished, setFinished] = useState<FinishSummary | null>(null)
+  /** Set when a breakdown produced nothing, so the button can explain itself. */
+  const [splitFailed, setSplitFailed] = useState(false)
 
   useEffect(() => {
     // The visible clock is the point: it is how she finds out for herself that
@@ -166,7 +168,10 @@ export function StartMode({ nodeId }: { nodeId: string }) {
 
   const stuckOptions = [
     { label: 'Kan du bare rejse dig?', action: () => setCountdown(5) },
-    { label: 'Gør den mindre', action: () => void breakDown(node.id) },
+    {
+      label: 'Gør den mindre',
+      action: () => void breakDown(node.id).then((ok) => setSplitFailed(!ok)),
+    },
     { label: 'Bliv hos mig imens', action: () => openOverlay({ kind: 'bodydouble', nodeId: node.id }) },
     { label: 'Sæt 10 minutter på', action: () => setTimerEnd(Date.now() + 10 * 60 * 1000) },
     { label: 'Snak med coachen', action: () => openOverlay({ kind: 'coach', nodeId: node.id }) },
@@ -289,12 +294,29 @@ export function StartMode({ nodeId }: { nodeId: string }) {
           )}
 
           {steps.length === 0 && (
-            <button
-              onClick={() => void breakDown(node.id)}
-              className="focus-ring mt-6 rounded-full border border-line bg-raised px-5 py-2.5 text-[14px] text-muted active:scale-95"
-            >
-              Del den op i småting
-            </button>
+            <>
+              <button
+                onClick={async () => {
+                  const ok = await breakDown(node.id)
+                  setSplitFailed(!ok)
+                  haptic(ok ? 'tap' : 'soft')
+                }}
+                className="focus-ring mt-6 rounded-full border border-line bg-raised px-5 py-2.5 text-[14px] text-muted active:scale-95"
+              >
+                Del den op i småting
+              </button>
+              {/*
+                A button that silently does nothing is worse than no button.
+                The only task the app cannot split is one that is really an
+                appointment, so it says that rather than leaving her tapping.
+              */}
+              {splitFailed && (
+                <p className="mx-auto mt-3 max-w-[19rem] text-[13px] leading-relaxed text-muted">
+                  Den her ligner en aftale mere end en opgave. Der er ikke noget at dele op, du skal
+                  møde op.
+                </p>
+              )}
+            </>
           )}
         </motion.div>
       </div>

@@ -59,7 +59,7 @@ const VERB_FORMS: Record<string, string[]> = {
   pak: ['pak', 'pakke', 'pakker', 'pakket'],
   post: ['post', 'poste', 'poster', 'postet', 'upload', 'uploade'],
   optag: ['optag', 'optage', 'optager', 'optaget', 'film', 'filme', 'filmer'],
-  rediger: ['rediger', 'redigere', 'redigerer', 'redigeret', 'klip', 'klippe'],
+  rediger: ['rediger', 'redigere', 'redigerer', 'redigeret'],
   træn: ['træn', 'træne', 'træner', 'trænet'],
   læs: ['læs', 'læse', 'læser', 'læst'],
   tjek: ['tjek', 'tjekke', 'tjekker', 'tjekket', 'undersøg', 'undersøge', 'undersøgt'],
@@ -85,6 +85,40 @@ const VERB_FORMS: Record<string, string[]> = {
   aflys: ['aflys', 'aflyse', 'aflyser', 'aflyst'],
   anmeld: ['anmeld', 'anmelde', 'anmelder', 'anmeldt'],
   underskriv: ['underskriv', 'underskrive', 'underskriver', 'underskrevet', 'skriv under', 'skrive under'],
+
+  // Everything below was missing, and every one of them showed up in an
+  // ordinary Danish to-do list. A verb the parser cannot see is a task that
+  // gets no steps at all, which is the one outcome worse than generic steps:
+  // she presses "del den op" and nothing happens.
+  afmeld: ['afmeld', 'afmelde', 'afmelder', 'afmeldt', 'frameld', 'framelde', 'udmeld', 'udmelde'],
+  opret: ['opret', 'oprette', 'opretter', 'oprettet'],
+  overfør: ['overfør', 'overføre', 'overfører', 'overført', 'indbetal', 'indbetale'],
+  hæv: ['hæv', 'hæve', 'hæver', 'hævet'],
+  sælg: ['sælg', 'sælge', 'sælger', 'solgt'],
+  saml: ['saml', 'samle', 'samler', 'samlet', 'montér', 'montere', 'monter'],
+  forbered: ['forbered', 'forberede', 'forbereder', 'forberedt', 'klargør', 'klargøre', 'klargjort'],
+  øv: ['øv', 'øve', 'øver', 'øvet', 'træn på', 'repeter', 'repetere'],
+  ret: ['ret', 'rette', 'retter', 'rettet', 'opdater', 'opdatere', 'opdaterer', 'opdateret'],
+  slet: ['slet', 'slette', 'sletter', 'slettet'],
+  kig: ['kig', 'kigge', 'kigger', 'kigget', 'se', 'ser', 'set'],
+  bag: ['bag', 'bage', 'bager', 'bagt'],
+  tal: ['tal', 'tale', 'taler', 'talt', 'snak', 'snakke', 'snakker', 'snakket'],
+  installer: ['installer', 'installere', 'installerer', 'installeret'],
+  bor: ['bor', 'bore', 'borer', 'boret'],
+  vand: ['vand', 'vande', 'vander', 'vandet'],
+  kør: ['kør', 'køre', 'kører', 'kørt'],
+  gem: ['gem', 'gemme', 'gemmer', 'gemt', 'arkivér', 'arkiver', 'arkivere'],
+  mød: ['mød', 'møde', 'møder', 'mødt'],
+  besøg: ['besøg', 'besøge', 'besøger', 'besøgt'],
+  lån: ['lån', 'låne', 'låner', 'lånt'],
+  returner: ['returner', 'returnere', 'returnerer', 'returneret', 'byt', 'bytte', 'bytter', 'byttet'],
+  mål: ['mål', 'måle', 'måler', 'målt', 'vej', 'veje', 'vejer', 'vejet'],
+  smid: ['smid', 'smide', 'smider', 'smidt'],
+  klap: ['klap', 'klappe', 'klapper', 'klappet'],
+  strig: ['stryg', 'stryge', 'stryger', 'strøget'],
+  red: ['red', 'rede', 'reder', 'redt'],
+  luft: ['luft', 'lufte', 'lufter', 'luftet'],
+  del: ['del', 'dele', 'deler', 'delt'],
 }
 
 const FORM_TO_VERB = new Map<string, string>()
@@ -121,6 +155,12 @@ export const IMPERATIVE: Record<string, string> = {
   tag: 'Tag', åbn: 'Åbn', luk: 'Luk', meld: 'Meld', syn: 'Syn', klip: 'Klip',
   rens: 'Rens', sæt: 'Sæt', spar: 'Spar', 'spar-op': 'Sæt penge til side', underskriv: 'Skriv under',
   hjælp: 'Hjælp', bestil: 'Bestil', aflys: 'Aflys', anmeld: 'Anmeld',
+  afmeld: 'Meld dig fra', opret: 'Opret', overfør: 'Overfør', hæv: 'Hæv', sælg: 'Sælg',
+  saml: 'Saml', forbered: 'Forbered', øv: 'Øv dig på', ret: 'Ret', slet: 'Slet',
+  kig: 'Kig på', bag: 'Bag', tal: 'Tal med', installer: 'Installér', bor: 'Bor',
+  vand: 'Vand', kør: 'Kør', gem: 'Gem', mød: 'Mød', besøg: 'Besøg', lån: 'Lån',
+  returner: 'Returnér', mål: 'Mål', smid: 'Smid', klap: 'Klap', strig: 'Stryg',
+  red: 'Red', luft: 'Luft', del: 'Del',
 }
 
 /** Multi-word verbs, checked before single words. */
@@ -137,12 +177,51 @@ const PHRASE_VERBS: Array<[RegExp, string]> = [
   [/^s[æa]t(?:te)?\s+(?:penge\s+)?til\s+side\b/i, 'spar-op'],
   [/^tage?\s+stilling\s+til\b/i, 'beslut'],
   [/^melde?\s+(?:sig\s+)?til\b/i, 'meld'],
+  [/^melde?\s+(?:sig\s+)?fra\b/i, 'afmeld'],
+  [/^s[æa]tte?\s+op\b/i, 'opret'],
+  [/^g[åa]\s+(?:en\s+)?tur\b/i, 'gåtur'],
+  [/^lufte?\s+hunden\b/i, 'gåtur'],
+  [/^rydde?\s+ud\b/i, 'ryd-ud'],
+  [/^blive?\s+bedre\s+til\b/i, 'blive-bedre'],
+  [/^komme?\s+i\s+gang\s+med\b/i, 'blive-bedre'],
+  [/^tage?\s+kontakt\s+til\b/i, 'kontakt'],
+  [/^h[øo]re?\s+(?:ad|efter)\b/i, 'spørg'],
 ]
+
+/**
+ * The infinitive, for sentences that need "at gøre X" rather than "gør X".
+ *
+ * Without it the steps read "find ud af hvor man meld dig fra nyhedsbrevet"
+ * and "det du skal bruge til at klip neglene". Broken grammar in a step is not
+ * cosmetic: it is the clearest possible signal that nobody wrote this for her,
+ * and it undoes the work the sentence was doing.
+ *
+ * Derived from the forms already listed, so a new verb gets one for free.
+ */
+export const INFINITIVE: Record<string, string> = {}
+for (const [canonical, forms] of Object.entries(VERB_FORMS)) {
+  const stem = canonical.slice(0, 3)
+  INFINITIVE[canonical] =
+    forms.find((f) => f !== canonical && f.endsWith('e') && f.startsWith(stem)) ?? canonical
+}
+INFINITIVE['find-ud-af'] = 'finde ud af'
+INFINITIVE['få-styr-på'] = 'få styr på'
+INFINITIVE['spar-op'] = 'sætte penge til side'
+INFINITIVE['underskriv'] = 'skrive under'
+INFINITIVE['gåtur'] = 'gå en tur'
+INFINITIVE['ryd-ud'] = 'rydde ud'
+INFINITIVE['blive-bedre'] = 'blive bedre til'
+INFINITIVE['afmeld'] = 'melde dig fra'
+INFINITIVE['meld'] = 'melde dig til'
+INFINITIVE['rengør'] = 'gøre rent'
 
 IMPERATIVE['find-ud-af'] = 'Find ud af'
 IMPERATIVE['få-styr-på'] = 'Få styr på'
 IMPERATIVE['spar-op'] = 'Sæt penge til side'
 IMPERATIVE['underskriv'] = 'Skriv under'
+IMPERATIVE['gåtur'] = 'Gå en tur'
+IMPERATIVE['ryd-ud'] = 'Ryd ud i'
+IMPERATIVE['blive-bedre'] = 'Bliv bedre til'
 
 const PREPOSITIONS = ['til', 'på', 'hos', 'i', 'med', 'om', 'for', 'fra', 'ved', 'af']
 
@@ -163,6 +242,20 @@ const PARTICLES = new Set([
 
 /** Words that are not part of the object. */
 const STOP_AFTER_VERB = /^(?:en|et|den|det|de|mit|min|mine|sin|sit|noget|nogle|lidt|alt|hele)\b\s*/i
+
+/**
+ * Drop the determiner, but only when a single word is left behind.
+ *
+ * "Saml den nye reol" was becoming the object "nye reol", and a step reading
+ * "det du skal bruge til at samle nye reol" is missing a word in a way anybody
+ * notices immediately. "En tid" losing its "en" is fine; "den nye reol" losing
+ * its "den" is not, because the adjective is left stranded.
+ */
+function dropDeterminer(text: string): string {
+  const stripped = text.replace(STOP_AFTER_VERB, '').trim()
+  if (!stripped) return text.trim()
+  return stripped.split(/\s+/).length > 1 ? text.trim() : stripped
+}
 
 /**
  * Danish definite endings. Removing them lets "pakken", "pakke" and "pakker"
@@ -248,7 +341,7 @@ export function analyse(text: string): Analysis {
 
   // Only the object is normalised, because that is what the domain rules match
   // on, the determiner would stop "mit rod" from matching "rod".
-  remainder = remainder.replace(STOP_AFTER_VERB, '').trim()
+  remainder = dropDeterminer(remainder)
 
   // Split off the first prepositional phrase, that is the target.
   let object = remainder

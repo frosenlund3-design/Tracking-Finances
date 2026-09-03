@@ -533,7 +533,7 @@ export function NodeSheet({ nodeId }: { nodeId: string }) {
               </div>
               <p className="mt-3 text-[12.5px] leading-relaxed text-faint">
                 {splitFailed
-                  ? 'Den her er jeg ikke klog nok på til at dele fornuftigt op. Skriv selv et par trin, eller omformulér titlen, så der står hvad du skal gøre.'
+                  ? 'Den her ligner en aftale mere end en opgave. Der er ikke noget at dele op, du skal møde op. Skriv selv et trin, hvis der er noget, der skal gøres inden.'
                   : 'Du kan skifte frem og tilbage. Trin du allerede har sat flueben ved, bliver stående.'}
               </p>
             </div>

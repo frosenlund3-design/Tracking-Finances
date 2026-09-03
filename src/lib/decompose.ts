@@ -1,4 +1,4 @@
-import { analyse, BROKEN, type Analysis } from './language'
+import { analyse, BROKEN, IMPERATIVE, INFINITIVE, type Analysis } from './language'
 
 /**
  * Turning a task into the steps you would actually take.
@@ -248,6 +248,261 @@ const DOMAINS: Domain[] = [
  * than about whatever category a keyword happened to hit.
  */
 const BY_VERB: Record<string, (a: Analysis) => Step[]> = {
+  /**
+   * Looking for something.
+   *
+   * It was landing in the sorting shape, which asked what should be thrown out
+   * of the insurance papers she is trying to find. Searching has its own
+   * failure mode: it expands until the whole flat has been turned over. So it
+   * gets a time limit and a stated plan B, because "jeg kan ikke finde den" is
+   * an answer, and acting on it beats another hour of looking.
+   */
+  find: (a) => {
+    const thing = a.object || a.target || 'det'
+    return [
+      s(`Skriv de 3 steder ned, hvor ${thing} sandsynligvis er`, 0),
+      s('Sæt en timer på ti minutter', 0),
+      s('Kig det første sted. Kun der', 0),
+      s('Kig de to andre', 1),
+      s('Stop når timeren ringer', 0),
+      s(`Fandt du den ikke: skriv ned hvem der kan sende ${thing} igen, og spørg dem`, 1),
+      s('Læg den et sted, hvor du leder næste gang', 3),
+    ]
+  },
+  /** Cash comes from a machine, not from MitID. */
+  hæv: (a) => [
+    s(`Beslut hvor meget du skal bruge til ${a.target ?? a.object ?? 'det'}`, 0),
+    s('Find kortet frem', 0),
+    s('Hæv dem næste gang du alligevel er ude', 0),
+    s('Læg dem det sted, de skal bruges', 2),
+  ],
+  /**
+   * Selling something. Almost never an errand: the thing that stops it is the
+   * photograph and the price, both of which are decisions, and both of which
+   * are five minutes when they are separated from each other.
+   */
+  sælg: (a) => {
+    const thing = a.object || 'den'
+    return [
+      s(`Stil ${thing} et sted med lys og tag tre billeder`, 0),
+      s('Slå op hvad andre tager for en tilsvarende', 0),
+      s('Vælg en pris. Lidt for lav er bedre end at den står der i et halvt år', 1),
+      s('Skriv tre linjer: hvad det er, hvor gammelt, hvad der fejler', 0),
+      s(`Læg annoncen op ${a.target ? `på ${a.target}` : ''}`.trim(), 0),
+      s('Beslut på forhånd hvordan den bliver hentet, så du slipper for at aftale det bagefter', 2),
+    ]
+  },
+  /** Practising is repetition, not a first draft. */
+  øv: (a) => {
+    const thing = a.object || a.target || 'det'
+    return [
+      s(`Vælg det ene stykke af ${thing}, der er sværest`, 0),
+      s('Sæt en timer på femten minutter', 0),
+      s('Kør det igennem én gang uden at stoppe, selvom det går galt', 0),
+      s('Kør kun det svære stykke igen, tre gange', 1),
+      s('Kør det hele igennem én gang til', 1),
+      s('Stop. Mere i dag gør det ikke bedre', 2),
+    ]
+  },
+  /** "Se den serie færdig", "kig på tallene": look at it, take one thing away. */
+  kig: (a) => {
+    const thing = a.object || a.target || 'det'
+    return [
+      s(`Åbn ${thing}`, 0),
+      s('Sæt en timer, hvis der er noget bagefter, du skal nå', 2),
+      s(`Kig på ${thing}. Lad være med at rette noget imens`, 0),
+      s('Skriv den ene ting ned, du tog med derfra', 1),
+    ]
+  },
+  /**
+   * Helping somebody is not a phone call, and it is not a chore either. The
+   * part that goes wrong is scope: it starts as twenty minutes of homework and
+   * becomes the whole evening, so it gets a stated end before it starts.
+   */
+  hjælp: (a) => {
+    const who = a.object || a.target || 'dem'
+    const what = a.target && a.object ? ` med ${a.target}` : ''
+    return [
+      s(`Spørg ${who} hvad der helt præcis er svært${what}. Ikke hele opgaven, det ene sted`, 0),
+      s('Aftal hvor lang tid I bruger, før I går i gang', 0),
+      s('Sæt en timer på den tid', 1),
+      s('Lav det første stykke sammen, og lad dem tage det næste selv', 0),
+      s('Stop når timeren ringer, også selvom I ikke er færdige', 0),
+      s('Aftal hvornår I tager resten, hvis der er mere', 2),
+    ]
+  },
+  /**
+   * Planning something big. The reason it never happens is that "planlæg
+   * sommerferien" is twelve decisions wearing one name, and the first one is
+   * not obvious. So the chain names the decisions and orders them so each one
+   * makes the next smaller.
+   */
+  planlæg: (a) => {
+    const thing = a.object || a.target || 'det'
+    return [
+      s(`Skriv de 3 ting ned, der skal besluttes om ${thing}. Ikke flere`, 0),
+      s('Skriv hvornår det skal være besluttet. En dato, ikke "snart"', 0),
+      s('Tag kun den første beslutning. De to andre bliver nemmere af den', 0),
+      s('Find den ene oplysning, du mangler for at kunne tage den', 1),
+      s('Beslut', 0),
+      s('Skriv den ned, så du ikke tager den om', 1),
+      s('Skriv den næste beslutning ind som sin egen opgave', 2),
+    ]
+  },
+  /**
+   * "Forbered oplægget" and "klargør bilen til vinter" are the same verb and
+   * completely different jobs, so it branches on whether she is preparing a
+   * thing or preparing something she is going to say.
+   */
+  forbered: (a) => {
+    const thing = a.object || a.target || 'det'
+    if (/\b(opl[æa]g|tale|pr[æa]sentation|m[øo]de|samtale|eksamen|pr[øo]ve|interview)\w*\b/i.test(thing)) {
+      return [
+        s(`Skriv de 3 ting ned, de skal huske fra ${thing}. Kun tre`, 0),
+        s('Skriv den første sætning ordret, så du har noget at starte på', 0),
+        s('Sæt en timer på tyve minutter', 1),
+        s('Byg resten groft op om de tre ting', 0),
+        s('Sig det højt én gang. Det er øvelsen, ikke at læse det igennem', 0),
+        s('Skriv ned hvad du glemte, og ret kun det', 2),
+      ]
+    }
+    return [
+      s(`Skriv i én linje hvad ${thing} skal kunne bagefter`, 0),
+      s('Skriv ned hvad du mangler at have hjemme', 0),
+      s('Køb eller find det du mangler', 1),
+      s('Sæt en timer på tyve minutter', 2),
+      s(`Klargør ${thing}`, 0),
+      s('Ryd op efter dig, så det ikke bliver en ny opgave', 3),
+    ]
+  },
+  /**
+   * "Lav mad", "lav madplan", "lav en aftale". One verb, three different jobs,
+   * so it branches on what she is making rather than pretending they are the
+   * same. The cooking one is the interesting case: the wall is almost never
+   * the cooking, it is deciding what to cook while standing up and hungry.
+   */
+  lav: (a) => {
+    const thing = a.object || 'det'
+    if (/\b(madplan|ugeplan|indk[øo]bsseddel|plan)\b/i.test(thing)) {
+      return [
+        s('Skriv de 5 retter ned, I altid ender med at spise alligevel', 0),
+        s('Sæt dem på hver sin dag. Rækkefølgen er ligegyldig', 0),
+        s('Skriv det ned, der mangler, i én liste', 1),
+        s('Hæng planen et sted, du kigger i forvejen', 2),
+      ]
+    }
+    if (/\b(mad|aftensmad|morgenmad|frokost|madpakke[rn]?|middag)\b/i.test(thing)) {
+      return [
+        s('Beslut hvad det bliver. Vælg det, du har lavet før', 0),
+        s('Tjek om du har det hjemme, før du går i gang', 0),
+        s('Stil det frem, du skal bruge', 1),
+        s('Lav det', 0),
+        s('Sæt resten i køleskabet med det samme, så er i morgen løst', 2),
+      ]
+    }
+    return [
+      s(`Skriv i én linje hvad "færdig" betyder for ${thing}`, 0),
+      s('Find det frem, du skal bruge', 0),
+      s('Sæt en timer på femten minutter', 1),
+      s(`Lav ${thing}. Første udgave må gerne være grim`, 0),
+      s('Stop når timeren ringer, eller når den er god nok', 0),
+    ]
+  },
+  /**
+   * "Tag medicin", "tag skraldet ud", "tag en beslutning". Nearly always a
+   * small physical act that fails on remembering, not on doing, so the chain
+   * is about making it impossible to forget rather than about the act.
+   */
+  tag: (a) => {
+    const thing = a.object || 'det'
+    return [
+      s(`Find ${thing} frem og stil det, hvor du falder over det`, 0),
+      s(`Tag ${thing}`, 0),
+      s('Hæng den på noget, du allerede gør hver dag, så du slipper for at huske den', 1),
+      s('Sæt tingene tilbage, hvor de stod', 3),
+    ]
+  },
+  sæt: (a) => {
+    const thing = a.object || 'det'
+    return [
+      s(`Find ud af hvor ${thing} sættes op: app, hjemmeside eller kasse`, 0),
+      s('Find det frem, du skal bruge: login, kode, ledning, papirer', 0),
+      s('Sæt en timer på femten minutter, så det ikke bliver hele aftenen', 1),
+      s(`Sæt ${thing} op så det virker. Ikke pænt, bare virker`, 0),
+      s('Prøv det én gang, så du ved det virker', 1),
+      s('Ryd op efter dig', 3),
+    ]
+  },
+  /**
+   * "Bliv bedre til at lave mad." A wish, not a task, and the usual advice is
+   * to tell her to be more specific, which she already knows and which is not
+   * the problem. The problem is that there is no single act that finishes it.
+   * So it gets turned into the smallest repeatable version, hung on something
+   * that already happens, and done once today. That is a thing that can end.
+   */
+  'blive-bedre': (a) => {
+    const thing = shorten(a.rest || a.object || 'det', 34)
+    return [
+      s(`Skriv den mindste udgave af "${thing}", der stadig tæller. Pinligt lille`, 0),
+      s('Skriv hvor tit. En gang om ugen er et rigtigt svar', 1),
+      s('Hæng den på noget, du allerede gør, i stedet for et klokkeslæt', 0),
+      s('Find det frem, du skal bruge, så det står klar', 2),
+      s('Gør den mindste udgave én gang i dag', 0),
+      s('Skriv ned at du gjorde det. Ikke hvor godt det gik', 3),
+    ]
+  },
+  gåtur: () => [
+    s('Tag sko og jakke på. Ikke andet endnu', 0),
+    s('Gå ud af døren', 0),
+    s('Gå til det første hjørne. Så må du vende om', 0),
+    s('Gå videre hvis du har lyst', 2),
+  ],
+  'ryd-ud': (a) => {
+    // "Rydde ud i tøjet" leaves the preposition on the front of the rest, and
+    // "hvad ryger ud af i tøjet" is the sort of sentence that makes a person
+    // stop reading.
+    const thing = stripLeadingPreposition(a.rest || a.object || 'det')
+    return [
+      s(`Beslut reglen først: hvad bliver, og hvad ryger ud af ${thing}?`, 0),
+      s('Find en sæk og en kasse frem', 0),
+      s('Sæt en timer på ti minutter', 1),
+      s('Tag én ting ad gangen. Ingen "måske"-bunke, den bliver aldrig sorteret', 0),
+      s('Stop når timeren ringer', 0),
+      s('Kør sækken ud, eller stil kassen i bilen. Nu, ikke senere', 1),
+    ]
+  },
+  bag: (a) => {
+    const thing = a.object || 'kagen'
+    return [
+      s(`Find opskriften på ${thing} frem og læg den, hvor du kan se den`, 0),
+      s('Læs den igennem og skriv kun det, du mangler, på sedlen', 0),
+      s('Køb det du mangler', 1),
+      s('Stil alle ingredienserne frem, før du går i gang', 0),
+      s('Tænd ovnen', 1),
+      s('Bag den', 0),
+      s('Sæt en timer, og vask op mens den er i ovnen', 2),
+    ]
+  },
+  spar: (a) => {
+    const thing = a.target || a.object || 'det'
+    return [
+      s(`Beslut ét beløb til ${thing}. Et lille et, du ikke mærker`, 0),
+      s('Åbn netbanken', 0),
+      s('Opret en konto til det, hvis du ikke har en', 1),
+      s('Sæt en fast overførsel op, så du aldrig skal huske det igen', 0),
+      s('Skriv beløbet ned, så du kan se det vokse', 3),
+    ]
+  },
+  mød: (a) => {
+    const who = a.target ?? a.object ?? 'dem'
+    return [
+      s(`Skriv den ene ting ned, du gerne vil have ud af mødet med ${who}`, 0),
+      s('Tjek tid og sted, og læg det i kalenderen med en alarm', 0),
+      s('Find det frem, du skal have med', 1),
+      s('Beslut hvornår du tager hjemmefra, ikke hvornår du skal være der', 0),
+      s('Skriv ned hvad I aftalte, mens du husker det', 2),
+    ]
+  },
   ring: (a) => [
     s(`Find ${a.target ?? a.object ?? 'nummeret'}s nummer`, 0),
     s('Skriv de to ting du vil sige eller spørge om', 0),
@@ -480,6 +735,162 @@ const BY_VERB: Record<string, (a: Analysis) => Step[]> = {
   meld: (a) => [s(`Find tilmeldingen til ${a.object || 'det'}`, 0), s('Udfyld den', 0), s('Sæt datoen i kalenderen', 1)],
 }
 
+/* ------------------------------------------------------------------ *
+ * Kinds of work
+ * ------------------------------------------------------------------ *
+ *
+ * A third of ordinary Danish tasks used to get no steps at all: the verb was
+ * real, it just had no hand-written chain, and `decompose` returned null. From
+ * the outside that is a button that does nothing, which is worse than generic
+ * steps, because generic steps at least move.
+ *
+ * Writing a bespoke chain for every verb in Danish is not the answer either.
+ * There are only a handful of genuinely different *shapes* of work, and the
+ * shape is what determines where a task stalls. So every verb belongs to one,
+ * and the shape carries the scaffolding that shape needs:
+ *
+ *  contact   the wall is the sentence, not the call. Decide what you want
+ *            first, and the talking is the easy part.
+ *  online    the wall is the login and not knowing which page. Get those
+ *            first, then it is three clicks.
+ *  physical  no defined end, so a timer gives it one. Never "do it all".
+ *  errand    the expensive part is the transition out of the door, so it gets
+ *            hung on a trip that was happening anyway.
+ *  produce   the wall is the blank page. A deliberately bad first version, one
+ *            pass, done. Perfectionism is the mechanism here, not laziness.
+ *  sort      the wall is deciding, over and over, for every single item. So
+ *            the rule is decided once, up front, and then it is just hands.
+ *
+ * Every chain starts with something physical and small enough that not doing
+ * it would feel silly, and ends with something that closes the loop, so it is
+ * clear when to stop.
+ */
+
+/** Jobs short enough that a ten-minute timer is longer than the work. */
+const SMALL =
+  /\b(blomster|planter|negle|t[æa]nder|seng|sengen|postkasse|kattebakke|vand|glas|kop|bord|k[øo]kkenbord)\w*\b/i
+
+type WorkKind = 'contact' | 'online' | 'physical' | 'errand' | 'produce' | 'sort'
+
+const WORK_OF: Record<string, WorkKind> = {
+  ring: 'contact', kontakt: 'contact', spørg: 'contact', svar: 'contact', tal: 'contact',
+  mød: 'contact', besøg: 'contact', anmeld: 'contact',
+
+  opret: 'online', afmeld: 'online', overfør: 'online',
+  slet: 'online', installer: 'online', meld: 'online', tjek: 'online', gem: 'online',
+  udfyld: 'online', del: 'online', ansøg: 'online',
+
+  vask: 'physical', klip: 'physical', vand: 'physical', mal: 'physical', bor: 'physical',
+  saml: 'physical', strig: 'physical', red: 'physical', luft: 'physical', smid: 'physical',
+  fyld: 'physical', klap: 'physical', mål: 'physical', kør: 'errand',
+
+  aflever: 'errand', hent: 'errand', returner: 'errand', lån: 'errand',
+
+  optag: 'produce', post: 'produce', rediger: 'produce', ret: 'produce',
+
+  sorter: 'sort',
+}
+
+/** Where the thing is, said the way she would say it. */
+function place(a: Analysis): string {
+  return a.target ? `${a.targetPreposition ?? 'hos'} ${a.target}` : ''
+}
+
+const WORK_SHAPES: Record<WorkKind, (a: Analysis, imperative: string, infinitive: string) => Step[]> = {
+  contact: (a, imp) => {
+    const who = a.target ?? a.object ?? 'dem'
+    return [
+      s(`Skriv i én linje hvad du vil have ud af det med ${who}`, 0),
+      s('Skriv det ned, du er bange for de siger, og hvad du så svarer', 3),
+      s(`Find ${who}s nummer eller adresse frem`, 0),
+      s('Tjek at de er der nu, hvis det er noget med åbningstid', 2),
+      s(`${imp} ${who}`, 0),
+      s('Skriv ned hvad I aftalte, mens du husker det', 1),
+    ]
+  },
+  online: (a, imp, inf) => {
+    const thing = a.object || a.target || 'det'
+    return [
+      s('Find MitID eller adgangskoden frem, før du åbner noget', 0),
+      s(`Find ud af hvor du skal hen for at ${inf} ${thing}: app, hjemmeside eller brev`, 0),
+      s('Log ind', 1),
+      s('Find den rigtige side. Kig efter, lad være med at trykke endnu', 2),
+      s(`${imp} ${thing}`, 0),
+      s('Se efter en kvittering eller en bekræftelse, så du ved den gik igennem', 1),
+      s('Gem bekræftelsen et sted du kan finde den', 3),
+    ]
+  },
+  physical: (a, imp, inf) => {
+    const thing = a.object || a.target || 'det'
+    // Under a few minutes, the timer and the "stop when it rings" are more
+    // ceremony than the job itself, and ceremony around a two-minute task is
+    // its own reason not to start.
+    if (SMALL.test(thing)) {
+      return [
+        s(`Find det frem, du skal bruge til at ${inf} ${thing}`, 0),
+        s(`${imp} ${thing}`, 0),
+        s('Sæt tingene tilbage, hvor de stod', 2),
+      ]
+    }
+    return [
+      s(`Find det frem, du skal bruge til at ${inf} ${thing}`, 0),
+      s('Sæt en timer på ti minutter. Den er slutningen, ikke målet', 0),
+      s(`Start med den mindste del af ${thing}`, 0),
+      s('Tag resten, hvis du stadig er i gang', 2),
+      s('Stop når timeren ringer, uanset hvordan der ser ud', 0),
+      s('Sæt tingene på plads, så du ikke arver et nyt rod', 3),
+    ]
+  },
+  errand: (a, imp) => {
+    const thing = a.object || 'det'
+    return [
+      s(`Find ${thing} frem og læg det ved døren`, 0),
+      s(`Slå åbningstiden op ${place(a) || 'der hvor du skal hen'}`, 1),
+      s('Find det med, du skal have med: kvittering, kode, kort', 1),
+      s('Kobl den på en tur du alligevel skal, i stedet for at lave en ekstra', 2),
+      s(`${imp} ${thing}`, 0),
+      s('Streg den, så snart du er ude ad døren igen', 3),
+    ]
+  },
+  produce: (a) => {
+    const thing = a.object || a.target || 'det'
+    return [
+      s(`Skriv i én linje hvad "færdig" betyder for ${thing}. Lavt sat`, 0),
+      s('Find det frem, du skal bruge, og læg telefonen et andet sted', 0),
+      s('Sæt en timer på femten minutter', 1),
+      s('Lav en grim første udgave. Den må gerne være dårlig, det er meningen', 0),
+      s('Hold pause. Lad være med at rette imens', 2),
+      s('Kig den igennem én gang. Kun én', 1),
+      s('Bliv færdig, eller skriv hvor du kom til', 0),
+    ]
+  },
+  sort: (a) => {
+    const thing = a.object || a.target || 'det'
+    return [
+      s(`Beslut reglen først: hvad bliver, og hvad ryger ud af ${thing}?`, 0),
+      s('Find to bunker eller to kasser frem', 0),
+      s('Sæt en timer på ti minutter', 1),
+      s('Tag én ting ad gangen. Ingen "måske"-bunke, den bliver aldrig sorteret', 0),
+      s('Stop når timeren ringer', 0),
+      s('Få den ene bunke ud af huset med det samme', 2),
+    ]
+  },
+}
+
+/**
+ * Steps for a verb we recognise but have written no chain for.
+ *
+ * Returns null only when the verb belongs to no shape at all, which is the
+ * point at which saying nothing is more honest than guessing.
+ */
+function shapeFor(a: Analysis): Step[] | null {
+  if (!a.verb) return null
+  const kind = WORK_OF[a.verb]
+  if (!kind) return null
+  const imp = IMPERATIVE[a.verb] ?? a.verb
+  return WORK_SHAPES[kind](a, imp, INFINITIVE[a.verb] ?? a.verb)
+}
+
 /**
  * The fallback, for tasks that name no recognised verb. It is deliberately
  * about deciding what the thing even is, because a task you cannot name is
@@ -545,7 +956,19 @@ const DECIDE: (a: Analysis) => Step[] = (a) => {
  * Verbs that name an intention rather than an action. They pass every "is this
  * a task?" test and then leave you standing exactly where you started.
  */
-const VAGUE_VERBS = new Set(['ordn', 'lav', 'gør', 'få', 'klar', 'tag', 'se', 'kig', 'styr', 'håndter'])
+const VAGUE_VERBS = new Set(['ordn', 'lav', 'gør', 'få', 'klar', 'tag', 'se', 'styr', 'håndter'])
+
+/**
+ * Nouns that are as unspecific as the verb in front of them.
+ *
+ * The gate that was missing. "Tag medicin" and "Bage en kage til Idas
+ * fødselsdag" were being handed "skriv i én sætning hvad medicin ville betyde,
+ * når det er færdigt", which is the app being obtuse at somebody about the
+ * most concrete thing in their day. A vague verb only makes a vague task when
+ * the object is vague too.
+ */
+const VAGUE_OBJECT =
+  /^(?:det|den|dem|noget|nogle|ting|tingene|sager|sagerne|rod|rodet|alt|alting|hele|resten|styr|orden|det hele)?$/i
 
 /**
  * "Få styr på pensionen" is not a decision and not a chore, it is a missing
@@ -577,8 +1000,11 @@ const OVERVIEW: (a: Analysis) => Step[] = (a) => {
  * that first, and put a decision point in the middle so it cannot turn into an
  * open-ended research project.
  */
-const REPAIR: (title: string) => Step[] = (title) => {
-  const thing = shorten(title.split(/\s+/)[0] ?? 'den', 24)
+const REPAIR: (title: string, a?: Analysis) => Step[] = (title, a) => {
+  // The thing, not the verb. "Reparer cyklen" was producing "skriv i én linje
+  // hvad Reparer gør", which reads as the app not having understood a two-word
+  // sentence.
+  const thing = shorten(a?.object || title.split(/\s+/)[0] || 'den', 24)
   return [
     s(`Skriv i én linje hvad ${thing} gør, og hvornår den gør det`, 0),
     s('Find mærke og model (det står som regel bagpå eller indeni lugen)', 0),
@@ -590,6 +1016,11 @@ const REPAIR: (title: string) => Step[] = (title) => {
     s('Book tiden, eller skriv i kalenderen hvornår du gør det selv', 0),
     s('Skriv ned hvad du må bruge på den, før det bedre kan betale sig at købe ny', 3),
   ]
+}
+
+/** "i tøjet" -> "tøjet", so a step can put it after its own preposition. */
+function stripLeadingPreposition(text: string): string {
+  return text.trim().replace(/^(?:i|p[åa]|til|med|om|for|fra|ved|af|hos)\s+/i, '')
 }
 
 function shorten(text: string, max = 30): string {
@@ -621,9 +1052,11 @@ export function decompose(title: string, opts: DecomposeOptions = {}): Decomposi
   const a = analyse(t)
 
   // "Vaskemaskinen larmer", something is broken. This has to be caught before
-  // the domains, or the washing machine gets a laundry checklist.
-  if (!a.verb && BROKEN.test(t)) {
-    return { steps: toGranularity(REPAIR(t), granularity), minutes: 25, recognised: 'reparation' }
+  // the domains, or the washing machine gets a laundry checklist. "Reparer
+  // cyklen" lands here too: the repair itself is rarely the wall, the
+  // unanswered question of who fixes it and what it costs is.
+  if (BROKEN.test(t) || a.verb === 'reparer') {
+    return { steps: toGranularity(REPAIR(t, a), granularity), minutes: 25, recognised: 'reparation' }
   }
 
   // Domain knowledge first, it beats the generic verb shape when it applies.
@@ -646,10 +1079,10 @@ export function decompose(title: string, opts: DecomposeOptions = {}): Decomposi
     return { steps: toGranularity(OVERVIEW(a), granularity), minutes: 30, recognised: 'overblik' }
   }
 
-  // "Ordn mit rod", "lav noget ved haven", a real verb that still says nothing
-  // about what to do. It is the vague case, not a chore with known steps, so it
-  // gets the make-it-concrete chain rather than nothing at all.
-  if (a.verb && VAGUE_VERBS.has(a.verb) && !BY_VERB[a.verb]) {
+  // "Ordn mit rod", "lav noget ved haven": a real verb that still says nothing
+  // about what to do. The object has to be vague as well, or this swallows
+  // "Tag medicin" and hands back a philosophy exercise.
+  if (a.verb && VAGUE_VERBS.has(a.verb) && !BY_VERB[a.verb] && VAGUE_OBJECT.test(a.object.trim())) {
     return { steps: toGranularity(vagueSteps(a, t), granularity), minutes: 25, recognised: 'uklar' }
   }
 
@@ -658,24 +1091,81 @@ export function decompose(title: string, opts: DecomposeOptions = {}): Decomposi
     return { steps: toGranularity(chain, granularity), minutes: guessMinutes(a), recognised: a.verb }
   }
 
-  // No verb we know: only break it down if it actually looks unmanageable.
-  if (looksOverwhelming(t)) {
-    return { steps: toGranularity(vagueSteps(a, t), granularity), minutes: 25, recognised: 'uklar' }
+  // A verb we know, with no chain written for it. Rather than nothing, it gets
+  // the shape its kind of work has: a phone call stalls in a different place
+  // from a pile of laundry, and the shape is what carries that.
+  const shape = shapeFor(a)
+  if (shape) {
+    return { steps: toGranularity(shape, granularity), minutes: guessMinutes(a), recognised: `${a.verb}` }
   }
-  return null
+
+  // Nothing recognised at all. An appointment is the one case where the right
+  // answer is that there is nothing to break down, and saying so is a real
+  // answer rather than a shrug.
+  if (looksLikeAnAppointment(t)) return null
+
+  // A named thing, even without a verb we know, is concrete. Handing back
+  // "skriv i én sætning hvad det ville betyde, når det er færdigt" for
+  // something she has already stated plainly reads as the app not having read
+  // it, so that chain is kept for tasks that really are unspecific.
+  if (!VAGUE_OBJECT.test((a.object || t).trim())) {
+    return { steps: toGranularity(CONCRETE(a, t), granularity), minutes: guessMinutes(a), recognised: 'konkret' }
+  }
+
+  return { steps: toGranularity(vagueSteps(a, t), granularity), minutes: 25, recognised: 'uklar' }
+}
+
+/**
+ * The last chain before giving up: a small job, named plainly.
+ *
+ * It cannot know what the work is, so it does not pretend to. What it can do
+ * is supply the three things that are missing from every stalled small task
+ * regardless of what it is: a physical first move, an end that arrives by
+ * itself, and somewhere for the thing to go afterwards. That is worth more
+ * than a philosophical prompt about what "færdig" means.
+ */
+function CONCRETE(a: Analysis, title: string): Step[] {
+  const thing = shorten(a.object || title, 34)
+  const imp = a.verb ? (IMPERATIVE[a.verb] ?? 'Lav') : 'Lav'
+  return [
+    s(`Find det frem, du skal bruge til "${thing}"`, 0),
+    s('Beslut hvor du sidder eller står imens', 3),
+    s('Sæt en timer på ti minutter. Den er slutningen, ikke målet', 0),
+    s(`${imp} den mindste del af det`, 0),
+    s('Tag resten, hvis du stadig er i gang', 2),
+    s('Stop når timeren ringer', 0),
+    s('Skriv hvor du kom til, hvis den ikke blev færdig', 1),
+  ]
+}
+
+/**
+ * A thing that happens at a time, rather than a thing to be done.
+ *
+ * "Tandlæge torsdag kl 14", "Fars fødselsdag", "Møde med Anne". There is no
+ * first step: you show up. Offering to break it into five parts is the app
+ * failing to understand what it is looking at, so it says so instead.
+ */
+export function looksLikeAnAppointment(title: string): boolean {
+  const t = title.trim()
+  if (analyse(t).verb) return false
+  return (
+    /\b(?:f[øo]dselsdag|jubil[æa]um|bryllup|begravelse|konfirmation|barnedåb|ferie|fri)\b/i.test(t) ||
+    /\b(?:kl\.?\s*\d{1,2}|\d{1,2}[.:]\d{2})\b/i.test(t) ||
+    /^(?:m[øo]de|aftale|tid)\b/i.test(t) ||
+    /\b(?:mandag|tirsdag|onsdag|torsdag|fredag|l[øo]rdag|s[øo]ndag)\b/i.test(t)
+  )
 }
 
 function guessMinutes(a: Analysis): number {
-  const quick = ['ring', 'send', 'betal', 'tjek', 'print', 'spørg', 'svar']
-  const long = ['ryd', 'rengør', 'pak', 'flyt', 'ansøg', 'optag', 'træn', 'mal']
+  const quick = ['ring', 'send', 'betal', 'tjek', 'print', 'spørg', 'svar', 'tag', 'vand', 'hæv', 'gem', 'smid']
+  const long = ['ryd', 'rengør', 'pak', 'flyt', 'ansøg', 'optag', 'træn', 'mal', 'bag', 'saml', 'planlæg', 'ryd-ud', 'forbered']
   if (a.verb && quick.includes(a.verb)) return 8
   if (a.verb && long.includes(a.verb)) return 30
+  // Otherwise the kind of work is a better guess than one number for
+  // everything: an errand costs a trip out of the door, a login does not.
+  const kind = a.verb ? WORK_OF[a.verb] : undefined
+  if (kind === 'errand') return 25
+  if (kind === 'produce' || kind === 'sort' || kind === 'physical') return 20
+  if (kind === 'online' || kind === 'contact') return 10
   return 15
-}
-
-const VAGUE = /\b(styr p[åa]|ordne|f[åa] lavet|f[åa] gjort|planl[æa]g|hele|alt det|overblik|organiser|s[øo]rge for|tage mig af|fikse)\b/i
-
-/** True when the task looks big or vague enough that a breakdown helps. */
-export function looksOverwhelming(title: string): boolean {
-  return VAGUE.test(title) || title.trim().split(/\s+/).length >= 5
 }
